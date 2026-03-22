@@ -1,0 +1,104 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Step type colors */
+  --color-step-pre-dough-bg: #f5eef8;
+  --color-step-pre-dough-tx: #7050a0;
+  --color-step-dough-bg: #eef0f5;
+  --color-step-dough-tx: #5a6070;
+  --color-step-rest-bg: #f5f0ea;
+  --color-step-rest-tx: #7a6a55;
+  --color-step-rise-bg: #fef6ed;
+  --color-step-rise-tx: #8a6e40;
+  --color-step-shape-bg: #f0eef5;
+  --color-step-shape-tx: #6050a0;
+  --color-step-bake-bg: #fdeee8;
+  --color-step-bake-tx: #8a4a30;
+  --color-step-done-bg: #eaf5ea;
+  --color-step-done-tx: #3a7a3a;
+
+  /* Font families */
+  --font-sans: 'Lato', sans-serif;
+  --font-display: 'Lato', sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: 36 43% 97%;
+    --foreground: 18 43% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 18 43% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 18 43% 12%;
+    --primary: 27 48% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 18% 92%;
+    --secondary-foreground: 18 43% 12%;
+    --muted: 28 21% 93%;
+    --muted-foreground: 27 22% 43%;
+    --accent: 38 50% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 15 55% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 22% 83%;
+    --input: 30 22% 83%;
+    --ring: 27 48% 64%;
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 20 15% 8%;
+    --foreground: 36 30% 92%;
+    --card: 20 15% 10%;
+    --card-foreground: 36 30% 92%;
+    --popover: 20 15% 10%;
+    --popover-foreground: 36 30% 92%;
+    --primary: 27 48% 64%;
+    --primary-foreground: 20 15% 8%;
+    --secondary: 20 12% 16%;
+    --secondary-foreground: 36 30% 92%;
+    --muted: 20 12% 16%;
+    --muted-foreground: 27 18% 55%;
+    --accent: 38 50% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 15 55% 41%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 20 12% 20%;
+    --input: 20 12% 20%;
+    --ring: 27 48% 54%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+  }
+}

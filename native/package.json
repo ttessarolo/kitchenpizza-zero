@@ -1,0 +1,38 @@
+{
+  "name": "@kitchenpizza/native",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios"
+  },
+  "dependencies": {
+    "@clerk/clerk-expo": "^2.19.0",
+    "@expo-google-fonts/lato": "^0.4.1",
+    "@expo/vector-icons": "^14.0.0",
+    "@orpc/client": "latest",
+    "@orpc/react-query": "latest",
+    "@sentry/react-native": "^8.5.0",
+    "@tanstack/react-query": "^5.0.0",
+    "expo": "~55.0.0",
+    "expo-constants": "~55.0.0",
+    "expo-font": "^55.0.4",
+    "expo-linking": "~55.0.0",
+    "expo-router": "~55.0.0",
+    "expo-secure-store": "~55.0.0",
+    "expo-status-bar": "~55.0.0",
+    "immer": "^10.0.0",
+    "react": "^19.1.0",
+    "react-native": "~0.84.0",
+    "react-native-safe-area-context": "^5.7.0",
+    "react-native-screens": "^4.24.0",
+    "zod": "^3.24.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "typescript": "^5.8.3"
+  }
+}

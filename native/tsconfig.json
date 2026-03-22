@@ -1,0 +1,13 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@commons/*": ["../commons/*"],
+      "@commons": ["../commons/index.ts"]
+    }
+  },
+  "include": ["./**/*", "../commons/**/*"],
+  "exclude": ["node_modules"]
+}
