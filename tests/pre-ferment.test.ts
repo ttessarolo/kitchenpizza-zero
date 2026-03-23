@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { computePreFermentAmounts, validatePreFerment, rnd, recalcPreFermentIngredients } from '@commons/utils/recipe'
-import { makeStep, makePfCfg } from './synthetic_data/helpers'
+import { computePreFermentAmounts, validatePreFerment, rnd, recalcPreFermentIngredients, adjustDoughForPreFerment, reconcilePreFerments, getStepTotalWeight } from '@commons/utils/recipe'
+import { makeStep, makeDep, makePfCfg, makeRecipe } from './synthetic_data/helpers'
 
 describe('Pre-ferment: Biga calculations', () => {
   const totalDough = 1000
@@ -9,28 +9,27 @@ describe('Pre-ferment: Biga calculations', () => {
     const cfg = makePfCfg({ preFermentPct: 80, hydrationPct: 44, yeastPct: 1 })
     const pf = computePreFermentAmounts(totalDough, cfg)
     expect(pf.pfWeight).toBe(800)
-    expect(pf.pfFlour).toBe(rnd(800 / 1.44))
+    // New formula: denominator includes yeast ratio
+    expect(pf.pfFlour).toBe(rnd(800 / (1 + 0.44 + 0.01)))
     expect(pf.pfWater).toBe(rnd(pf.pfFlour * 0.44))
     expect(pf.pfYeast).toBe(rnd(pf.pfFlour * 0.01))
+    // KEY: sum must equal pfWeight (within rounding tolerance)
+    expect(pf.pfFlour + pf.pfWater + pf.pfYeast).toBeCloseTo(pf.pfWeight, -1)
   })
 
   it('Biga 30%: lower amounts', () => {
     const cfg = makePfCfg({ preFermentPct: 30, hydrationPct: 44, yeastPct: 1 })
     const pf = computePreFermentAmounts(totalDough, cfg)
     expect(pf.pfWeight).toBe(300)
-    expect(pf.pfFlour).toBeCloseTo(208, 0)
-    expect(pf.pfWater).toBeCloseTo(91.5, 0)
+    expect(pf.pfFlour + pf.pfWater + pf.pfYeast).toBeCloseTo(300, -1)
   })
 
   it('Biga 100%: all dough is pre-ferment', () => {
-    // At 100% biga with 65% hydration to match the recipe hydration
     const cfg = makePfCfg({ preFermentPct: 100, hydrationPct: 65, yeastPct: 1 })
     const pf = computePreFermentAmounts(totalDough, cfg)
     expect(pf.pfWeight).toBe(1000)
-    // pfFlour = 1000 / (1 + 0.65) ≈ 606
-    expect(pf.pfFlour).toBeCloseTo(606, 0)
-    // pfWater = 606 * 0.65 ≈ 394
-    expect(pf.pfWater).toBeCloseTo(394, 0)
+    // Sum of components must equal weight
+    expect(pf.pfFlour + pf.pfWater + pf.pfYeast).toBeCloseTo(1000, -1)
   })
 })
 
@@ -101,8 +100,8 @@ describe('Pre-ferment: percentage changes', () => {
   it('Biga 80% → 100%: maximum pre-ferment', () => {
     const pf = computePreFermentAmounts(totalDough, makePfCfg({ preFermentPct: 100, hydrationPct: 44, yeastPct: 1 }))
     expect(pf.pfWeight).toBe(1000)
-    // Main dough would have flour: totalFlour - pfFlour (should be ~0 or negative if hydration mismatch)
-    expect(pf.pfFlour + pf.pfWater).toBeCloseTo(1000, -1) // pfYeast is negligible
+    // Sum of ALL components (incl yeast) must equal pfWeight
+    expect(pf.pfFlour + pf.pfWater + pf.pfYeast).toBeCloseTo(1000, -1)
   })
 })
 
@@ -219,7 +218,9 @@ describe('recalcPreFermentIngredients: ingredient↔config coherence', () => {
     const recalced = recalcPreFermentIngredients(step, totalDough)
     const expected = computePreFermentAmounts(totalDough, cfg)
     expect(recalced.flours[0].g).toBe(expected.pfFlour)
-    expect(recalced.flours[0].g + recalced.liquids[0].g).toBeCloseTo(1000, -1) // ~1000g total
+    // Sum of flour + water + yeast must equal pfWeight
+    const total = recalced.flours[0].g + recalced.liquids[0].g + recalced.yeasts.reduce((a, y) => a + y.g, 0)
+    expect(total).toBeCloseTo(1000, -1)
   })
 
   it('single-phase (sourdough): no yeasts in result', () => {
@@ -247,5 +248,137 @@ describe('recalcPreFermentIngredients: ingredient↔config coherence', () => {
     expect(recalced.flours[0].type).toBe('gt_00_deb')
     expect(recalced.flours[0].temp).toBe(20)
     expect(recalced.liquids[0].temp).toBe(18)
+  })
+})
+
+describe('adjustDoughForPreFerment: dough step gets correct remainder', () => {
+  it('Biga 80%: dough step has remaining flour/water', () => {
+    const target = 1000
+    const targetHyd = 65
+    const targetFlour = rnd(target / (1 + targetHyd / 100)) // ~606
+    const targetLiquid = rnd(targetFlour * (targetHyd / 100)) // ~394
+
+    const cfg = makePfCfg({ preFermentPct: 80, hydrationPct: 44, yeastPct: 1 })
+    const pfAmounts = computePreFermentAmounts(target, cfg)
+
+    const steps = [
+      makeStep({
+        id: 'biga', type: 'pre_ferment', subtype: 'biga',
+        flours: [{ id: 0, type: 'f', g: pfAmounts.pfFlour, temp: null }],
+        liquids: [{ id: 0, type: 'Acqua', g: pfAmounts.pfWater, temp: null }],
+        yeasts: [{ id: 0, type: 'fresh', g: pfAmounts.pfYeast }],
+        preFermentCfg: cfg,
+      }),
+      makeStep({
+        id: 'knead', type: 'dough',
+        deps: [makeDep('biga')],
+        flours: [{ id: 0, type: 'f', g: 999, temp: null }], // wrong, will be corrected
+        liquids: [{ id: 0, type: 'Acqua', g: 999, temp: null }],
+      }),
+    ]
+
+    const result = adjustDoughForPreFerment(steps, 'biga', target, targetHyd)
+    const knead = result.find(s => s.id === 'knead')!
+
+    expect(knead.flours[0].g).toBe(Math.max(0, rnd(targetFlour - pfAmounts.pfFlour)))
+    expect(knead.liquids[0].g).toBe(Math.max(0, rnd(targetLiquid - pfAmounts.pfWater)))
+    // Total flour across all steps should equal targetFlour
+    const totalF = result.reduce((s, st) => s + st.flours.reduce((a, f) => a + f.g, 0), 0)
+    expect(totalF).toBeCloseTo(targetFlour, 0)
+  })
+
+  it('Biga 100%: dough step has minimal or zero flour/water', () => {
+    const target = 1000
+    const targetHyd = 65
+    // Use 0 yeast so pfFlour+pfWater = pfWeight exactly (no yeast weight offset)
+    const cfg = makePfCfg({ preFermentPct: 100, hydrationPct: 65, yeastPct: 0, yeastType: null })
+    const pfAmounts = computePreFermentAmounts(target, cfg)
+
+    const steps = [
+      makeStep({
+        id: 'biga', type: 'pre_ferment', subtype: 'biga',
+        flours: [{ id: 0, type: 'f', g: pfAmounts.pfFlour, temp: null }],
+        liquids: [{ id: 0, type: 'Acqua', g: pfAmounts.pfWater, temp: null }],
+        preFermentCfg: cfg,
+      }),
+      makeStep({
+        id: 'knead', type: 'dough',
+        deps: [makeDep('biga')],
+        flours: [{ id: 0, type: 'f', g: 100, temp: null }],
+        liquids: [{ id: 0, type: 'Acqua', g: 50, temp: null }],
+        extras: [{ id: 0, name: 'Sale', g: 20 }],
+      }),
+    ]
+
+    const result = adjustDoughForPreFerment(steps, 'biga', target, targetHyd)
+    const knead = result.find(s => s.id === 'knead')!
+
+    expect(knead.flours).toHaveLength(0)
+    expect(knead.liquids).toHaveLength(0)
+    // Salt should be preserved
+    expect(knead.extras[0].name).toBe('Sale')
+  })
+})
+
+describe('reconcilePreFerments: coherence on recipe load', () => {
+  it('recipe with biga: ingredients match computePreFermentAmounts after reconcile', () => {
+    const cfg = makePfCfg({ preFermentPct: 80, hydrationPct: 44, yeastPct: 1 })
+    const recipe = makeRecipe([
+      makeStep({
+        id: 'biga', type: 'pre_ferment', subtype: 'biga',
+        flours: [{ id: 0, type: 'f', g: 999, temp: null }], // intentionally wrong
+        liquids: [{ id: 0, type: 'Acqua', g: 999, temp: null }],
+        yeasts: [{ id: 0, type: 'fresh', g: 999 }],
+        preFermentCfg: cfg,
+      }),
+      makeStep({
+        id: 'knead', type: 'dough',
+        deps: [makeDep('biga')],
+        flours: [{ id: 0, type: 'f', g: 999, temp: null }],
+        liquids: [{ id: 0, type: 'Acqua', g: 999, temp: null }],
+      }),
+      makeStep({ id: 'done', type: 'done', deps: [makeDep('knead')] }),
+    ])
+
+    const reconciled = reconcilePreFerments(recipe)
+    const biga = reconciled.steps.find(s => s.id === 'biga')!
+
+    const target = 1000 // ball 500 * 2
+    const expected = computePreFermentAmounts(target, cfg)
+
+    // Biga step ingredients match computed amounts
+    expect(biga.flours[0].g).toBe(expected.pfFlour)
+    expect(biga.liquids[0].g).toBe(expected.pfWater)
+
+    // The "Preparazioni da Aggiungere" box uses getStepTotalWeight — it should match
+    const bigaWeight = getStepTotalWeight(biga)
+    expect(bigaWeight).toBeCloseTo(expected.pfFlour + expected.pfWater + expected.pfYeast, 0)
+  })
+
+  it('recipe with 100% biga: dough has no flour/water after reconcile', () => {
+    const cfg = makePfCfg({ preFermentPct: 100, hydrationPct: 65, yeastPct: 0, yeastType: null })
+    const recipe = makeRecipe([
+      makeStep({
+        id: 'biga', type: 'pre_ferment',
+        flours: [{ id: 0, type: 'f', g: 500, temp: null }],
+        liquids: [{ id: 0, type: 'Acqua', g: 300, temp: null }],
+        preFermentCfg: cfg,
+      }),
+      makeStep({
+        id: 'knead', type: 'dough',
+        deps: [makeDep('biga')],
+        flours: [{ id: 0, type: 'f', g: 100, temp: null }],
+        liquids: [{ id: 0, type: 'Acqua', g: 50, temp: null }],
+        extras: [{ id: 0, name: 'Sale', g: 20 }],
+      }),
+      makeStep({ id: 'done', type: 'done', deps: [makeDep('knead')] }),
+    ])
+
+    const reconciled = reconcilePreFerments(recipe)
+    const knead = reconciled.steps.find(s => s.id === 'knead')!
+
+    expect(knead.flours).toHaveLength(0)
+    expect(knead.liquids).toHaveLength(0)
+    expect(knead.extras[0].name).toBe('Sale')
   })
 })

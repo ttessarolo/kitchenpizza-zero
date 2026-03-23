@@ -453,11 +453,11 @@ export function computePreFermentAmounts(totalDough: number, cfg: PreFermentConf
   pfYeast: number
 } {
   const pfWeight = rnd(totalDough * (cfg.preFermentPct / 100))
-  const pfFlour = rnd(pfWeight / (1 + cfg.hydrationPct / 100))
+  // Denominator includes yeast so that pfFlour + pfWater + pfYeast = pfWeight
+  const yeastRatio = (cfg.yeastPct != null && cfg.yeastPct > 0) ? cfg.yeastPct / 100 : 0
+  const pfFlour = rnd(pfWeight / (1 + cfg.hydrationPct / 100 + yeastRatio))
   const pfWater = rnd(pfFlour * (cfg.hydrationPct / 100))
-  const pfYeast = cfg.yeastPct != null && cfg.yeastPct > 0
-    ? rnd(pfFlour * (cfg.yeastPct / 100))
-    : 0
+  const pfYeast = yeastRatio > 0 ? rnd(pfFlour * yeastRatio) : 0
   return { pfWeight, pfFlour, pfWater, pfYeast }
 }
 
@@ -514,37 +514,64 @@ export function recalcPreFermentIngredients(
 }
 
 /** After a pre-ferment changes, adjust the linked dough step's flour/water to be the remainder.
+ *  Uses target (portioning weight) and targetHyd (target hydration %) to derive
+ *  the recipe's total flour/liquid — NOT the sum of step ingredients (which is circular).
  *  Returns updated steps array. */
-export function adjustDoughForPreFerment(steps: RecipeStep[], preFermentId: string, target: number): RecipeStep[] {
+export function adjustDoughForPreFerment(
+  steps: RecipeStep[],
+  preFermentId: string,
+  target: number,
+  targetHyd: number,
+): RecipeStep[] {
   const pfStep = steps.find((s) => s.id === preFermentId)
   if (!pfStep?.preFermentCfg) return steps
 
   const { pfFlour, pfWater } = computePreFermentAmounts(target, pfStep.preFermentCfg)
 
-  // Total flour/liquid in the recipe = target split by hydration
-  // totalFlour = target / (1 + targetHyd/100)  — but we don't have hydration here
-  // Instead, sum ALL flour/liquid across ALL steps to get the recipe's total resources
-  const totalFlour = steps.reduce((s, st) => s + st.flours.reduce((a, f) => a + f.g, 0), 0)
-  const totalLiquid = steps.reduce((s, st) => s + st.liquids.reduce((a, l) => a + l.g, 0), 0)
+  // Derive total flour/liquid from target weight and hydration — NOT from summing steps
+  const targetFlour = rnd(target / (1 + targetHyd / 100))
+  const targetLiquid = rnd(targetFlour * (targetHyd / 100))
 
   // Find the dough step that depends (transitively) on this pre-ferment
   const descendants = getDescendantIds(preFermentId, steps)
   const doughStep = steps.find((s) => s.type === 'dough' && descendants.has(s.id))
   if (!doughStep) return steps
 
-  const remainingFlour = Math.max(0, rnd(totalFlour - pfFlour))
-  const remainingWater = Math.max(0, rnd(totalLiquid - pfWater))
+  const remainingFlour = Math.max(0, rnd(targetFlour - pfFlour))
+  const remainingWater = Math.max(0, rnd(targetLiquid - pfWater))
 
   return steps.map((s) => {
     if (s.id !== doughStep.id) return s
     return {
       ...s,
-      flours: s.flours.length > 0
-        ? [{ ...s.flours[0], g: remainingFlour }, ...s.flours.slice(1)]
-        : remainingFlour > 0 ? [{ id: 0, type: 'gt_0_for', g: remainingFlour, temp: null }] : [],
-      liquids: s.liquids.length > 0
-        ? [{ ...s.liquids[0], g: remainingWater }, ...s.liquids.slice(1)]
-        : remainingWater > 0 ? [{ id: 0, type: 'Acqua', g: remainingWater, temp: null }] : [],
+      flours: remainingFlour > 0
+        ? (s.flours.length > 0 ? [{ ...s.flours[0], g: remainingFlour }, ...s.flours.slice(1)] : [{ id: 0, type: 'gt_0_for', g: remainingFlour, temp: null }])
+        : [],
+      liquids: remainingWater > 0
+        ? (s.liquids.length > 0 ? [{ ...s.liquids[0], g: remainingWater }, ...s.liquids.slice(1)] : [{ id: 0, type: 'Acqua', g: remainingWater, temp: null }])
+        : [],
     }
   })
+}
+
+/** Reconcile all pre-ferment steps in a recipe: recalculate ingredients from config
+ *  and adjust linked dough steps. Call once at recipe load. */
+export function reconcilePreFerments(recipe: Recipe): Recipe {
+  const target = recipe.portioning.mode === 'tray'
+    ? Math.round(recipe.portioning.tray.l * recipe.portioning.tray.w * recipe.portioning.thickness * recipe.portioning.tray.count)
+    : recipe.portioning.ball.weight * recipe.portioning.ball.count
+  const targetHyd = recipe.portioning.targetHyd
+
+  let steps = [...recipe.steps]
+  for (const s of steps) {
+    if (s.type === 'pre_ferment' && s.preFermentCfg) {
+      // Recalc pre-ferment step ingredients from config
+      steps = steps.map((st) =>
+        st.id === s.id ? recalcPreFermentIngredients(st, target) : st,
+      )
+      // Adjust the linked dough step
+      steps = adjustDoughForPreFerment(steps, s.id, target, targetHyd)
+    }
+  }
+  return { ...recipe, steps }
 }

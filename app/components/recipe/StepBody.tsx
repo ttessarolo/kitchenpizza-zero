@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { RecipeStep, TemperatureUnit, FlourCatalogEntry } from '@commons/types/recipe'
-import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius, computePreFermentAmounts, recalcPreFermentIngredients, adjustDoughForPreFerment, getAncestorIds, getStepTotalWeight, blendFlourProperties } from '@commons/utils/recipe'
+import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius, getAncestorIds, getStepTotalWeight, blendFlourProperties } from '@commons/utils/recipe'
 import {
   STEP_TYPES,
   KNEAD_METHODS,
@@ -37,7 +37,6 @@ export function StepBody({ step: s }: StepBodyProps) {
     setTemperatureUnit,
     getValidParents,
     totalDough,
-    target,
   } = useRecipe()
   const { ingredientGroups: ig, steps: allSteps } = recipe
   const sF = s.flours.reduce((a, f) => a + f.g, 0)
@@ -104,41 +103,27 @@ export function StepBody({ step: s }: StepBodyProps) {
             onChange={(v) => {
               const newSubtype = v || null
               const subtypeEntry = subtypes.find((st) => st.key === v)
-              if (s.type === 'pre_ferment' && subtypeEntry?.defaults) {
-                // Use setRecipe to update both pre_ferment AND dough step
-                setRecipe((p) => {
+              uS(s.id, (st) => {
+                const updated = { ...st, subtype: newSubtype }
+                if (subtypeEntry?.defaults.baseDur != null) updated.baseDur = subtypeEntry.defaults.baseDur
+                if (subtypeEntry?.defaults.kneadMethod) updated.kneadMethod = subtypeEntry.defaults.kneadMethod
+                if (subtypeEntry?.defaults.riseMethod) updated.riseMethod = subtypeEntry.defaults.riseMethod
+                // Re-create preFermentCfg when switching pre_ferment subtype
+                if (st.type === 'pre_ferment' && subtypeEntry?.defaults) {
                   const d = subtypeEntry.defaults
-                  let newSteps = p.steps.map((st) => {
-                    if (st.id !== s.id) return st
-                    const updated = {
-                      ...st,
-                      subtype: newSubtype,
-                      baseDur: d.baseDur ?? st.baseDur,
-                      preFermentCfg: {
-                        preFermentPct: d.preFermentPct ?? 45,
-                        hydrationPct: d.hydrationPct ?? 44,
-                        yeastType: d.yeastType ?? 'fresh',
-                        yeastPct: d.yeastPct ?? null,
-                        fermentTemp: d.fermentTemp ?? null,
-                        fermentDur: d.fermentDur ?? null,
-                        roomTempDur: d.roomTempDur ?? null,
-                        starterForm: null,
-                      },
-                    }
-                    return recalcPreFermentIngredients(updated, target)
-                  })
-                  newSteps = adjustDoughForPreFerment(newSteps, s.id, target)
-                  return { ...p, steps: newSteps }
-                })
-              } else {
-                uS(s.id, (st) => {
-                  const updated = { ...st, subtype: newSubtype }
-                  if (subtypeEntry?.defaults.baseDur != null) updated.baseDur = subtypeEntry.defaults.baseDur
-                  if (subtypeEntry?.defaults.kneadMethod) updated.kneadMethod = subtypeEntry.defaults.kneadMethod
-                  if (subtypeEntry?.defaults.riseMethod) updated.riseMethod = subtypeEntry.defaults.riseMethod
-                  return updated
-                })
-              }
+                  updated.preFermentCfg = {
+                    preFermentPct: d.preFermentPct ?? 45,
+                    hydrationPct: d.hydrationPct ?? 44,
+                    yeastType: d.yeastType ?? 'fresh',
+                    yeastPct: d.yeastPct ?? null,
+                    fermentTemp: d.fermentTemp ?? null,
+                    fermentDur: d.fermentDur ?? null,
+                    roomTempDur: d.roomTempDur ?? null,
+                    starterForm: null,
+                  }
+                }
+                return updated
+              })
             }}
             options={subtypes.map((st) => ({ k: st.key, l: st.label }))}
           />
@@ -221,21 +206,20 @@ export function StepBody({ step: s }: StepBodyProps) {
         const pfSubtypeEntry = currentTypeEntry?.subtypes?.find((st) => st.key === s.subtype)
         const pfDefaults = pfSubtypeEntry?.defaults || {}
         const isTwoPhase = (pfDefaults.phases ?? 2) === 2
-        const pf = computePreFermentAmounts(target, cfg)
+        // Use ACTUAL step ingredients for display (not computePreFermentAmounts which uses stale target)
+        const actualFlour = s.flours.reduce((a, f) => a + f.g, 0)
+        const actualLiquid = s.liquids.reduce((a, l) => a + l.g, 0)
+        const actualYeast = (s.yeasts || []).reduce((a, y) => a + y.g, 0)
+        const actualWeight = actualFlour + actualLiquid + actualYeast
         const pfRange = pfDefaults.preFermentPctRange || [10, 100]
         const hydRange = pfDefaults.hydrationPctRange || [40, 130]
         const isHydLocked = pfDefaults.hydrationLocked === true
 
         function updateCfg(field: string, value: unknown) {
-          setRecipe((p) => {
-            let newSteps = p.steps.map((st) => {
-              if (st.id !== s.id || !st.preFermentCfg) return st
-              const newCfg = { ...st.preFermentCfg, [field]: value }
-              const updated = { ...st, preFermentCfg: newCfg }
-              return recalcPreFermentIngredients(updated, target)
-            })
-            newSteps = adjustDoughForPreFerment(newSteps, s.id, target)
-            return { ...p, steps: newSteps }
+          // Uses uS (updateStep) which auto-reconciles pre_ferment + dough in the hook
+          uS(s.id, (st) => {
+            if (!st.preFermentCfg) return st
+            return { ...st, preFermentCfg: { ...st.preFermentCfg, [field]: value } }
           })
         }
 
@@ -243,14 +227,14 @@ export function StepBody({ step: s }: StepBodyProps) {
           <details className="mt-1.5 bg-[#fef8eb] rounded-lg border border-[#e8d8a0] group">
             <summary className="p-2.5 cursor-pointer list-none text-xs font-semibold text-[#7a6020] uppercase tracking-[1px]">
               <span className="inline-block transition-transform group-open:rotate-90">▸</span>{' '}
-              Configurazione Prefermento — {cfg.preFermentPct}% · {cfg.hydrationPct}% idr. · {rnd(pf.pfWeight)}g
+              Configurazione Prefermento — {cfg.preFermentPct}% · {cfg.hydrationPct}% idr. · {rnd(actualWeight)}g
             </summary>
             <div className="px-2.5 pb-2.5">
               {/* PreFerment % */}
               <div className="mb-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-0.5">
                   <span>Prefermento</span>
-                  <span><b>{cfg.preFermentPct}%</b> · {rnd(pf.pfWeight)}g</span>
+                  <span><b>{cfg.preFermentPct}%</b> · {rnd(actualWeight)}g</span>
                 </div>
                 <input type="range" min={pfRange[0]} max={pfRange[1]} step={1} value={cfg.preFermentPct} onChange={(e) => updateCfg('preFermentPct', +e.target.value)} className="w-full accent-[#7a6020]" />
               </div>
@@ -318,17 +302,17 @@ export function StepBody({ step: s }: StepBodyProps) {
                 </div>
               )}
 
-              {/* Computed values */}
+              {/* Computed values — show ACTUAL step ingredients */}
               <div className="mt-2 p-2 bg-white rounded border border-[#e8d8a0] text-xs">
                 <div className="font-semibold text-[#7a6020] mb-1">Valori calcolati</div>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-muted-foreground">
-                  <span>Peso prefermento:</span><span className="font-semibold text-foreground">{rnd(pf.pfWeight)}g</span>
-                  <span>Farina:</span><span className="font-semibold text-foreground">{rnd(pf.pfFlour)}g</span>
-                  <span>Acqua:</span><span className="font-semibold text-foreground">{rnd(pf.pfWater)}g</span>
-                  {pf.pfYeast > 0 && (<><span>Lievito:</span><span className="font-semibold text-foreground">{rnd(pf.pfYeast)}g</span></>)}
+                  <span>Peso prefermento:</span><span className="font-semibold text-foreground">{rnd(actualWeight)}g</span>
+                  <span>Farina:</span><span className="font-semibold text-foreground">{rnd(actualFlour)}g</span>
+                  <span>Acqua:</span><span className="font-semibold text-foreground">{rnd(actualLiquid)}g</span>
+                  {actualYeast > 0 && (<><span>Lievito:</span><span className="font-semibold text-foreground">{rnd(actualYeast)}g</span></>)}
                 </div>
                 <div className="mt-1.5 pt-1.5 border-t border-[#e8d8a0] text-amber-700">
-                  Riduzione impasto principale: farina <b>-{rnd(pf.pfFlour)}g</b> · acqua <b>-{rnd(pf.pfWater)}g</b>
+                  Riduzione impasto principale: farina <b>-{rnd(actualFlour)}g</b> · acqua <b>-{rnd(actualLiquid)}g</b>
                 </div>
               </div>
             </div>

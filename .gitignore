@@ -48,6 +48,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Knownledge
-knowledge/
+# Knowledge
+knowledge/artifacts/
 CLAUDE_EXAMPLE_GUIDES/

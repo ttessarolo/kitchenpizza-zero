@@ -35,9 +35,12 @@ describe('computePreFermentAmounts()', () => {
   it('computes Biga 45% at 44% hydration on 1000g', () => {
     const pf = computePreFermentAmounts(1000, makePfCfg({ preFermentPct: 45, hydrationPct: 44, yeastPct: 1 }))
     expect(pf.pfWeight).toBe(450)
-    expect(pf.pfFlour).toBe(rnd(450 / 1.44))  // 312.5 → rnd = 313
+    // New formula: denominator includes yeast
+    expect(pf.pfFlour).toBe(rnd(450 / (1 + 0.44 + 0.01)))
     expect(pf.pfWater).toBe(rnd(pf.pfFlour * 0.44))
     expect(pf.pfYeast).toBe(rnd(pf.pfFlour * 0.01))
+    // Sum must equal pfWeight
+    expect(pf.pfFlour + pf.pfWater + pf.pfYeast).toBeCloseTo(450, -1)
   })
 
   it('computes Poolish 40% at 100% hydration on 1000g', () => {
@@ -51,8 +54,8 @@ describe('computePreFermentAmounts()', () => {
   it('computes 100% pre-ferment — all dough is pre-ferment', () => {
     const pf = computePreFermentAmounts(1000, makePfCfg({ preFermentPct: 100, hydrationPct: 65, yeastPct: 1 }))
     expect(pf.pfWeight).toBe(1000)
-    expect(pf.pfFlour).toBeCloseTo(606, 0)
-    expect(pf.pfWater).toBeCloseTo(394, 0)
+    // Sum must equal pfWeight
+    expect(pf.pfFlour + pf.pfWater + pf.pfYeast).toBeCloseTo(1000, -1)
   })
 
   it('returns 0 yeast when yeastPct is null', () => {

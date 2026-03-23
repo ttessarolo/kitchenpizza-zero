@@ -22,6 +22,9 @@ import {
   calcFinalDoughTemp,
   riseTemperatureFactor,
   migrateRecipe,
+  reconcilePreFerments,
+  recalcPreFermentIngredients,
+  adjustDoughForPreFerment,
   getStepTotalWeight,
   getChildIds,
   removeStepAndFixDeps,
@@ -143,7 +146,7 @@ export interface RecipeCalculator {
 
 export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
   // ── Layer 1: Base recipe ───────────────────────────────────────
-  const [recipe, setRecipe] = useState<Recipe>(() => migrateRecipe(JSON.parse(JSON.stringify(initialRecipe))))
+  const [recipe, setRecipe] = useState<Recipe>(() => reconcilePreFerments(migrateRecipe(JSON.parse(JSON.stringify(initialRecipe)))))
 
   // ── Layer 2: Execution status ──────────────────────────────────
   const [status, setStatus] = useState<RecipeStatus | null>(null)
@@ -273,12 +276,21 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
     })
   }
 
-  // ── Update step with auto-scale propagation ────────────────────
+  // ── Update step with auto-scale propagation + pre-ferment reconcile ──
   function updateStep(id: string, fn: (s: RecipeStep) => RecipeStep) {
     setRecipe((p) => {
       const oldStep = p.steps.find((s) => s.id === id)
-      const newSteps = p.steps.map((s) => (s.id === id ? fn(s) : s))
+      let newSteps = p.steps.map((s) => (s.id === id ? fn(s) : s))
       const newStep = newSteps.find((s) => s.id === id)
+
+      // Pre-ferment auto-reconcile: recalc ingredients + adjust dough step
+      if (newStep?.type === 'pre_ferment' && newStep.preFermentCfg) {
+        newSteps = newSteps.map((s) =>
+          s.id === id ? recalcPreFermentIngredients(s, target) : s,
+        )
+        newSteps = adjustDoughForPreFerment(newSteps, id, target, p.portioning.targetHyd)
+        return { ...p, steps: newSteps }
+      }
 
       // Auto-scale children if ingredient weight changed
       if (oldStep && newStep) {
