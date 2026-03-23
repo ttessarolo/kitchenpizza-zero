@@ -1,5 +1,6 @@
-import type { RecipeStep, TemperatureUnit } from '@commons/types/recipe'
-import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius } from '@commons/utils/recipe'
+import { useState } from 'react'
+import type { RecipeStep, TemperatureUnit, FlourCatalogEntry } from '@commons/types/recipe'
+import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius, computePreFermentAmounts, recalcPreFermentIngredients, adjustDoughForPreFerment, getAncestorIds, getStepTotalWeight, blendFlourProperties } from '@commons/utils/recipe'
 import {
   STEP_TYPES,
   KNEAD_METHODS,
@@ -8,6 +9,7 @@ import {
   OVEN_TYPES,
   OVEN_MODES,
   MODE_MAP,
+  FLOUR_CATALOG,
 } from '@/local_data'
 import { FlourPicker } from './FlourPicker'
 import { IngredientBox } from './IngredientBox'
@@ -22,6 +24,7 @@ interface StepBodyProps {
 export function StepBody({ step: s }: StepBodyProps) {
   const {
     recipe,
+    editMode,
     temperatureUnit: tu,
     ambientTemp: at,
     displayTemp: dTf,
@@ -34,18 +37,57 @@ export function StepBody({ step: s }: StepBodyProps) {
     setTemperatureUnit,
     getValidParents,
     totalDough,
+    target,
   } = useRecipe()
-  const { ingredientGroups: ig } = recipe
+  const { ingredientGroups: ig, steps: allSteps } = recipe
   const sF = s.flours.reduce((a, f) => a + f.g, 0)
   const sL = s.liquids.reduce((a, l) => a + l.g, 0)
   const sH = sF > 0 ? Math.round((sL / sF) * 100) : 0
   const hasI =
     s.flours.length > 0 || s.liquids.length > 0 || s.extras.length > 0 || (s.yeasts || []).length > 0
 
+  const currentTypeEntry = STEP_TYPES.find((t) => t.key === s.type)
+  const subtypes = currentTypeEntry?.subtypes || []
+
+  // Duration helpers (baseDur in minutes → h/m/s)
+  const baseDurH = Math.floor(s.baseDur / 60)
+  const baseDurM = Math.floor(s.baseDur % 60)
+  const baseDurS = Math.round((s.baseDur % 1) * 60)
+  const restDur = s.restDur || 0
+  const restDurH = Math.floor(restDur / 60)
+  const restDurM = Math.floor(restDur % 60)
+  const restDurS = Math.round((restDur % 1) * 60)
+
+  function setDuration(field: 'baseDur' | 'restDur', h: number, m: number, sec: number) {
+    uSF(s.id, field, h * 60 + m + sec / 60)
+  }
+
+  // Tangzhong warning
+  const tangzhongWarning = s.type === 'pre_dough' && s.subtype === 'tangzhong' && sL > 0
+    ? (() => {
+        const flourPct = (sF / sL) * 100
+        if (flourPct < 1.5) return { type: 'warn' as const, msg: `Farina ${rnd(flourPct)}% dell'acqua — minimo consigliato: 1.5%` }
+        if (flourPct > 2) return { type: 'warn' as const, msg: `Farina ${rnd(flourPct)}% dell'acqua — consigliato: 1.5–2%` }
+        return { type: 'ok' as const, msg: `Farina ${rnd(flourPct)}% dell'acqua (1.5–2%)` }
+      })()
+    : null
+
   return (
     <div className="px-3 pb-3 border-t border-[#f0e8df]">
-      {/* Type/Group selectors */}
-      <div className="flex gap-2 mt-2 mb-1.5 flex-wrap">
+      {/* Title */}
+      <div className="mt-2 mb-1.5">
+        <input
+          type="text"
+          value={s.title}
+          onChange={(e) => uSF(s.id, 'title', e.target.value)}
+          placeholder="Titolo step..."
+          disabled={!editMode}
+          className="w-full text-sm font-semibold text-foreground bg-transparent border-none border-b border-dashed border-border outline-none pb-0.5 disabled:opacity-50"
+        />
+      </div>
+
+      {/* Type + Subtype + Group selectors */}
+      <div className="flex gap-2 mb-1.5 flex-wrap">
         <MiniSelect
           label="Tipo"
           value={s.type}
@@ -55,14 +97,58 @@ export function StepBody({ step: s }: StepBodyProps) {
             l: t.icon + ' ' + t.label,
           }))}
         />
-        <MiniSelect
-          label="Gruppo"
+        {subtypes.length > 0 && (
+          <MiniSelect
+            label="Sub"
+            value={s.subtype || ''}
+            onChange={(v) => {
+              const newSubtype = v || null
+              const subtypeEntry = subtypes.find((st) => st.key === v)
+              if (s.type === 'pre_ferment' && subtypeEntry?.defaults) {
+                // Use setRecipe to update both pre_ferment AND dough step
+                setRecipe((p) => {
+                  const d = subtypeEntry.defaults
+                  let newSteps = p.steps.map((st) => {
+                    if (st.id !== s.id) return st
+                    const updated = {
+                      ...st,
+                      subtype: newSubtype,
+                      baseDur: d.baseDur ?? st.baseDur,
+                      preFermentCfg: {
+                        preFermentPct: d.preFermentPct ?? 45,
+                        hydrationPct: d.hydrationPct ?? 44,
+                        yeastType: d.yeastType ?? 'fresh',
+                        yeastPct: d.yeastPct ?? null,
+                        fermentTemp: d.fermentTemp ?? null,
+                        fermentDur: d.fermentDur ?? null,
+                        roomTempDur: d.roomTempDur ?? null,
+                        starterForm: null,
+                      },
+                    }
+                    return recalcPreFermentIngredients(updated, target)
+                  })
+                  newSteps = adjustDoughForPreFerment(newSteps, s.id, target)
+                  return { ...p, steps: newSteps }
+                })
+              } else {
+                uS(s.id, (st) => {
+                  const updated = { ...st, subtype: newSubtype }
+                  if (subtypeEntry?.defaults.baseDur != null) updated.baseDur = subtypeEntry.defaults.baseDur
+                  if (subtypeEntry?.defaults.kneadMethod) updated.kneadMethod = subtypeEntry.defaults.kneadMethod
+                  if (subtypeEntry?.defaults.riseMethod) updated.riseMethod = subtypeEntry.defaults.riseMethod
+                  return updated
+                })
+              }
+            }}
+            options={subtypes.map((st) => ({ k: st.key, l: st.label }))}
+          />
+        )}
+        <GroupSelect
           value={s.group}
+          groups={ig}
+          allSteps={allSteps}
+          editMode={editMode}
           onChange={(v) => uSF(s.id, 'group', v)}
-          options={[
-            ...ig.map((g) => ({ k: g, l: g })),
-            { k: '__new__', l: '+ Nuovo...' },
-          ]}
           onNew={(n) => {
             setRecipe((p) => ({
               ...p,
@@ -70,11 +156,228 @@ export function StepBody({ step: s }: StepBodyProps) {
             }))
             uSF(s.id, 'group', n)
           }}
+          onDelete={(g) => {
+            setRecipe((p) => ({
+              ...p,
+              ingredientGroups: p.ingredientGroups.filter((x) => x !== g),
+            }))
+          }}
         />
       </div>
 
+      {/* Duration (left) + Rest (right) */}
+      <div className="flex justify-between mb-1.5">
+        <div>
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[1px] mb-0.5">Durata</div>
+          <div className="flex items-center gap-0.5 text-xs">
+            <input type="number" min={0} value={baseDurH} onChange={(e) => setDuration('baseDur', +e.target.value || 0, baseDurM, baseDurS)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+            <span className="text-muted-foreground">h</span>
+            <input type="number" min={0} max={59} value={baseDurM} onChange={(e) => setDuration('baseDur', baseDurH, +e.target.value || 0, baseDurS)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+            <span className="text-muted-foreground">m</span>
+            <input type="number" min={0} max={59} value={baseDurS} onChange={(e) => setDuration('baseDur', baseDurH, baseDurM, +e.target.value || 0)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+            <span className="text-muted-foreground">s</span>
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[1px] mb-0.5 text-right">Riposo</div>
+          <div className="flex items-center gap-0.5 text-xs">
+            <input type="number" min={0} value={restDurH} onChange={(e) => setDuration('restDur', +e.target.value || 0, restDurM, restDurS)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+            <span className="text-muted-foreground">h</span>
+            <input type="number" min={0} max={59} value={restDurM} onChange={(e) => setDuration('restDur', restDurH, +e.target.value || 0, restDurS)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+            <span className="text-muted-foreground">m</span>
+            <input type="number" min={0} max={59} value={restDurS} onChange={(e) => setDuration('restDur', restDurH, restDurM, +e.target.value || 0)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+            <span className="text-muted-foreground">s</span>
+          </div>
+          {/* Rest temperature */}
+          {restDur > 0 && (
+            <div className="flex items-center gap-1 mt-1 justify-end">
+              <span className="text-[11px] text-muted-foreground">Temp:</span>
+              <input
+                type="number"
+                step={0.1}
+                value={s.restTemp ?? (tu === 'F' ? celsiusToFahrenheit(at) : at)}
+                onChange={(e) => uSF(s.id, 'restTemp', tu === 'F' ? fahrenheitToCelsius(+e.target.value) : +e.target.value)}
+                className="w-14 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7"
+              />
+              <span className="text-[11px] text-muted-foreground">{tu === 'F' ? '°F' : '°C'}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Description */}
-      <p className="text-sm leading-relaxed text-[#5a4538] my-1">{s.desc}</p>
+      {s.desc && <p className="text-sm leading-relaxed text-[#5a4538] my-1">{s.desc}</p>}
+
+      {/* Tangzhong warning */}
+      {tangzhongWarning && (
+        <div className={`text-xs px-2 py-1.5 rounded-md mb-1.5 ${tangzhongWarning.type === 'warn' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+          {tangzhongWarning.msg}
+        </div>
+      )}
+
+      {/* Pre-ferment config (reveal, before ingredients) */}
+      {s.type === 'pre_ferment' && s.preFermentCfg && (() => {
+        const cfg = s.preFermentCfg
+        const pfSubtypeEntry = currentTypeEntry?.subtypes?.find((st) => st.key === s.subtype)
+        const pfDefaults = pfSubtypeEntry?.defaults || {}
+        const isTwoPhase = (pfDefaults.phases ?? 2) === 2
+        const pf = computePreFermentAmounts(target, cfg)
+        const pfRange = pfDefaults.preFermentPctRange || [10, 100]
+        const hydRange = pfDefaults.hydrationPctRange || [40, 130]
+        const isHydLocked = pfDefaults.hydrationLocked === true
+
+        function updateCfg(field: string, value: unknown) {
+          setRecipe((p) => {
+            let newSteps = p.steps.map((st) => {
+              if (st.id !== s.id || !st.preFermentCfg) return st
+              const newCfg = { ...st.preFermentCfg, [field]: value }
+              const updated = { ...st, preFermentCfg: newCfg }
+              return recalcPreFermentIngredients(updated, target)
+            })
+            newSteps = adjustDoughForPreFerment(newSteps, s.id, target)
+            return { ...p, steps: newSteps }
+          })
+        }
+
+        return (
+          <details className="mt-1.5 bg-[#fef8eb] rounded-lg border border-[#e8d8a0] group">
+            <summary className="p-2.5 cursor-pointer list-none text-xs font-semibold text-[#7a6020] uppercase tracking-[1px]">
+              <span className="inline-block transition-transform group-open:rotate-90">▸</span>{' '}
+              Configurazione Prefermento — {cfg.preFermentPct}% · {cfg.hydrationPct}% idr. · {rnd(pf.pfWeight)}g
+            </summary>
+            <div className="px-2.5 pb-2.5">
+              {/* PreFerment % */}
+              <div className="mb-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-0.5">
+                  <span>Prefermento</span>
+                  <span><b>{cfg.preFermentPct}%</b> · {rnd(pf.pfWeight)}g</span>
+                </div>
+                <input type="range" min={pfRange[0]} max={pfRange[1]} step={1} value={cfg.preFermentPct} onChange={(e) => updateCfg('preFermentPct', +e.target.value)} className="w-full accent-[#7a6020]" />
+              </div>
+
+              {/* Hydration % */}
+              <div className="mb-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-0.5">
+                  <span>Idratazione</span>
+                  <span><b>{cfg.hydrationPct}%</b>{isHydLocked && ' (fisso)'}</span>
+                </div>
+                <input type="range" min={hydRange[0]} max={hydRange[1]} step={1} value={cfg.hydrationPct} onChange={(e) => updateCfg('hydrationPct', +e.target.value)} disabled={isHydLocked} className="w-full accent-[#7a6020]" />
+              </div>
+
+              {/* Yeast (two-phase only) */}
+              {isTwoPhase && cfg.yeastType != null && (
+                <div className="flex gap-2 mb-2">
+                  <div className="flex-1">
+                    <div className="text-xs text-muted-foreground mb-0.5">Lievito</div>
+                    <select value={cfg.yeastType || 'fresh'} onChange={(e) => updateCfg('yeastType', e.target.value)} className="w-full text-xs font-medium bg-background border border-border rounded-lg py-1 pl-2 pr-6 cursor-pointer outline-none min-h-7">
+                      {YEAST_TYPES.filter((y) => !y.key.startsWith('madre')).map((y) => (
+                        <option key={y.key} value={y.key}>{y.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-20">
+                    <div className="text-xs text-muted-foreground mb-0.5">Lievito %</div>
+                    <input type="number" step={0.1} min={0.01} value={cfg.yeastPct ?? 1} onChange={(e) => updateCfg('yeastPct', +e.target.value || 0.1)} className="w-full text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+                  </div>
+                </div>
+              )}
+
+              {/* Sourdough starter form toggle */}
+              {s.subtype === 'sourdough' && (
+                <div className="mb-2">
+                  <div className="text-xs text-muted-foreground mb-0.5">Tipo starter</div>
+                  <div className="flex gap-1">
+                    {[{ k: 'solid', l: 'Pasta Madre (50%)' }, { k: 'licoli', l: 'Li.Co.Li. (100%)' }].map((f) => (
+                      <button key={f.k} type="button" onClick={() => { updateCfg('starterForm', f.k); updateCfg('hydrationPct', f.k === 'solid' ? 50 : 100) }} className={`flex-1 text-xs py-1 rounded border cursor-pointer ${cfg.starterForm === f.k ? 'bg-[#7a6020] text-white border-[#7a6020] font-semibold' : 'bg-white text-muted-foreground border-border'}`}>
+                        {f.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fermentation temp + duration (two-phase only) */}
+              {isTwoPhase && (
+                <div className="flex gap-2 mb-2">
+                  <div className="flex-1">
+                    <div className="text-xs text-muted-foreground mb-0.5">Temp. ferm.</div>
+                    <div className="flex items-center gap-0.5">
+                      <input type="number" step={0.1} value={cfg.fermentTemp ?? 18} onChange={(e) => updateCfg('fermentTemp', +e.target.value)} className="w-14 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+                      <span className="text-xs text-muted-foreground">°C</span>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-muted-foreground mb-0.5">Durata ferm.</div>
+                    <div className="flex items-center gap-0.5">
+                      <input type="number" min={0} value={Math.floor((cfg.fermentDur ?? 0) / 60)} onChange={(e) => updateCfg('fermentDur', (+e.target.value || 0) * 60 + ((cfg.fermentDur ?? 0) % 60))} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+                      <span className="text-xs text-muted-foreground">h</span>
+                      <input type="number" min={0} max={59} value={Math.floor((cfg.fermentDur ?? 0) % 60)} onChange={(e) => updateCfg('fermentDur', Math.floor((cfg.fermentDur ?? 0) / 60) * 60 + (+e.target.value || 0))} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
+                      <span className="text-xs text-muted-foreground">m</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Computed values */}
+              <div className="mt-2 p-2 bg-white rounded border border-[#e8d8a0] text-xs">
+                <div className="font-semibold text-[#7a6020] mb-1">Valori calcolati</div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-muted-foreground">
+                  <span>Peso prefermento:</span><span className="font-semibold text-foreground">{rnd(pf.pfWeight)}g</span>
+                  <span>Farina:</span><span className="font-semibold text-foreground">{rnd(pf.pfFlour)}g</span>
+                  <span>Acqua:</span><span className="font-semibold text-foreground">{rnd(pf.pfWater)}g</span>
+                  {pf.pfYeast > 0 && (<><span>Lievito:</span><span className="font-semibold text-foreground">{rnd(pf.pfYeast)}g</span></>)}
+                </div>
+                <div className="mt-1.5 pt-1.5 border-t border-[#e8d8a0] text-amber-700">
+                  Riduzione impasto principale: farina <b>-{rnd(pf.pfFlour)}g</b> · acqua <b>-{rnd(pf.pfWater)}g</b>
+                </div>
+              </div>
+            </div>
+          </details>
+        )
+      })()}
+
+      {/* Dough: Preparations to incorporate (before ingredients) */}
+      {s.type === 'dough' && (() => {
+        const { steps } = recipe
+        const ancestorIds = getAncestorIds(s.id, steps)
+        const preps = steps.filter(
+          (st) => ancestorIds.has(st.id) && (st.type === 'pre_dough' || st.type === 'pre_ferment'),
+        )
+        if (preps.length === 0) return null
+        return (
+          <div className="mt-1.5 p-2.5 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="text-xs font-semibold text-amber-800 uppercase tracking-[1px] mb-1.5">
+              Preparazioni da Aggiungere
+            </div>
+            {preps.map((prep) => {
+              const icon = STEP_TYPES.find((t) => t.key === prep.type)?.icon || ''
+              const weight = getStepTotalWeight(prep)
+              const flourG = prep.flours.reduce((a, f) => a + f.g, 0)
+              const liquidG = prep.liquids.reduce((a, l) => a + l.g, 0)
+              const yeastG = (prep.yeasts || []).reduce((a, y) => a + y.g, 0)
+              const parts: string[] = []
+              if (flourG > 0) parts.push(`Farina ${rnd(flourG)}g`)
+              if (liquidG > 0) parts.push(`Acqua ${rnd(liquidG)}g`)
+              if (yeastG > 0) parts.push(`Lievito ${rnd(yeastG)}g`)
+              return (
+                <div key={prep.id} className="mb-1 last:mb-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-amber-900">
+                      {icon} {prep.title}
+                    </span>
+                    <span className="text-xs font-bold text-amber-800">{rnd(weight)}g</span>
+                  </div>
+                  {parts.length > 0 && (
+                    <div className="text-[11px] text-amber-700 mt-0.5">
+                      {parts.join(' · ')}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {/* Ingredients */}
       {hasI && (
@@ -113,7 +416,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                       <input
                         type="number"
                         value={(item.temp as number | null) ?? (tu === 'F' ? celsiusToFahrenheit(at) : at)}
-                        step={1}
+                        step={0.1}
                         onChange={(e) =>
                           onU('temp', tu === 'F' ? fahrenheitToCelsius(+e.target.value) : +e.target.value)
                         }
@@ -125,7 +428,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                       <input
                         type="number"
                         value={item.g as number}
-                        step={5}
+                        step={0.1}
                         min={0}
                         onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
                         className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
@@ -168,7 +471,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                     <input
                       type="number"
                       value={(item.temp as number | null) ?? (tu === 'F' ? celsiusToFahrenheit(at) : at)}
-                      step={1}
+                      step={0.1}
                       onChange={(e) =>
                         onU('temp', tu === 'F' ? fahrenheitToCelsius(+e.target.value) : +e.target.value)
                       }
@@ -180,7 +483,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                     <input
                       type="number"
                       value={item.g as number}
-                      step={5}
+                      step={0.1}
                       min={0}
                       onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
                       className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
@@ -237,7 +540,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                     <input
                       type="number"
                       value={item.g as number}
-                      step={1}
+                      step={0.1}
                       min={0}
                       onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
                       className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
@@ -310,9 +613,8 @@ export function StepBody({ step: s }: StepBodyProps) {
                 }))
               }
               renderItem={(item, onU) => {
-                const yt = YEAST_TYPES.find((y) => y.key === (item.type as string)) || YEAST_TYPES[0]
                 return (
-                  <div className="grid grid-cols-[1fr_60px] gap-1 items-center">
+                  <div className="grid grid-cols-[1fr_80px] gap-1 items-center">
                     <select
                       value={item.type as string}
                       onChange={(e) => {
@@ -333,7 +635,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                       <input
                         type="number"
                         value={item.g as number}
-                        step={yt.hasFW ? 5 : 0.5}
+                        step={0.1}
                         min={0.1}
                         onChange={(e) => onU('g', parseFloat(e.target.value) || 0.1)}
                         className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
@@ -377,6 +679,27 @@ export function StepBody({ step: s }: StepBodyProps) {
                 <span className="text-xs font-normal text-[#8a6e55]">
                   (ideale: {dTf(24)}–{dTf(26)})
                 </span>
+              </div>
+            )
+          })()}
+
+          {/* Flour-based suggestions */}
+          {(() => {
+            const bp = blendFlourProperties(s.flours, FLOUR_CATALOG as unknown as FlourCatalogEntry[])
+            const tips: string[] = []
+            if (bp.absorption > 65) tips.push('Farina ad alto assorbimento: considera +5-10% idratazione')
+            if (bp.W > 350) tips.push('Farina di forza: impasto lungo, ottima per lievitazioni prolungate')
+            if (bp.W > 0 && bp.W < 150) tips.push('Farina debole: limita la lievitazione a max 2-3h')
+            if (bp.protein > 13.5) tips.push('Alto contenuto proteico: impasta a lungo per sviluppare il glutine')
+            if (bp.PL > 0.8) tips.push('P/L alto: impasto tenace, lascia riposare prima di formare')
+            if (bp.PL > 0 && bp.PL < 0.4) tips.push('P/L basso: impasto molto estensibile, forma subito')
+            if (bp.fallingNumber > 0 && bp.fallingNumber < 250) tips.push('Falling Number basso: alta attività enzimatica, riduci tempi di lievitazione')
+            if (bp.fiber > 6) tips.push('Alto contenuto di fibra: aumenta idratazione e tempi di impasto')
+            if (!tips.length) return null
+            return (
+              <div className="mt-1.5 p-2 bg-blue-50 rounded border border-blue-200 text-xs text-blue-800">
+                <div className="font-semibold mb-0.5">Suggerimenti</div>
+                {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
               </div>
             )
           })()}
@@ -425,6 +748,24 @@ export function StepBody({ step: s }: StepBodyProps) {
             <div className="text-xs text-[#8a6e55] mt-0.5">
               Durata: <b>{fmtDuration(sDur(s))}</b>
             </div>
+
+            {/* Rise-step flour suggestions */}
+            {(() => {
+              const src = s.sourcePrep ? recipe.steps.find((st) => st.id === s.sourcePrep) : null
+              if (!src || !src.flours.length) return null
+              const bp = blendFlourProperties(src.flours, FLOUR_CATALOG as unknown as FlourCatalogEntry[])
+              const riseDur = sDur(s)
+              const tips: string[] = []
+              if (bp.W > 0 && bp.W < 180 && riseDur > 180) tips.push('Farina debole con lievitazione lunga: rischio di over-proofing')
+              if (bp.fallingNumber > 0 && bp.fallingNumber < 220) tips.push('Attività enzimatica alta: controlla la lievitazione frequentemente')
+              if (!tips.length) return null
+              return (
+                <div className="mt-1.5 p-2 bg-amber-50 rounded border border-amber-200 text-xs text-amber-800">
+                  <div className="font-semibold mb-0.5">Attenzione</div>
+                  {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -494,6 +835,113 @@ export function StepBody({ step: s }: StepBodyProps) {
 
       {/* Dependencies */}
       <DepEditor step={s} />
+    </div>
+  )
+}
+
+// ── GroupSelect sub-component ────────────────────────────────
+function GroupSelect({
+  value,
+  groups,
+  allSteps,
+  editMode,
+  onChange,
+  onNew,
+  onDelete,
+}: {
+  value: string
+  groups: string[]
+  allSteps: RecipeStep[]
+  editMode: boolean
+  onChange: (v: string) => void
+  onNew: (name: string) => void
+  onDelete: (group: string) => void
+}) {
+  const [adding, setAdding] = useState(false)
+  const [newValue, setNewValue] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+
+  function isGroupEmpty(g: string) {
+    return !allSteps.some((s) => s.group === g)
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-[11px] text-[#b8a08a] font-medium">Gruppo:</span>
+      {adding ? (
+        <div className="flex gap-0.5">
+          <input
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            className="text-xs border border-border rounded px-1 py-0.5 w-[70px] outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (newValue.trim()) {
+                onNew(newValue.trim())
+                setAdding(false)
+                setNewValue('')
+              }
+            }}
+            className="text-[11px] bg-primary text-primary-foreground border-none rounded px-1.5 py-0.5 cursor-pointer"
+          >
+            OK
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-0.5">
+          <select
+            value={value}
+            onChange={(e) =>
+              e.target.value === '__new__' ? setAdding(true) : onChange(e.target.value)
+            }
+            disabled={!editMode}
+            className="text-[11px] text-[#6a5a48] bg-[#f5f0ea] border border-border rounded px-1 py-0.5 cursor-pointer outline-none min-h-7"
+          >
+            {groups.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+            <option value="__new__">+ Nuovo...</option>
+          </select>
+          {/* Delete button for empty groups */}
+          {editMode && isGroupEmpty(value) && value !== groups[0] && (
+            <>
+              {confirmDelete === value ? (
+                <div className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDelete(value)
+                      if (groups.length > 1) onChange(groups.find((g) => g !== value) || groups[0])
+                      setConfirmDelete(null)
+                    }}
+                    className="text-[10px] bg-red-500 text-white border-none rounded px-1 py-0.5 cursor-pointer"
+                  >
+                    Elimina
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(null)}
+                    className="text-[10px] bg-[#e8e2da] text-[#8a7a66] border-none rounded px-1 py-0.5 cursor-pointer"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(value)}
+                  className="w-5 h-5 rounded-full border-none bg-[#fde8e8] text-[#c45a3a] text-[10px] font-bold cursor-pointer flex items-center justify-center p-0"
+                  title="Elimina gruppo vuoto"
+                >
+                  ✕
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -615,8 +1063,24 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
         </div>
       </div>
 
+      {/* Shelf position */}
+      <div className="mt-1">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-[1px] mb-0.5">
+          Piano forno
+        </div>
+        <select
+          value={cfg.shelfPosition ?? 1}
+          onChange={(e) => ch('shelfPosition', +e.target.value)}
+          className="text-xs font-medium text-foreground bg-background border-[1.5px] border-border rounded-lg py-1.5 pl-2 pr-7 cursor-pointer outline-none appearance-none min-h-8"
+        >
+          {[1, 2, 3, 4, 5].map((n) => (
+            <option key={n} value={n}>Piano {n}</option>
+          ))}
+        </select>
+      </div>
+
       {sd !== bd && (
-        <div className="text-xs text-[#8a6e55]">
+        <div className="text-xs text-[#8a6e55] mt-1">
           Cottura: <b>{fmtDuration(sd)}</b> (base: {fmtDuration(bd)})
         </div>
       )}

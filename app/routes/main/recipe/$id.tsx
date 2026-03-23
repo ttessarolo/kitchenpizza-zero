@@ -1,6 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Recipe } from '~/components/recipe/Recipe'
-import { DEFAULT_RECIPE } from '@/local_data'
+import { DEFAULT_RECIPE, RECIPE_2 } from '@/local_data'
+
+const RECIPES: Record<string, typeof DEFAULT_RECIPE> = {
+  '1': DEFAULT_RECIPE,
+  '2': RECIPE_2,
+}
 
 export const Route = createFileRoute('/main/recipe/$id')({
   component: RecipePage,
@@ -8,9 +13,7 @@ export const Route = createFileRoute('/main/recipe/$id')({
 
 function RecipePage() {
   const { id } = Route.useParams()
-
-  // For now, id='1' loads the default Shokupan recipe
-  const recipe = id === '1' ? DEFAULT_RECIPE : DEFAULT_RECIPE
+  const recipe = RECIPES[id] || DEFAULT_RECIPE
 
   return <Recipe initialRecipe={recipe} />
 }

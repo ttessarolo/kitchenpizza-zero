@@ -10,14 +10,23 @@ function MainHome() {
       <h1 className="text-3xl font-bold mb-6">Home</h1>
       <div className="rounded-lg border border-border p-6">
         <h2 className="text-xl font-semibold mb-4">Recipes</h2>
-        <ul>
+        <ul className="space-y-2">
           <li>
             <Link
               to="/main/recipe/$id"
               params={{ id: '1' }}
               className="text-primary underline hover:opacity-80"
             >
-              Pizza Margherita
+              Shokupan 食パン
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/main/recipe/$id"
+              params={{ id: '2' }}
+              className="text-primary underline hover:opacity-80"
+            >
+              Pane Casareccio con Biga
             </Link>
           </li>
         </ul>

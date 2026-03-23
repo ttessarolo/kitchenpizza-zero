@@ -58,7 +58,7 @@ export interface RecipeCalculator {
   status: RecipeStatus | null
 
   // UI state
-  openStep: string | null
+  openSteps: Set<string>
   temperatureUnit: TemperatureUnit
   ambientTemp: number
   planningMode: PlanningMode
@@ -95,7 +95,7 @@ export interface RecipeCalculator {
 
   // Actions — state setters
   setRecipe: React.Dispatch<React.SetStateAction<Recipe>>
-  setOpenStep: (id: string | null) => void
+  toggleStep: (id: string) => void
   setTemperatureUnit: (u: TemperatureUnit) => void
   setAmbientTemp: (t: number) => void
   setPlanningMode: (m: PlanningMode) => void
@@ -156,7 +156,15 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
   }, [status])
 
   // ── UI state ───────────────────────────────────────────────────
-  const [openStep, setOpenStep] = useState<string | null>(null)
+  const [openSteps, setOpenSteps] = useState<Set<string>>(new Set())
+  const toggleStep = useCallback((id: string) => {
+    setOpenSteps((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
   const [temperatureUnit, setTemperatureUnit] = useState<TemperatureUnit>('C')
   const [ambientTemp, setAmbientTemp] = useState(24)
   const [planningMode, setPlanningMode] = useState<PlanningMode>('forward')
@@ -454,13 +462,45 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
   function reorderSteps(fromIndex: number, toIndex: number): { valid: boolean; errors: string[] } {
     let result = { valid: true, errors: [] as string[] }
     setRecipe((p) => {
+      const moved = p.steps[fromIndex]
+
+      // Hard constraints — block the move entirely
+      if (moved.type === 'done') {
+        result = { valid: false, errors: ['Lo step "Pronto!" non può essere spostato'] }
+        return p
+      }
+
       const newSteps = [...p.steps]
-      const [moved] = newSteps.splice(fromIndex, 1)
+      newSteps.splice(fromIndex, 1)
       newSteps.splice(toIndex, 0, moved)
+
+      // Constraint: pre_ferment must stay before any dough step that depends on it
+      if (moved.type === 'pre_ferment') {
+        const doughIdx = newSteps.findIndex((s) => s.type === 'dough' && s.deps.some((d) => d.id === moved.id))
+        const movedIdx = newSteps.findIndex((s) => s.id === moved.id)
+        if (doughIdx !== -1 && movedIdx > doughIdx) {
+          result = { valid: false, errors: ['Il prefermento deve restare prima dell\'impasto che lo utilizza'] }
+          return p
+        }
+      }
+
+      // Constraint: dough must stay after all its pre_ferment deps
+      if (moved.type === 'dough') {
+        const movedIdx = newSteps.findIndex((s) => s.id === moved.id)
+        for (const dep of moved.deps) {
+          const depStep = newSteps.find((s) => s.id === dep.id)
+          if (depStep?.type === 'pre_ferment') {
+            const depIdx = newSteps.findIndex((s) => s.id === dep.id)
+            if (movedIdx < depIdx) {
+              result = { valid: false, errors: ['L\'impasto deve restare dopo i prefermenti da cui dipende'] }
+              return p
+            }
+          }
+        }
+      }
 
       result = validateDeps(newSteps)
       if (!result.valid) {
-        // Auto-fix: topological sort
         const sorted = topologicalSort(newSteps)
         result = validateDeps(sorted)
         return { ...p, steps: sorted }
@@ -598,7 +638,18 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
 
   // ── Step duration calculation ────────────────────────────────
   function getStepDuration(s: RecipeStep): number {
+    const rest = s.restDur || 0
+    // Pre-ferment preparation: just baseDur (manual prep time). Fermentation is a separate rise step.
+    if (s.type === 'pre_ferment') {
+      return s.baseDur + rest
+    }
     if (s.type === 'rise' && s.riseMethod) {
+      // If this rise step's sourcePrep is a pre_ferment, use baseDur directly
+      // (the fermentation time is already set as baseDur, don't recalculate)
+      const srcStep = s.sourcePrep ? steps.find((st) => st.id === s.sourcePrep) : null
+      if (srcStep?.type === 'pre_ferment') {
+        return s.baseDur + rest
+      }
       const yd = getYeastData(s)
       const yP = yd.fl > 0 ? (yd.fe / yd.fl) * 100 : 2
       const src = s.sourcePrep ? steps.find((st) => st.id === s.sourcePrep) ?? null : null
@@ -610,16 +661,16 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
         yd.sf,
         riseTemperatureFactor(getFDT(src), s.riseMethod),
         RISE_METHODS as unknown as import('@commons/types/recipe').RiseMethod[],
-      )
+      ) + rest
     }
     if (s.type === 'bake' && s.ovenCfg) {
       const tm = TRAY_MATERIALS.find((m) => m.key === s.ovenCfg!.panType) || TRAY_MATERIALS[0]
       return Math.max(
         10,
         Math.round(((tm.bMin + tm.bMax) / 2 * tm.defTemp) / Math.max(s.ovenCfg.temp, 100)),
-      )
+      ) + rest
     }
-    return s.baseDur
+    return s.baseDur + rest
   }
 
   // ── Steps with duration ──────────────────────────────────────
@@ -703,7 +754,7 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
     })
     return {
       total: span,
-      prep: (c.pre_dough || 0) + (c.dough || 0) + (c.rest || 0) + (c.shape || 0),
+      prep: (c.pre_dough || 0) + (c.pre_ferment || 0) + (c.dough || 0) + (c.rest || 0) + (c.shape || 0),
       rise: c.rise || 0,
       bake: c.bake || 0,
     }
@@ -764,7 +815,7 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
     editMode,
     status,
 
-    openStep,
+    openSteps,
     temperatureUnit,
     ambientTemp,
     planningMode,
@@ -799,7 +850,7 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
     currentSubtypes,
 
     setRecipe,
-    setOpenStep,
+    toggleStep,
     setTemperatureUnit,
     setAmbientTemp,
     setPlanningMode,

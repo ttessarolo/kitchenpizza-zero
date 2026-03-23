@@ -103,7 +103,7 @@ export function StepCard({
               {STEP_TYPES.find((t) => t.key === s.type)?.icon} {s.title}
             </div>
             <div className="text-xs text-[#b8a08a] mt-px">
-              {cm.lb} · {fmtDuration(s.dur)}
+              {cm.lb}{s.subtype ? ` · ${STEP_TYPES.find((t) => t.key === s.type)?.subtypes?.find((st) => st.key === s.subtype)?.label || s.subtype}` : ''} · {fmtDuration(s.dur)}
             </div>
           </div>
 

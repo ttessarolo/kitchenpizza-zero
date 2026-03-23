@@ -12,6 +12,8 @@ export type {
   OvenTypeEntry,
   OvenModeEntry,
   KneadMethod,
+  StepSubtypeDefaults,
+  StepSubtypeEntry,
   StepTypeEntry,
   ColorMapEntry,
   PortioningMode,
@@ -24,6 +26,7 @@ export type {
   ExtraIngredient,
   YeastIngredient,
   OvenConfig,
+  PreFermentConfig,
   StepDep,
   RecipeStep,
   Recipe,
@@ -47,4 +50,4 @@ export { createVersionSlice } from './store/slices/version'
 export { APP_NAME, APP_VERSION } from './constants/index'
 
 // Utils
-export { rnd, pad, fmtTime, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius, nextId, getFlour, blendFlourProperties, calcRiseDuration, calcFinalDoughTemp, riseTemperatureFactor, relativeDate, thicknessLabel, migrateStepDep, migrateRecipe, getAncestorIds, getDescendantIds, getChildIds, validateDeps, topologicalSort, getStepTotalWeight, createDefaultStep, createDefaultStatus, removeStepAndFixDeps, cloneStep } from './utils/recipe'
+export { rnd, pad, fmtTime, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius, nextId, getFlour, blendFlourProperties, calcRiseDuration, calcFinalDoughTemp, riseTemperatureFactor, relativeDate, thicknessLabel, migrateStepDep, migrateRecipe, getAncestorIds, getDescendantIds, getChildIds, validateDeps, topologicalSort, getStepTotalWeight, createDefaultStep, createDefaultStatus, removeStepAndFixDeps, cloneStep, computePreFermentAmounts, validatePreFerment, recalcPreFermentIngredients, adjustDoughForPreFerment, estimateW } from './utils/recipe'

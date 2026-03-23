@@ -10,6 +10,7 @@ import type {
   RecipeStatus,
   TemperatureUnit,
   PlanningMode,
+  PreFermentConfig,
 } from '@commons/types/recipe'
 
 /** Intelligent rounding: >=100 round to int, >=10 round to 0.5, else round to 0.1 */
@@ -65,39 +66,45 @@ export function blendFlourProperties(
   catalog: FlourCatalogEntry[],
 ): BlendedFlourProps {
   let t = 0
-  let wP = 0
-  let wW = 0
-  let wA = 0
-  let wSD = 0
-  let wFS = 0
+  let wP = 0, wW = 0, wPL = 0, wA = 0, wAsh = 0, wFib = 0, wSD = 0, wFS = 0, wFN = 0
 
   for (const f of flours) {
     const c = getFlour(f.type, catalog)
     t += f.g
     wP += f.g * c.protein
     wW += f.g * c.W
+    wPL += f.g * c.PL
     wA += f.g * c.absorption
+    wAsh += f.g * c.ash
+    wFib += f.g * c.fiber
     wSD += f.g * c.starchDamage
     wFS += f.g * c.fermentSpeed
+    wFN += f.g * (c.fallingNumber ?? 300)
   }
 
   if (t <= 0) {
     return {
-      protein: 12,
-      W: 280,
-      absorption: 60,
-      starchDamage: 7,
-      fermentSpeed: 1,
+      protein: 12, W: 280, PL: 0.55, absorption: 60, ash: 0.55,
+      fiber: 2.5, starchDamage: 7, fermentSpeed: 1, fallingNumber: 300,
     }
   }
 
   return {
     protein: rnd(wP / t),
     W: Math.round(wW / t),
+    PL: rnd((wPL / t) * 100) / 100,
     absorption: Math.round(wA / t),
+    ash: rnd((wAsh / t) * 100) / 100,
+    fiber: rnd((wFib / t) * 10) / 10,
     starchDamage: rnd((wSD / t) * 10) / 10,
     fermentSpeed: rnd((wFS / t) * 100) / 100,
+    fallingNumber: Math.round(wFN / t),
   }
+}
+
+/** Estimate W strength from protein percentage (Italian soft wheat correlation) */
+export function estimateW(protein: number): number {
+  return Math.round(Math.max(60, Math.min(420, 22 * protein - 70)))
 }
 
 /** Calculate rise duration in minutes */
@@ -111,12 +118,16 @@ export function calcRiseDuration(
   riseMethods: RiseMethod[],
 ): number {
   const rm = riseMethods.find((m) => m.key === method) || riseMethods[0]
+  const fnFactor = 300 / Math.max(bp.fallingNumber || 300, 150)
+  const fiberFactor = 1 + Math.max(0, ((bp.fiber || 2.5) - 3) * 0.02)
   return Math.round(
     ((base *
       rm.tf *
       (2 / Math.max(yPct, 0.5)) *
       (280 / Math.max(bp.W || 280, 50)) *
-      (1 - ((bp.starchDamage || 7) - 7) * 0.02)) /
+      (1 - ((bp.starchDamage || 7) - 7) * 0.02) *
+      fnFactor *
+      fiberFactor) /
       Math.max(ySF, 0.1)) *
       (tf || 1),
   )
@@ -205,7 +216,12 @@ export function migrateRecipe(raw: Recipe): Recipe {
     steps: raw.steps.map((s) => ({
       ...s,
       deps: s.deps.map(migrateStepDep),
+      subtype: s.subtype ?? null,
+      restDur: s.restDur ?? 0,
+      restTemp: s.restTemp ?? null,
       shapeCount: s.shapeCount ?? null,
+      preFermentCfg: s.preFermentCfg ?? null,
+      ovenCfg: s.ovenCfg ? { ...s.ovenCfg, shelfPosition: s.ovenCfg.shelfPosition ?? 1 } : null,
     })),
   }
 }
@@ -358,13 +374,16 @@ export function getStepTotalWeight(step: RecipeStep): number {
 }
 
 /** Create a default step with sensible values */
-export function createDefaultStep(type: string, group: string, id?: string): RecipeStep {
+export function createDefaultStep(type: string, group: string, id?: string, subtype?: string | null): RecipeStep {
   return {
     id: id || `step_${Date.now().toString(36)}`,
     title: '',
     type,
+    subtype: subtype ?? null,
     group,
     baseDur: type === 'rise' ? 60 : type === 'bake' ? 30 : 10,
+    restDur: 0,
+    restTemp: null,
     deps: [],
     kneadMethod: type === 'dough' ? 'hand' : null,
     desc: '',
@@ -373,9 +392,10 @@ export function createDefaultStep(type: string, group: string, id?: string): Rec
     extras: [],
     yeasts: [],
     riseMethod: type === 'rise' ? 'room' : null,
-    ovenCfg: type === 'bake' ? { panType: 'ci_lid', ovenType: 'electric', ovenMode: 'static', temp: 180, cieloPct: 50 } : null,
+    ovenCfg: type === 'bake' ? { panType: 'ci_lid', ovenType: 'electric', ovenMode: 'static', temp: 180, cieloPct: 50, shelfPosition: 1 } : null,
     sourcePrep: null,
     shapeCount: type === 'shape' ? 1 : null,
+    preFermentCfg: type === 'pre_ferment' ? { preFermentPct: 45, hydrationPct: 44, yeastType: 'fresh', yeastPct: 1, fermentTemp: 18, fermentDur: 1080, roomTempDur: null, starterForm: null } : null,
   }
 }
 
@@ -421,4 +441,110 @@ export function removeStepAndFixDeps(stepId: string, steps: RecipeStep[]): Recip
 /** Deep clone a step with a new ID */
 export function cloneStep(step: RecipeStep, newId: string): RecipeStep {
   return JSON.parse(JSON.stringify({ ...step, id: newId }))
+}
+
+// ── Pre-ferment utilities ────────────────────────────────────────
+
+/** Compute pre-ferment flour, water, yeast from totalDough and config */
+export function computePreFermentAmounts(totalDough: number, cfg: PreFermentConfig): {
+  pfWeight: number
+  pfFlour: number
+  pfWater: number
+  pfYeast: number
+} {
+  const pfWeight = rnd(totalDough * (cfg.preFermentPct / 100))
+  const pfFlour = rnd(pfWeight / (1 + cfg.hydrationPct / 100))
+  const pfWater = rnd(pfFlour * (cfg.hydrationPct / 100))
+  const pfYeast = cfg.yeastPct != null && cfg.yeastPct > 0
+    ? rnd(pfFlour * (cfg.yeastPct / 100))
+    : 0
+  return { pfWeight, pfFlour, pfWater, pfYeast }
+}
+
+/** Validate pre-ferment config against available dough resources */
+export function validatePreFerment(
+  cfg: PreFermentConfig,
+  totalFlour: number,
+  totalLiquid: number,
+  totalDough: number,
+): string[] {
+  const errors: string[] = []
+  const { pfFlour, pfWater } = computePreFermentAmounts(totalDough, cfg)
+
+  if (cfg.preFermentPct <= 0 || cfg.preFermentPct > 100) {
+    errors.push('La percentuale di prefermento deve essere tra 1% e 100%')
+  }
+  if (cfg.hydrationPct < 40 || cfg.hydrationPct > 130) {
+    errors.push("L'idratazione del prefermento deve essere tra 40% e 130%")
+  }
+  if (pfFlour > totalFlour * 1.01) {
+    errors.push("Il prefermento richiede più farina di quella disponibile nella ricetta")
+  }
+  if (pfWater > totalLiquid * 1.01) {
+    errors.push("Il prefermento richiede più liquidi di quelli disponibili nella ricetta")
+  }
+  return errors
+}
+
+/** Recalculate a pre-ferment step's ingredient arrays from its config and totalDough.
+ *  Returns a new step with updated flours/liquids/yeasts. */
+export function recalcPreFermentIngredients(
+  step: RecipeStep,
+  totalDough: number,
+): RecipeStep {
+  const cfg = step.preFermentCfg
+  if (!cfg) return step
+
+  const { pfFlour, pfWater, pfYeast } = computePreFermentAmounts(totalDough, cfg)
+
+  const flourType = step.flours[0]?.type || 'gt_0_for'
+  const flourTemp = step.flours[0]?.temp ?? null
+  const liquidType = step.liquids[0]?.type || 'Acqua'
+  const liquidTemp = step.liquids[0]?.temp ?? null
+  const yeastType = cfg.yeastType || step.yeasts[0]?.type || 'fresh'
+
+  const isTwoPhase = cfg.yeastPct != null && cfg.yeastPct > 0
+
+  return {
+    ...step,
+    flours: [{ id: 0, type: flourType, g: pfFlour, temp: flourTemp }],
+    liquids: [{ id: 0, type: liquidType, g: pfWater, temp: liquidTemp }],
+    yeasts: isTwoPhase ? [{ id: 0, type: yeastType, g: pfYeast }] : [],
+  }
+}
+
+/** After a pre-ferment changes, adjust the linked dough step's flour/water to be the remainder.
+ *  Returns updated steps array. */
+export function adjustDoughForPreFerment(steps: RecipeStep[], preFermentId: string, target: number): RecipeStep[] {
+  const pfStep = steps.find((s) => s.id === preFermentId)
+  if (!pfStep?.preFermentCfg) return steps
+
+  const { pfFlour, pfWater } = computePreFermentAmounts(target, pfStep.preFermentCfg)
+
+  // Total flour/liquid in the recipe = target split by hydration
+  // totalFlour = target / (1 + targetHyd/100)  — but we don't have hydration here
+  // Instead, sum ALL flour/liquid across ALL steps to get the recipe's total resources
+  const totalFlour = steps.reduce((s, st) => s + st.flours.reduce((a, f) => a + f.g, 0), 0)
+  const totalLiquid = steps.reduce((s, st) => s + st.liquids.reduce((a, l) => a + l.g, 0), 0)
+
+  // Find the dough step that depends (transitively) on this pre-ferment
+  const descendants = getDescendantIds(preFermentId, steps)
+  const doughStep = steps.find((s) => s.type === 'dough' && descendants.has(s.id))
+  if (!doughStep) return steps
+
+  const remainingFlour = Math.max(0, rnd(totalFlour - pfFlour))
+  const remainingWater = Math.max(0, rnd(totalLiquid - pfWater))
+
+  return steps.map((s) => {
+    if (s.id !== doughStep.id) return s
+    return {
+      ...s,
+      flours: s.flours.length > 0
+        ? [{ ...s.flours[0], g: remainingFlour }, ...s.flours.slice(1)]
+        : remainingFlour > 0 ? [{ id: 0, type: 'gt_0_for', g: remainingFlour, temp: null }] : [],
+      liquids: s.liquids.length > 0
+        ? [{ ...s.liquids[0], g: remainingWater }, ...s.liquids.slice(1)]
+        : remainingWater > 0 ? [{ id: 0, type: 'Acqua', g: remainingWater, temp: null }] : [],
+    }
+  })
 }

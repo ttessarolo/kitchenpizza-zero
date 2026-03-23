@@ -86,7 +86,8 @@ function SortableStepCard({
 export function StepsList() {
   const {
     schedule,
-    openStep,
+    openSteps,
+    toggleStep,
     doneMap,
     nextUndoneStep,
     started,
@@ -94,7 +95,6 @@ export function StepsList() {
     ambientTemp: at,
     setAmbientTemp,
     setTemperatureUnit,
-    setOpenStep,
     handleStart,
     handleDone,
     handleUndone,
@@ -109,7 +109,9 @@ export function StepsList() {
   const [addStepOpen, setAddStepOpen] = useState(false)
   const [newStepType, setNewStepType] = useState('dough')
 
-  const lastStepId = recipe.steps.length > 0 ? recipe.steps[recipe.steps.length - 1].id : null
+  // Insert before the "done" step (nothing can come after "done")
+  const doneIdx = recipe.steps.findIndex((s) => s.type === 'done')
+  const insertAfterId = doneIdx > 0 ? recipe.steps[doneIdx - 1].id : (recipe.steps.length > 0 ? recipe.steps[recipe.steps.length - 1].id : null)
 
   // DnD sensors — pointer with distance activation + touch with delay
   const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -142,7 +144,7 @@ export function StepsList() {
                 <input
                   type="number"
                   value={tu === 'F' ? celsiusToFahrenheit(at) : at}
-                  step={1}
+                  step={0.1}
                   onChange={(e) =>
                     setAmbientTemp(tu === 'F' ? fahrenheitToCelsius(+e.target.value) : +e.target.value)
                   }
@@ -198,13 +200,13 @@ export function StepsList() {
               <SortableStepCard
                 key={s.id}
                 step={s}
-                isOpen={openStep === s.id}
+                isOpen={openSteps.has(s.id)}
                 isDone={!!doneMap[s.id]}
                 isCurrent={s.id === nextUndoneStep}
-                onToggle={() => setOpenStep(openStep === s.id ? null : s.id)}
+                onToggle={() => toggleStep(s.id)}
                 onDone={() => handleDone(s.id)}
                 onUndone={() => handleUndone(s.id)}
-                disabled={!editMode}
+                disabled={!editMode || s.type === 'done'}
               />
             ))}
           </div>
@@ -212,7 +214,7 @@ export function StepsList() {
       </DndContext>
 
       {/* Add step button */}
-      {editMode && lastStepId && (
+      {editMode && insertAfterId && (
         <button
           type="button"
           onClick={() => setAddStepOpen(true)}
@@ -258,8 +260,8 @@ export function StepsList() {
             <button
               type="button"
               onClick={() => {
-                if (lastStepId) {
-                  addStep(lastStepId, newStepType)
+                if (insertAfterId) {
+                  addStep(insertAfterId, newStepType)
                 }
                 setAddStepOpen(false)
               }}

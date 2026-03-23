@@ -50,6 +50,7 @@ export interface FlourCatalogEntry {
   fiber: number
   starchDamage: number
   fermentSpeed: number
+  fallingNumber: number
 }
 
 export interface RiseMethod {
@@ -82,10 +83,47 @@ export interface KneadMethod {
   ff: number
 }
 
+export interface StepSubtypeDefaults {
+  baseDur?: number
+  riseMethod?: string
+  kneadMethod?: string
+  liquidTemp?: number
+  flourPctOfLiquid?: number
+  flourPctOfLiquidMax?: number
+  hydrationPct?: number
+  useMainDoughFlour?: boolean
+  // Pre-ferment fields
+  phases?: number
+  preFermentPct?: number
+  preFermentPctRange?: [number, number]
+  hydrationPctRange?: [number, number]
+  hydrationLocked?: boolean
+  yeastType?: string | null
+  yeastPct?: number | null
+  yeastPctRange?: [number, number]
+  fermentTemp?: number
+  fermentTempRange?: [number, number]
+  fermentDur?: number
+  fermentDurRange?: [number, number]
+  roomTempDur?: number
+  roomTempRange?: [number, number]
+  roomTemp?: number
+  phaseDescriptions?: string[]
+  starterForms?: string[]
+  maxAgeDays?: number
+}
+
+export interface StepSubtypeEntry {
+  key: string
+  label: string
+  defaults: StepSubtypeDefaults
+}
+
 export interface StepTypeEntry {
   key: string
   label: string
   icon: string
+  subtypes?: StepSubtypeEntry[]
 }
 
 export interface ColorMapEntry {
@@ -161,6 +199,18 @@ export interface OvenConfig {
   ovenMode: string
   temp: number
   cieloPct: number
+  shelfPosition: number
+}
+
+export interface PreFermentConfig {
+  preFermentPct: number
+  hydrationPct: number
+  yeastType: string | null
+  yeastPct: number | null
+  fermentTemp: number | null
+  fermentDur: number | null
+  roomTempDur: number | null
+  starterForm: string | null
 }
 
 export interface StepDep {
@@ -173,8 +223,11 @@ export interface RecipeStep {
   id: string
   title: string
   type: string
+  subtype: string | null
   group: string
   baseDur: number
+  restDur: number
+  restTemp: number | null
   deps: StepDep[]
   kneadMethod: string | null
   desc: string
@@ -186,6 +239,7 @@ export interface RecipeStep {
   ovenCfg: OvenConfig | null
   sourcePrep: string | null
   shapeCount: number | null
+  preFermentCfg: PreFermentConfig | null
 }
 
 export interface Recipe {
@@ -200,9 +254,13 @@ export interface Recipe {
 export interface BlendedFlourProps {
   protein: number
   W: number
+  PL: number
   absorption: number
+  ash: number
+  fiber: number
   starchDamage: number
   fermentSpeed: number
+  fallingNumber: number
 }
 
 export interface ScheduledStep extends RecipeStep {
