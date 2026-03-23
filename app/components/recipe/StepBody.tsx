@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { RecipeStep, TemperatureUnit, FlourCatalogEntry } from '@commons/types/recipe'
-import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius, getAncestorIds, getStepTotalWeight, blendFlourProperties } from '@commons/utils/recipe'
+import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius, getAncestorIds, getStepTotalWeight, blendFlourProperties, getSaltPct, getSugarPct, getFatPct } from '@commons/utils/recipe'
 import {
   STEP_TYPES,
   KNEAD_METHODS,
@@ -13,7 +13,7 @@ import {
 } from '@/local_data'
 import { FlourPicker } from './FlourPicker'
 import { IngredientBox } from './IngredientBox'
-import { MiniSelect, LiquidSelector, ExtraSelector, AddButton } from './shared'
+import { MiniSelect, LiquidSelector, ExtraSelector, SaltSelector, SugarSelector, FatSelector, AddButton } from './shared'
 import { useRecipe } from './RecipeContext'
 import { DepEditor } from './DepEditor'
 
@@ -43,7 +43,7 @@ export function StepBody({ step: s }: StepBodyProps) {
   const sL = s.liquids.reduce((a, l) => a + l.g, 0)
   const sH = sF > 0 ? Math.round((sL / sF) * 100) : 0
   const hasI =
-    s.flours.length > 0 || s.liquids.length > 0 || s.extras.length > 0 || (s.yeasts || []).length > 0
+    s.flours.length > 0 || s.liquids.length > 0 || s.extras.length > 0 || (s.yeasts || []).length > 0 || (s.salts || []).length > 0 || (s.sugars || []).length > 0 || (s.fats || []).length > 0
 
   const currentTypeEntry = STEP_TYPES.find((t) => t.key === s.type)
   const subtypes = currentTypeEntry?.subtypes || []
@@ -320,6 +320,20 @@ export function StepBody({ step: s }: StepBodyProps) {
         )
       })()}
 
+      {/* Pre-ferment salt warning */}
+      {s.type === 'pre_ferment' && (s.salts || []).length > 0 && (
+        <div className="mt-1.5 p-2 bg-red-50 rounded border border-red-200 text-xs text-red-800">
+          Il sale rallenta la fermentazione del prefermento: rimuoverlo e aggiungerlo nel rinfresco
+        </div>
+      )}
+
+      {/* Pre-ferment fat warning */}
+      {s.type === 'pre_ferment' && (s.fats || []).length > 0 && (
+        <div className="mt-1.5 p-2 bg-red-50 rounded border border-red-200 text-xs text-red-800">
+          I grassi rallentano la fermentazione del prefermento: aggiungerli nel rinfresco
+        </div>
+      )}
+
       {/* Dough: Preparations to incorporate (before ingredients) */}
       {s.type === 'dough' && (() => {
         const { steps } = recipe
@@ -449,7 +463,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                 }))
               }
               renderItem={(item, onU) => (
-                <div className="grid grid-cols-[1fr_58px_70px] gap-1 items-center">
+                <div className="grid grid-cols-[1fr_70px_90px] gap-1 items-center">
                   <LiquidSelector value={item.type as string} onChange={(v) => onU('type', v)} />
                   <div className="flex items-center gap-0.5">
                     <input
@@ -518,7 +532,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                 }))
               }
               renderItem={(item, onU) => (
-                <div className="grid grid-cols-[1fr_60px] gap-1 items-center">
+                <div className="grid grid-cols-[1fr_90px] gap-1 items-center">
                   <ExtraSelector value={item.name as string} onChange={(v) => onU('name', v)} />
                   <div className="flex items-center gap-0.5">
                     <input
@@ -571,6 +585,39 @@ export function StepBody({ step: s }: StepBodyProps) {
                 }
               />
             )}
+            {(s.salts || []).length === 0 && (
+              <AddButton
+                label="+ Sale"
+                onClick={() =>
+                  uS(s.id, (st) => ({
+                    ...st,
+                    salts: [{ id: 0, type: 'sale_fino', g: 10 }],
+                  }))
+                }
+              />
+            )}
+            {(s.sugars || []).length === 0 && (
+              <AddButton
+                label="+ Zucchero"
+                onClick={() =>
+                  uS(s.id, (st) => ({
+                    ...st,
+                    sugars: [{ id: 0, type: 'zucchero', g: 10 }],
+                  }))
+                }
+              />
+            )}
+            {(s.fats || []).length === 0 && (
+              <AddButton
+                label="+ Grasso"
+                onClick={() =>
+                  uS(s.id, (st) => ({
+                    ...st,
+                    fats: [{ id: 0, type: 'olio_evo', g: 10 }],
+                  }))
+                }
+              />
+            )}
           </div>
 
           {/* Yeasts */}
@@ -598,7 +645,7 @@ export function StepBody({ step: s }: StepBodyProps) {
               }
               renderItem={(item, onU) => {
                 return (
-                  <div className="grid grid-cols-[1fr_80px] gap-1 items-center">
+                  <div className="grid grid-cols-[1fr_90px] gap-1 items-center">
                     <select
                       value={item.type as string}
                       onChange={(e) => {
@@ -629,6 +676,132 @@ export function StepBody({ step: s }: StepBodyProps) {
                   </div>
                 )
               }}
+            />
+          )}
+
+          {/* Salts */}
+          {(s.salts || []).length > 0 && (
+            <IngredientBox
+              title="Sali"
+              items={s.salts}
+              onUpdate={(id, f, v) =>
+                uS(s.id, (st) => ({
+                  ...st,
+                  salts: st.salts.map((x) => (x.id === id ? { ...x, [f]: v } : x)),
+                }))
+              }
+              onRemove={(id) =>
+                uS(s.id, (st) => ({
+                  ...st,
+                  salts: st.salts.filter((x) => x.id !== id),
+                }))
+              }
+              onAdd={() =>
+                uS(s.id, (st) => ({
+                  ...st,
+                  salts: [...st.salts, { id: nextId(st.salts), type: 'sale_fino', g: 10 }],
+                }))
+              }
+              renderItem={(item, onU) => (
+                <div className="grid grid-cols-[1fr_90px] gap-1 items-center">
+                  <SaltSelector value={item.type as string} onChange={(v) => onU('type', v)} />
+                  <div className="flex items-center gap-0.5">
+                    <input
+                      type="number"
+                      value={item.g as number}
+                      step={0.1}
+                      min={0}
+                      onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
+                      className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                    />
+                    <span className="text-xs text-[#8a6e55]">g</span>
+                  </div>
+                </div>
+              )}
+            />
+          )}
+
+          {/* Sugars */}
+          {(s.sugars || []).length > 0 && (
+            <IngredientBox
+              title="Zuccheri"
+              items={s.sugars}
+              onUpdate={(id, f, v) =>
+                uS(s.id, (st) => ({
+                  ...st,
+                  sugars: st.sugars.map((x) => (x.id === id ? { ...x, [f]: v } : x)),
+                }))
+              }
+              onRemove={(id) =>
+                uS(s.id, (st) => ({
+                  ...st,
+                  sugars: st.sugars.filter((x) => x.id !== id),
+                }))
+              }
+              onAdd={() =>
+                uS(s.id, (st) => ({
+                  ...st,
+                  sugars: [...st.sugars, { id: nextId(st.sugars), type: 'zucchero', g: 10 }],
+                }))
+              }
+              renderItem={(item, onU) => (
+                <div className="grid grid-cols-[1fr_90px] gap-1 items-center">
+                  <SugarSelector value={item.type as string} onChange={(v) => onU('type', v)} />
+                  <div className="flex items-center gap-0.5">
+                    <input
+                      type="number"
+                      value={item.g as number}
+                      step={0.1}
+                      min={0}
+                      onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
+                      className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                    />
+                    <span className="text-xs text-[#8a6e55]">g</span>
+                  </div>
+                </div>
+              )}
+            />
+          )}
+
+          {/* Fats */}
+          {(s.fats || []).length > 0 && (
+            <IngredientBox
+              title="Grassi"
+              items={s.fats || []}
+              onUpdate={(id, f, v) =>
+                uS(s.id, (st) => ({
+                  ...st,
+                  fats: (st.fats || []).map((x) => (x.id === id ? { ...x, [f]: v } : x)),
+                }))
+              }
+              onRemove={(id) =>
+                uS(s.id, (st) => ({
+                  ...st,
+                  fats: (st.fats || []).filter((x) => x.id !== id),
+                }))
+              }
+              onAdd={() =>
+                uS(s.id, (st) => ({
+                  ...st,
+                  fats: [...(st.fats || []), { id: nextId(st.fats || []), type: 'olio_evo', g: 10 }],
+                }))
+              }
+              renderItem={(item, onU) => (
+                <div className="grid grid-cols-[1fr_90px] gap-1 items-center">
+                  <FatSelector value={item.type as string} onChange={(v) => onU('type', v)} />
+                  <div className="flex items-center gap-0.5">
+                    <input
+                      type="number"
+                      value={item.g as number}
+                      step={0.1}
+                      min={0}
+                      onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
+                      className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                    />
+                    <span className="text-xs text-[#8a6e55]">g</span>
+                  </div>
+                </div>
+              )}
             />
           )}
         </div>
@@ -683,6 +856,41 @@ export function StepBody({ step: s }: StepBodyProps) {
             return (
               <div className="mt-1.5 p-2 bg-blue-50 rounded border border-blue-200 text-xs text-blue-800">
                 <div className="font-semibold mb-0.5">Suggerimenti</div>
+                {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
+              </div>
+            )
+          })()}
+
+          {/* Salt & sugar suggestions */}
+          {(() => {
+            const stepFlour = s.flours.reduce((a, f) => a + f.g, 0)
+            const saltPct = getSaltPct(s.salts || [], stepFlour > 0 ? stepFlour : sF)
+            const sugarPct = getSugarPct(s.sugars || [], stepFlour > 0 ? stepFlour : sF)
+            const tips: string[] = []
+            if ((s.salts || []).length > 0 && saltPct < 2.0) tips.push(`Sale basso (${saltPct}%): consigliato 2-2.5% sulla farina`)
+            if (saltPct > 3.0) tips.push(`Sale alto (${saltPct}%): può rallentare eccessivamente la fermentazione`)
+            if (s.type === 'dough' && (s.salts || []).length === 0) tips.push("Nessun sale aggiunto — l'impasto risulterà insipido")
+            if (sugarPct > 8) tips.push(`Zucchero alto (${sugarPct}%): la fermentazione sarà significativamente rallentata`)
+            if (!tips.length) return null
+            return (
+              <div className="mt-1.5 p-2 bg-amber-50 rounded border border-amber-200 text-xs text-amber-800">
+                <div className="font-semibold mb-0.5">Sale & Zucchero</div>
+                {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
+              </div>
+            )
+          })()}
+
+          {/* Fat suggestions */}
+          {(() => {
+            const stepFlour = s.flours.reduce((a, f) => a + f.g, 0)
+            const fatPct = getFatPct(s.fats || [], stepFlour > 0 ? stepFlour : 1)
+            const tips: string[] = []
+            if (s.fats && s.fats.length > 0 && fatPct > 12) tips.push(`Grassi alti (${fatPct}%): impasta il grasso dopo la prima incordatura`)
+            if (s.fats && s.fats.some(f => f.type === 'burro')) tips.push("Il burro contiene ~15% acqua: l'idratazione effettiva è leggermente superiore")
+            if (!tips.length) return null
+            return (
+              <div className="mt-1.5 p-2 bg-amber-50 rounded border border-amber-200 text-xs text-amber-800">
+                <div className="font-semibold mb-0.5">Grassi</div>
                 {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
               </div>
             )

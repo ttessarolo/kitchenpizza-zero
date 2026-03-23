@@ -29,6 +29,15 @@ function MainHome() {
               Pane Casareccio con Biga
             </Link>
           </li>
+          <li>
+            <Link
+              to="/main/recipe/$id"
+              params={{ id: '3' }}
+              className="text-primary underline hover:opacity-80"
+            >
+              Pizza Bianca in Teglia alla Romana
+            </Link>
+          </li>
         </ul>
       </div>
     </div>

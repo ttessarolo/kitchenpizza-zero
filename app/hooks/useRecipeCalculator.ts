@@ -11,16 +11,16 @@ import type {
   LiquidIngredient,
   ExtraIngredient,
   YeastIngredient,
+  SaltIngredient,
+  SugarIngredient,
+  FatIngredient,
   PortioningMode,
   RecipeStatus,
 } from '@commons/types/recipe'
 import {
   rnd,
   celsiusToFahrenheit,
-  blendFlourProperties,
-  calcRiseDuration,
   calcFinalDoughTemp,
-  riseTemperatureFactor,
   migrateRecipe,
   reconcilePreFerments,
   recalcPreFermentIngredients,
@@ -37,9 +37,6 @@ import {
 import {
   RECIPE_SUBTYPES,
   TRAY_MATERIALS,
-  FLOUR_CATALOG,
-  RISE_METHODS,
-  YEAST_TYPES,
   KNEAD_METHODS,
 } from '@/local_data'
 
@@ -49,6 +46,9 @@ export interface GroupedIngredients {
   liquids: LiquidIngredient[]
   extras: ExtraIngredient[]
   yeasts: YeastIngredient[]
+  salts: SaltIngredient[]
+  sugars: SugarIngredient[]
+  fats: FatIngredient[]
 }
 
 // ── Hook return type ──────────────────────────────────────────────
@@ -81,6 +81,9 @@ export interface RecipeCalculator {
   totalLiquid: number
   totalExtras: number
   totalYeast: number
+  totalSalt: number
+  totalSugar: number
+  totalFat: number
   totalDough: number
   currentHydration: number
   target: number
@@ -222,7 +225,10 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
     (s, st) => s + (st.yeasts || []).reduce((a, y) => a + y.g, 0),
     0,
   )
-  const totalDough = totalFlour + totalLiquid + totalExtras + totalYeast
+  const totalSalt = steps.reduce((s, st) => s + (st.salts || []).reduce((a, x) => a + x.g, 0), 0)
+  const totalSugar = steps.reduce((s, st) => s + (st.sugars || []).reduce((a, x) => a + x.g, 0), 0)
+  const totalFat = steps.reduce((s, st) => s + (st.fats || []).reduce((a, x) => a + x.g, 0), 0)
+  const totalDough = totalFlour + totalLiquid + totalExtras + totalYeast + totalSalt + totalSugar + totalFat
   const currentHydration = totalFlour > 0 ? Math.round((totalLiquid / totalFlour) * 100) : 0
 
   // ── Scale helpers ──────────────────────────────────────────────
@@ -233,6 +239,9 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
       liquids: s.liquids.map((x) => ({ ...x, g: rnd(x.g * f) })),
       extras: s.extras.map((x) => (x.unit ? x : { ...x, g: rnd(x.g * f) })),
       yeasts: (s.yeasts || []).map((x) => ({ ...x, g: rnd(x.g * f) })),
+      salts: (s.salts || []).map((x) => ({ ...x, g: rnd(x.g * f) })),
+      sugars: (s.sugars || []).map((x) => ({ ...x, g: rnd(x.g * f) })),
+      fats: (s.fats || []).map((x) => ({ ...x, g: rnd(x.g * f) })),
     }
   }
 
@@ -387,7 +396,10 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
           st.flours.reduce((a, f) => a + f.g, 0) +
           st.liquids.reduce((a, l) => a + l.g, 0) +
           st.extras.reduce((a, e) => a + (e.unit ? 0 : e.g), 0) +
-          (st.yeasts || []).reduce((a, y) => a + y.g, 0),
+          (st.yeasts || []).reduce((a, y) => a + y.g, 0) +
+          (st.salts || []).reduce((a, x) => a + x.g, 0) +
+          (st.sugars || []).reduce((a, x) => a + x.g, 0) +
+          (st.fats || []).reduce((a, x) => a + x.g, 0),
         0,
       )
       if (old <= 0) return { ...p, portioning: np }
@@ -591,7 +603,7 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
   const groupedIngredients = useMemo(() => {
     const g: Record<string, GroupedIngredients> = {}
     for (const grp of ig)
-      g[grp] = { flours: [], liquids: [], extras: [], yeasts: [] }
+      g[grp] = { flours: [], liquids: [], extras: [], yeasts: [], salts: [], sugars: [], fats: [] }
     for (const s of steps) {
       const gr = g[s.group]
       if (!gr) continue
@@ -615,31 +627,24 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
         if (ex) ex.g += y.g
         else gr.yeasts.push({ ...y })
       }
+      for (const sl of s.salts || []) {
+        const ex = gr.salts.find((x) => x.type === sl.type)
+        if (ex) ex.g += sl.g
+        else gr.salts.push({ ...sl })
+      }
+      for (const sg of s.sugars || []) {
+        const ex = gr.sugars.find((x) => x.type === sg.type)
+        if (ex) ex.g += sg.g
+        else gr.sugars.push({ ...sg })
+      }
+      for (const ft of s.fats || []) {
+        const ex = gr.fats.find((x) => x.type === ft.type)
+        if (ex) ex.g += ft.g
+        else gr.fats.push({ ...ft })
+      }
     }
     return g
   }, [steps, ig])
-
-  // ── Yeast data for a rise step ───────────────────────────────
-  function getYeastData(rs: RecipeStep) {
-    const src = rs.sourcePrep ? steps.find((s) => s.id === rs.sourcePrep) : null
-    const ys = src ? src.yeasts || [] : []
-    if (!ys.length)
-      return { fe: 0, sf: 1, fl: totalFlour, bp: blendFlourProperties(src ? src.flours : [], FLOUR_CATALOG as unknown as import('@commons/types/recipe').FlourCatalogEntry[]) }
-    let fe = 0
-    let ws = 0
-    for (const y of ys) {
-      const yt = YEAST_TYPES.find((t) => t.key === y.type) || YEAST_TYPES[0]
-      const f = y.g * yt.toFresh
-      fe += f
-      ws += f * yt.speedF
-    }
-    return {
-      fe,
-      sf: fe > 0 ? ws / fe : 1,
-      fl: (src ? src.flours.reduce((a, f) => a + f.g, 0) : totalFlour) || totalFlour,
-      bp: blendFlourProperties(src ? src.flours : [], FLOUR_CATALOG as unknown as import('@commons/types/recipe').FlourCatalogEntry[]),
-    }
-  }
 
   // ── Get FDT for a step ───────────────────────────────────────
   function getFDT(ps: RecipeStep | null): number {
@@ -655,25 +660,10 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
     if (s.type === 'pre_ferment') {
       return s.baseDur + rest
     }
-    if (s.type === 'rise' && s.riseMethod) {
-      // If this rise step's sourcePrep is a pre_ferment, use baseDur directly
-      // (the fermentation time is already set as baseDur, don't recalculate)
-      const srcStep = s.sourcePrep ? steps.find((st) => st.id === s.sourcePrep) : null
-      if (srcStep?.type === 'pre_ferment') {
-        return s.baseDur + rest
-      }
-      const yd = getYeastData(s)
-      const yP = yd.fl > 0 ? (yd.fe / yd.fl) * 100 : 2
-      const src = s.sourcePrep ? steps.find((st) => st.id === s.sourcePrep) ?? null : null
-      return calcRiseDuration(
-        s.baseDur,
-        s.riseMethod,
-        yd.bp,
-        yP,
-        yd.sf,
-        riseTemperatureFactor(getFDT(src), s.riseMethod),
-        RISE_METHODS as unknown as import('@commons/types/recipe').RiseMethod[],
-      ) + rest
+    // Rise steps: use baseDur directly. The user sets the desired duration.
+    // calcRiseDuration is available as a suggestion utility, not an override.
+    if (s.type === 'rise') {
+      return s.baseDur + rest
     }
     if (s.type === 'bake' && s.ovenCfg) {
       const tm = TRAY_MATERIALS.find((m) => m.key === s.ovenCfg!.panType) || TRAY_MATERIALS[0]
@@ -846,6 +836,9 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
     totalLiquid,
     totalExtras,
     totalYeast,
+    totalSalt,
+    totalSugar,
+    totalFat,
     totalDough,
     currentHydration,
     target,

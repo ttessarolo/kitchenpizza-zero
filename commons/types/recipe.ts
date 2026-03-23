@@ -193,6 +193,24 @@ export interface YeastIngredient {
   g: number
 }
 
+export interface SaltIngredient {
+  id: number
+  type: string
+  g: number
+}
+
+export interface SugarIngredient {
+  id: number
+  type: string
+  g: number
+}
+
+export interface FatIngredient {
+  id: number
+  type: string
+  g: number
+}
+
 export interface OvenConfig {
   panType: string
   ovenType: string
@@ -235,6 +253,9 @@ export interface RecipeStep {
   liquids: LiquidIngredient[]
   extras: ExtraIngredient[]
   yeasts: YeastIngredient[]
+  salts: SaltIngredient[]
+  sugars: SugarIngredient[]
+  fats: FatIngredient[]
   riseMethod: string | null
   ovenCfg: OvenConfig | null
   sourcePrep: string | null

@@ -10,14 +10,8 @@ export const LIQUID_PRESETS = [
 ] as const
 
 export const EXTRA_PRESETS = [
-  "Miele di acacia",
-  "Burro morbido",
-  "Zucchero",
-  "Sale",
-  "Olio EVO",
   "Uova intere",
   "Tuorlo d'uovo",
-  "Malto",
   "Semi",
   "Cacao",
   "Inserisci nuovo...",

@@ -11,6 +11,9 @@ import type {
   TemperatureUnit,
   PlanningMode,
   PreFermentConfig,
+  SaltIngredient,
+  SugarIngredient,
+  FatIngredient,
 } from '@commons/types/recipe'
 
 /** Intelligent rounding: >=100 round to int, >=10 round to 0.5, else round to 0.1 */
@@ -116,10 +119,16 @@ export function calcRiseDuration(
   ySF: number,
   tf: number,
   riseMethods: RiseMethod[],
+  saltPct = 2.5,
+  sugarPct = 0,
+  fatPct = 0,
 ): number {
   const rm = riseMethods.find((m) => m.key === method) || riseMethods[0]
   const fnFactor = 300 / Math.max(bp.fallingNumber || 300, 150)
   const fiberFactor = 1 + Math.max(0, ((bp.fiber || 2.5) - 3) * 0.02)
+  const saltFactor = 1 + Math.max(0, (saltPct - 2.5) * 0.1)
+  const sugarFactor = 1 + Math.max(0, (sugarPct - 5) * 0.05)
+  const fatFactor = 1 + Math.max(0, (fatPct - 3) * 0.02)
   return Math.round(
     ((base *
       rm.tf *
@@ -129,7 +138,10 @@ export function calcRiseDuration(
       fnFactor *
       fiberFactor) /
       Math.max(ySF, 0.1)) *
-      (tf || 1),
+      (tf || 1) *
+      saltFactor *
+      sugarFactor *
+      fatFactor,
   )
 }
 
@@ -213,16 +225,49 @@ export function migrateStepDep(dep: { id: string; wait: number; grams?: number }
 export function migrateRecipe(raw: Recipe): Recipe {
   return {
     ...raw,
-    steps: raw.steps.map((s) => ({
-      ...s,
-      deps: s.deps.map(migrateStepDep),
-      subtype: s.subtype ?? null,
-      restDur: s.restDur ?? 0,
-      restTemp: s.restTemp ?? null,
-      shapeCount: s.shapeCount ?? null,
-      preFermentCfg: s.preFermentCfg ?? null,
-      ovenCfg: s.ovenCfg ? { ...s.ovenCfg, shelfPosition: s.ovenCfg.shelfPosition ?? 1 } : null,
-    })),
+    steps: raw.steps.map((s) => {
+      // Migrate salt/sugar from extras to dedicated arrays
+      const saltNames = ['Sale', 'Sale fino', 'Sale marino', 'Sale Maldon']
+      const sugarNames = ['Zucchero', 'Miele', 'Miele di acacia', 'Malto', 'Malto diastatico']
+      const fatNames = ['Olio', 'Burro', 'Strutto', 'Margarina']
+      const migratedSalts = (s.extras || [])
+        .filter(e => saltNames.some(n => e.name.toLowerCase().includes(n.toLowerCase())))
+        .map((e, i) => ({ id: i, type: 'sale_fino', g: e.g }))
+      const migratedSugars = (s.extras || [])
+        .filter(e => sugarNames.some(n => e.name.toLowerCase().includes(n.toLowerCase())))
+        .map((e, i) => {
+          const name = e.name.toLowerCase()
+          const type = name.includes('miele') ? 'miele' : name.includes('malto') ? 'malto_d' : 'zucchero'
+          return { id: i, type, g: e.g }
+        })
+      const migratedFats = (s.extras || [])
+        .filter(e => fatNames.some(n => e.name.toLowerCase().includes(n.toLowerCase())))
+        .map((e, i) => {
+          const name = e.name.toLowerCase()
+          const type = name.includes('burro') ? 'burro' : name.includes('strutto') ? 'strutto' : name.includes('margarina') ? 'margarina' : 'olio_evo'
+          return { id: i, type, g: e.g }
+        })
+      const cleanedExtras = (s.extras || []).filter(e =>
+        !saltNames.some(n => e.name.toLowerCase().includes(n.toLowerCase())) &&
+        !sugarNames.some(n => e.name.toLowerCase().includes(n.toLowerCase())) &&
+        !fatNames.some(n => e.name.toLowerCase().includes(n.toLowerCase()))
+      )
+
+      return {
+        ...s,
+        deps: s.deps.map(migrateStepDep),
+        subtype: s.subtype ?? null,
+        restDur: s.restDur ?? 0,
+        restTemp: s.restTemp ?? null,
+        shapeCount: s.shapeCount ?? null,
+        preFermentCfg: s.preFermentCfg ?? null,
+        ovenCfg: s.ovenCfg ? { ...s.ovenCfg, shelfPosition: s.ovenCfg.shelfPosition ?? 1 } : null,
+        salts: s.salts?.length ? s.salts : migratedSalts,
+        sugars: s.sugars?.length ? s.sugars : migratedSugars,
+        fats: s.fats ?? (migratedFats.length ? migratedFats : []),
+        extras: s.salts?.length || s.sugars?.length ? s.extras : cleanedExtras,
+      }
+    }),
   }
 }
 
@@ -371,6 +416,9 @@ export function getStepTotalWeight(step: RecipeStep): number {
     + step.liquids.reduce((a, l) => a + l.g, 0)
     + step.extras.reduce((a, e) => a + (e.unit ? 0 : e.g), 0)
     + (step.yeasts || []).reduce((a, y) => a + y.g, 0)
+    + (step.salts || []).reduce((a, s) => a + s.g, 0)
+    + (step.sugars || []).reduce((a, s) => a + s.g, 0)
+    + (step.fats || []).reduce((a, f) => a + f.g, 0)
 }
 
 /** Create a default step with sensible values */
@@ -391,6 +439,9 @@ export function createDefaultStep(type: string, group: string, id?: string, subt
     liquids: [],
     extras: [],
     yeasts: [],
+    salts: [],
+    sugars: [],
+    fats: [],
     riseMethod: type === 'rise' ? 'room' : null,
     ovenCfg: type === 'bake' ? { panType: 'ci_lid', ovenType: 'electric', ovenMode: 'static', temp: 180, cieloPct: 50, shelfPosition: 1 } : null,
     sourcePrep: null,
@@ -441,6 +492,37 @@ export function removeStepAndFixDeps(stepId: string, steps: RecipeStep[]): Recip
 /** Deep clone a step with a new ID */
 export function cloneStep(step: RecipeStep, newId: string): RecipeStep {
   return JSON.parse(JSON.stringify({ ...step, id: newId }))
+}
+
+// ── Salt & sugar utilities ───────────────────────────────────────
+
+/** Compute suggested salt in grams based on flour weight and hydration */
+export function computeSuggestedSalt(totalFlour: number, hydration: number): number {
+  const basePct = 2.5
+  const adjustment = Math.max(0, (hydration - 60) * 0.01)
+  const pct = Math.min(3.0, Math.max(2.0, basePct + adjustment))
+  return rnd(totalFlour * pct / 100)
+}
+
+/** Get salt percentage relative to flour */
+export function getSaltPct(salts: SaltIngredient[], totalFlour: number): number {
+  if (totalFlour <= 0) return 0
+  const totalSalt = salts.reduce((a, s) => a + s.g, 0)
+  return rnd((totalSalt / totalFlour) * 1000) / 10
+}
+
+/** Get sugar percentage relative to flour */
+export function getSugarPct(sugars: SugarIngredient[], totalFlour: number): number {
+  if (totalFlour <= 0) return 0
+  const totalSugar = sugars.reduce((a, s) => a + s.g, 0)
+  return rnd((totalSugar / totalFlour) * 1000) / 10
+}
+
+/** Get fat percentage relative to flour */
+export function getFatPct(fats: FatIngredient[], totalFlour: number): number {
+  if (totalFlour <= 0) return 0
+  const totalFat = fats.reduce((a, f) => a + f.g, 0)
+  return rnd((totalFat / totalFlour) * 1000) / 10
 }
 
 // ── Pre-ferment utilities ────────────────────────────────────────
