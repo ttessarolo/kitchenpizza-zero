@@ -3,18 +3,18 @@ import type { Recipe } from '@commons/types/recipe'
 /**
  * Pizza Bianca in Teglia alla Romana
  *
- * Tray: 60×40 cm professional pan (2400 cm²)
- * Target weight: ~1300g (coefficient 0.54 × 2400 cm²)
+ * Tray: 40×30 cm pan (1200 cm²)
+ * Target weight: ~648g (coefficient 0.54 × 1200 cm²)
  * Hydration: 80%
  * Flour: 0 forte W 300 (gt_0_for)
  *
  * Calculations:
- *   totalFlour = 1300 / (1 + 0.80 + 0.025 + 0.05 + 0.003 + 0.0015) ≈ 693g
- *   water      = 693 × 0.80  ≈ 555g
- *   salt       = 693 × 0.025 ≈ 17g
- *   oil        = 693 × 0.05  ≈ 35g
- *   malto      = 693 × 0.003 ≈ 2g
- *   yeast      = 693 × 0.0015 ≈ 1g
+ *   totalFlour = 648 / (1 + 0.80 + 0.025 + 0.05 + 0.003 + 0.0015) ≈ 345g
+ *   water      = 345 × 0.80  ≈ 276g
+ *   salt       = 345 × 0.025 ≈ 9g
+ *   oil        = 345 × 0.05  ≈ 17g
+ *   malto      = 345 × 0.003 ≈ 1g
+ *   yeast      = 345 × 0.0015 ≈ 1g
  */
 export const RECIPE_3: Recipe = {
   meta: {
@@ -26,11 +26,11 @@ export const RECIPE_3: Recipe = {
   portioning: {
     mode: "tray",
     tray: {
-      preset: "teglia_60x40",
-      l: 60,
-      w: 40,
-      h: 3,
-      material: "alluminio",
+      preset: "teglia_40x30",
+      l: 40,
+      w: 30,
+      h: 2,
+      material: "alu",
       griglia: false,
       count: 1,
     },
@@ -53,8 +53,8 @@ export const RECIPE_3: Recipe = {
       deps: [],
       kneadMethod: null,
       desc: "Mescola farina e acqua (80% del totale). Lascia riposare coperto 30 minuti.",
-      flours: [{ id: 0, type: "gt_0_for", g: 693, temp: null }],
-      liquids: [{ id: 0, type: "Acqua", g: 444, temp: null }],
+      flours: [{ id: 0, type: "gt_0_for", g: 345, temp: null }],
+      liquids: [{ id: 0, type: "Acqua", g: 222, temp: null }],
       extras: [],
       yeasts: [],
       salts: [],
@@ -80,12 +80,12 @@ export const RECIPE_3: Recipe = {
       kneadMethod: "hand",
       desc: "Aggiungi sale, malto, lievito e impasta. Dopo l'incordatura aggiungi olio e acqua rimanente a filo.",
       flours: [],
-      liquids: [{ id: 0, type: "Acqua", g: 111, temp: null }],
+      liquids: [{ id: 0, type: "Acqua", g: 54, temp: null }],
       extras: [],
       yeasts: [{ id: 0, type: "fresh", g: 1 }],
-      salts: [{ id: 0, type: "sale_fino", g: 17 }],
-      sugars: [{ id: 0, type: "malto_d", g: 2 }],
-      fats: [{ id: 0, type: "olio_evo", g: 35 }],
+      salts: [{ id: 0, type: "sale_fino", g: 9 }],
+      sugars: [{ id: 0, type: "malto_d", g: 1 }],
+      fats: [{ id: 0, type: "olio_evo", g: 17 }],
       riseMethod: null,
       ovenCfg: null,
       sourcePrep: null,
@@ -213,9 +213,9 @@ export const RECIPE_3: Recipe = {
       liquids: [],
       extras: [],
       yeasts: [],
-      salts: [{ id: 0, type: "sale_maldon", g: 3 }],
+      salts: [{ id: 0, type: "sale_maldon", g: 2 }],
       sugars: [],
-      fats: [{ id: 0, type: "olio_evo", g: 15 }],
+      fats: [{ id: 0, type: "olio_evo", g: 8 }],
       riseMethod: null,
       ovenCfg: null,
       sourcePrep: null,
@@ -244,7 +244,7 @@ export const RECIPE_3: Recipe = {
       fats: [],
       riseMethod: null,
       ovenCfg: {
-        panType: "alluminio",
+        panType: "alu",
         ovenType: "electric",
         ovenMode: "static",
         temp: 250,

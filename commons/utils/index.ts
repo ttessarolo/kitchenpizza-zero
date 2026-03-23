@@ -14,3 +14,10 @@ export {
   relativeDate,
   thicknessLabel,
 } from './recipe'
+
+export {
+  getBakingProfile,
+  calcBakeDuration,
+  getBakingWarnings,
+  type BakingWarning,
+} from './baking'

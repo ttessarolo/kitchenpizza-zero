@@ -39,6 +39,7 @@ import {
   TRAY_MATERIALS,
   KNEAD_METHODS,
 } from '@/local_data'
+import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
 
 // ── Grouped ingredients type ──────────────────────────────────────
 export interface GroupedIngredients {
@@ -666,6 +667,11 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
       return s.baseDur + rest
     }
     if (s.type === 'bake' && s.ovenCfg) {
+      const profile = getBakingProfile(recipe.meta.type, recipe.meta.subtype)
+      if (profile) {
+        return calcBakeDuration(profile, s.ovenCfg, po.thickness) + rest
+      }
+      // Fallback: legacy formula if no profile found
       const tm = TRAY_MATERIALS.find((m) => m.key === s.ovenCfg!.panType) || TRAY_MATERIALS[0]
       return Math.max(
         10,
@@ -679,7 +685,7 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
   const stepsWithDuration = useMemo(
     () => steps.map((s) => ({ ...s, dur: getStepDuration(s) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [steps, ambientTemp],
+    [steps, ambientTemp, recipe.meta.type, recipe.meta.subtype, po.thickness],
   )
 
   // ── Total span ───────────────────────────────────────────────

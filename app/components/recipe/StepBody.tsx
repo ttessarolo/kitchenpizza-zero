@@ -16,6 +16,7 @@ import { IngredientBox } from './IngredientBox'
 import { MiniSelect, LiquidSelector, ExtraSelector, SaltSelector, SugarSelector, FatSelector, AddButton } from './shared'
 import { useRecipe } from './RecipeContext'
 import { DepEditor } from './DepEditor'
+import { BakingAdvisory } from './BakingAdvisory'
 
 interface StepBodyProps {
   step: RecipeStep
@@ -974,6 +975,8 @@ export function StepBody({ step: s }: StepBodyProps) {
           }
           stepDur={sDur(s)}
           baseDur={s.baseDur}
+          recipeType={recipe.meta.type}
+          recipeSubtype={recipe.meta.subtype}
         />
       )}
 
@@ -1147,9 +1150,11 @@ interface OvenEditorProps {
   onChange: (field: string, value: unknown) => void
   stepDur: number
   baseDur: number
+  recipeType: string
+  recipeSubtype: string | null
 }
 
-function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd }: OvenEditorProps) {
+function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd, recipeType, recipeSubtype }: OvenEditorProps) {
   const ms = MODE_MAP[cfg.ovenType] || ['static']
   const pp = 100 - cfg.cieloPct
 
@@ -1253,6 +1258,16 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
             </svg>
           </button>
         </div>
+        {(() => {
+          const plateaOff = Math.round((pp - 50) * 1.5)
+          const cieloOff = Math.round((pp - 50) * 0.5)
+          return (
+            <div className="text-[10px] text-muted-foreground mt-0.5 flex justify-between px-0.5">
+              <span>Cielo ~{dT(cfg.temp - cieloOff)}</span>
+              <span>Platea ~{dT(cfg.temp + plateaOff)}</span>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Shelf position */}
@@ -1276,6 +1291,14 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
           Cottura: <b>{fmtDuration(sd)}</b> (base: {fmtDuration(bd)})
         </div>
       )}
+
+      <BakingAdvisory
+        ovenCfg={cfg}
+        recipeType={recipeType}
+        recipeSubtype={recipeSubtype}
+        calculatedDur={sd}
+        baseDur={bd}
+      />
     </div>
   )
 }

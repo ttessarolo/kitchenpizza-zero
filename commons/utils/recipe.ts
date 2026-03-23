@@ -468,25 +468,86 @@ export function createDefaultStatus(ambientTemp = 24, temperatureUnit: Temperatu
   }
 }
 
-/** Remove a step and reconnect its children to its parents */
+/** Merge source step's ingredients into target, scaled by factor */
+function mergeStepIngredients(
+  target: RecipeStep,
+  source: RecipeStep,
+  factor: number,
+): RecipeStep {
+  return {
+    ...target,
+    flours: mergeIngArray(target.flours, source.flours, factor),
+    liquids: mergeIngArray(target.liquids, source.liquids, factor),
+    extras: mergeIngArray(target.extras, source.extras, factor),
+    yeasts: mergeIngArray(target.yeasts ?? [], source.yeasts ?? [], factor),
+    salts: mergeIngArray(target.salts ?? [], source.salts ?? [], factor),
+    sugars: mergeIngArray(target.sugars ?? [], source.sugars ?? [], factor),
+    fats: mergeIngArray(target.fats ?? [], source.fats ?? [], factor),
+  }
+}
+
+function mergeIngArray<T extends { type: string; g: number }>(
+  target: T[],
+  source: T[],
+  factor: number,
+): T[] {
+  const result = target.map((t) => ({ ...t }))
+  for (const s of source) {
+    const scaled = Math.round(s.g * factor)
+    if (scaled <= 0) continue
+    const existing = result.find((r) => r.type === s.type)
+    if (existing) {
+      existing.g += scaled
+    } else {
+      result.push({ ...s, g: scaled })
+    }
+  }
+  return result
+}
+
+/** Remove a step, transfer its ingredients to children, and reconnect deps */
 export function removeStepAndFixDeps(stepId: string, steps: RecipeStep[]): RecipeStep[] {
   const removed = steps.find((s) => s.id === stepId)
   if (!removed) return steps
 
   const parentDeps = removed.deps
+  const childIds = new Set(
+    steps.filter((s) => s.deps.some((d) => d.id === stepId)).map((s) => s.id),
+  )
 
   return steps
     .filter((s) => s.id !== stepId)
-    .map((s) => ({
-      ...s,
-      deps: s.deps.some((d) => d.id === stepId)
-        ? [
-            ...s.deps.filter((d) => d.id !== stepId),
-            ...parentDeps.filter((pd) => !s.deps.some((d) => d.id === pd.id)),
-          ]
-        : s.deps,
-      sourcePrep: s.sourcePrep === stepId ? null : s.sourcePrep,
-    }))
+    .map((s) => {
+      if (!childIds.has(s.id)) {
+        return {
+          ...s,
+          sourcePrep: s.sourcePrep === stepId ? null : s.sourcePrep,
+        }
+      }
+
+      // This step depended on the deleted step
+      const depOnRemoved = s.deps.find((d) => d.id === stepId)!
+      const gramsFactor = depOnRemoved.grams
+
+      // Reconnect deps: compose grams through the deleted step
+      const newDeps = [
+        ...s.deps.filter((d) => d.id !== stepId),
+        ...parentDeps
+          .filter((pd) => !s.deps.some((d) => d.id === pd.id))
+          .map((pd) => ({ ...pd, grams: pd.grams * gramsFactor })),
+      ]
+
+      // Merge deleted step's ingredients into this child
+      const merged = mergeStepIngredients(s, removed, gramsFactor)
+
+      return {
+        ...merged,
+        deps: newDeps,
+        sourcePrep: s.sourcePrep === stepId
+          ? (parentDeps.length === 1 ? parentDeps[0].id : null)
+          : s.sourcePrep,
+      }
+    })
 }
 
 /** Deep clone a step with a new ID */
