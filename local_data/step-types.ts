@@ -58,7 +58,50 @@ export const STEP_TYPES: StepTypeEntry[] = [
     ],
   },
   { key: "bake", label: "Cottura", icon: "🔥" },
+  {
+    key: "post_bake",
+    label: "Post-Cottura",
+    icon: "🍽️",
+    subtypes: [
+      { key: "garnish", label: "Guarnizione", defaults: { baseDur: 5 } },
+      { key: "fill", label: "Farcitura", defaults: { baseDur: 10 } },
+      { key: "glaze", label: "Glassatura", defaults: { baseDur: 5 } },
+      { key: "dress", label: "Condimento", defaults: { baseDur: 3 } },
+      { key: "dust", label: "Spolverata", defaults: { baseDur: 2 } },
+      { key: "plate", label: "Impiattamento", defaults: { baseDur: 5 } },
+      { key: "generic", label: "Generico", defaults: {} },
+    ],
+  },
   { key: "done", label: "Pronto!", icon: "🎉" },
+  {
+    key: "prep",
+    label: "Preparazione",
+    icon: "🔪",
+    subtypes: [
+      { key: "cut", label: "Taglio", defaults: { baseDur: 10 } },
+      { key: "cook", label: "Cottura", defaults: { baseDur: 15 } },
+      { key: "mix", label: "Miscelazione", defaults: { baseDur: 5 } },
+      { key: "marinate", label: "Marinatura", defaults: { baseDur: 120 } },
+      { key: "ferment", label: "Fermentazione", defaults: { baseDur: 4320 } },
+      { key: "cool", label: "Raffreddamento", defaults: { baseDur: 30 } },
+      { key: "assemble", label: "Assemblaggio", defaults: { baseDur: 10 } },
+    ],
+  },
+  { key: "split", label: "Divisione", icon: "✂️" },
+  {
+    key: "join",
+    label: "Mix",
+    icon: "🔗",
+    subtypes: [
+      { key: "braid", label: "Intreccio", defaults: { baseDur: 10 } },
+      { key: "layer", label: "Sovrapposizione", defaults: { baseDur: 5 } },
+      { key: "fold", label: "Piega", defaults: { baseDur: 5 } },
+      { key: "enclose", label: "Avvolgimento", defaults: { baseDur: 10 } },
+      { key: "mix", label: "Rimescolamento", defaults: { baseDur: 5 } },
+      { key: "side_by_side", label: "Affiancamento", defaults: { baseDur: 3 } },
+      { key: "generic", label: "Generico", defaults: {} },
+    ],
+  },
 ]
 
 export const COLOR_MAP: Record<string, ColorMapEntry> = {
@@ -71,4 +114,8 @@ export const COLOR_MAP: Record<string, ColorMapEntry> = {
   pre_bake: { bg: "#fef5ee", tx: "#9a7040", lb: "Pre-Cott." },
   bake: { bg: "#fdeee8", tx: "#8a4a30", lb: "Cottura" },
   done: { bg: "#eaf5ea", tx: "#3a7a3a", lb: "Pronto!" },
+  post_bake: { bg: "#f5eef0", tx: "#8a4060", lb: "Post-Cott." },
+  prep: { bg: "#edf7ed", tx: "#2e6e2e", lb: "Prepar." },
+  split: { bg: "#f0e8f5", tx: "#7040a0", lb: "Divis." },
+  join: { bg: "#f0e8f5", tx: "#7040a0", lb: "Mix" },
 }

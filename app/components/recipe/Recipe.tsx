@@ -1,108 +1,56 @@
-import { useRecipeCalculator } from '~/hooks/useRecipeCalculator'
+import { useEffect } from 'react'
+import { ReactFlowProvider } from '@xyflow/react'
 import { DEFAULT_RECIPE } from '@/local_data'
-import type { Recipe as RecipeType } from '@commons/types/recipe'
-import { RecipeProvider } from './RecipeContext'
+import type { Recipe as RecipeV1Type } from '@commons/types/recipe'
+import type { RecipeV2 } from '@commons/types/recipe-graph'
+import { ensureRecipeV2 } from '@commons/utils/recipe-migration'
+import { autoLayout } from '~/lib/auto-layout'
+import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { RecipeHeader } from './RecipeHeader'
-import { RecipeTypeSelector } from './RecipeTypeSelector'
-import { PortioningSection } from './PortioningSection'
-import { IngredientsOverview } from './IngredientsOverview'
-import { TimeSummary } from './TimeSummary'
-import { ScheduleEditor } from './ScheduleEditor'
-import { StepsList } from './StepsList'
+import { RecipeFlowCanvas } from '~/components/recipe-flow/RecipeFlowCanvas'
+import { RecipeToolbar } from '~/components/recipe-flow/RecipeToolbar'
+import { NodeDetailPanel } from '~/components/recipe-flow/NodeDetailPanel'
 
 interface RecipeProps {
-  initialRecipe?: RecipeType
+  initialRecipe?: RecipeV1Type | RecipeV2
 }
 
 export function Recipe({ initialRecipe = DEFAULT_RECIPE }: RecipeProps) {
-  const calc = useRecipeCalculator(initialRecipe)
+  const loadRecipe = useRecipeFlowStore((s) => s.loadRecipe)
+  const meta = useRecipeFlowStore((s) => s.meta)
+  const setMeta = useRecipeFlowStore((s) => s.setMeta)
+
+  useEffect(() => {
+    const v2 = ensureRecipeV2(initialRecipe as RecipeV1Type)
+    // Auto-layout if positions are all (0,0)
+    const needsLayout = v2.graph.nodes.every((n) => n.position.x === 0 && n.position.y === 0)
+    const recipe = needsLayout ? { ...v2, graph: autoLayout(v2.graph) } : v2
+    loadRecipe(recipe)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
-    <RecipeProvider calc={calc}>
-      <div className="min-h-screen bg-background text-foreground font-display">
-        {/* Header */}
+    <ReactFlowProvider>
+      <div className="h-screen flex flex-col bg-background text-foreground font-display">
+        {/* Compact header */}
         <RecipeHeader
-          meta={calc.recipe.meta}
-          onNameChange={(name) =>
-            calc.setRecipe((p) => ({ ...p, meta: { ...p.meta, name } }))
-          }
-          onAuthorChange={(author) =>
-            calc.setRecipe((p) => ({ ...p, meta: { ...p.meta, author } }))
-          }
+          meta={meta}
+          onNameChange={(name) => setMeta((m) => ({ ...m, name }))}
+          onAuthorChange={(author) => setMeta((m) => ({ ...m, author }))}
         />
 
-        <div className="max-w-xl mx-auto px-4 pb-12">
-          {/* Type selector */}
-          <RecipeTypeSelector
-            meta={calc.recipe.meta}
-            currentSubtypes={calc.currentSubtypes}
-            onTypeChange={(typeKey, subtypeKey) => {
-              calc.setRecipe((p) => ({
-                ...p,
-                meta: { ...p.meta, type: typeKey, subtype: subtypeKey },
-              }))
-              if (subtypeKey) calc.applyDefaults(typeKey, subtypeKey)
-            }}
-            onSubtypeChange={(subtypeKey) => {
-              calc.setRecipe((p) => ({
-                ...p,
-                meta: { ...p.meta, subtype: subtypeKey },
-              }))
-              calc.applyDefaults(calc.recipe.meta.type, subtypeKey)
-            }}
-          />
-
-          {/* Portioning */}
-          <PortioningSection
-            portioning={calc.recipe.portioning}
-            totalDough={calc.totalDough}
-            totalFlour={calc.totalFlour}
-            totalLiquid={calc.totalLiquid}
-            currentHydration={calc.currentHydration}
-            trayTotalDough={calc.trayTotalDough}
-            onPortioningChange={calc.handlePortioningChange}
-            onUpdatePortioning={calc.updatePortioning}
-            onScaleAll={calc.scaleAll}
-            onSetHydration={calc.setHydration}
-          />
-
-          {/* Ingredients overview */}
-          <IngredientsOverview
-            ingredientGroups={calc.recipe.ingredientGroups}
-            groupedIngredients={calc.groupedIngredients}
-          />
-
-          {/* Time summary */}
-          <TimeSummary timeSummary={calc.timeSummary} />
-
-          {/* Schedule editor */}
-          <ScheduleEditor
-            planningMode={calc.planningMode}
-            forwardHour={calc.forwardHour}
-            forwardMinute={calc.forwardMinute}
-            backwardDay={calc.backwardDay}
-            backwardHour={calc.backwardHour}
-            backwardMinute={calc.backwardMinute}
-            startTime={calc.startTime}
-            endTime={calc.endTime}
-            onPlanningModeChange={calc.setPlanningMode}
-            onForwardHourChange={calc.setForwardHour}
-            onForwardMinuteChange={calc.setForwardMinute}
-            onBackwardDayChange={calc.setBackwardDay}
-            onBackwardHourChange={calc.setBackwardHour}
-            onBackwardMinuteChange={calc.setBackwardMinute}
-            onNow={calc.handleNow}
-          />
-
-          {/* Steps list */}
-          <StepsList />
-
-          {/* Footer */}
-          <div className="mt-5 text-center text-[11px] text-[#b8a08a]">
-            {calc.recipe.meta.author}
+        {/* Main area: canvas + toolbar */}
+        <div className="flex-1 flex overflow-hidden relative">
+          {/* React Flow canvas */}
+          <div className="flex-1 relative">
+            <RecipeFlowCanvas />
+            <NodeDetailPanel />
           </div>
+
+          {/* Right sidebar toolbar */}
+          <RecipeToolbar />
         </div>
       </div>
-    </RecipeProvider>
+    </ReactFlowProvider>
   )
 }

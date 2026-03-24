@@ -9,15 +9,17 @@ import type { FlourCatalogEntry } from '@commons/types/recipe'
 interface IngredientsOverviewProps {
   ingredientGroups: string[]
   groupedIngredients: Record<string, GroupedIngredients>
+  hideHeader?: boolean
 }
 
 export function IngredientsOverview({
   ingredientGroups,
   groupedIngredients,
+  hideHeader,
 }: IngredientsOverviewProps) {
   return (
-    <section className="mt-3.5">
-      <SectionHeader emoji="🧈" title="Ingredienti" />
+    <section className={hideHeader ? '' : 'mt-3.5'}>
+      {!hideHeader && <SectionHeader emoji="🧈" title="Ingredienti" />}
       {ingredientGroups.map((g) => {
         const grp = groupedIngredients[g]
         if (

@@ -15,6 +15,7 @@ interface PortioningSectionProps {
   onUpdatePortioning: (fn: (p: Portioning) => Portioning) => void
   onScaleAll: (n: number) => void
   onSetHydration: (h: number) => void
+  hideHeader?: boolean
 }
 
 function PlusMinusButton({ onClick, label }: { onClick: () => void; label: string }) {
@@ -72,10 +73,11 @@ export function PortioningSection({
   onUpdatePortioning,
   onScaleAll,
   onSetHydration,
+  hideHeader,
 }: PortioningSectionProps) {
   return (
-    <section className="mt-3.5">
-      <SectionHeader emoji="📐" title="Porzionatura" />
+    <section className={hideHeader ? '' : 'mt-3.5'}>
+      {!hideHeader && <SectionHeader emoji="📐" title="Porzionatura" />}
       <Card className="p-3">
         {/* Mode toggle */}
         <div className="flex rounded-[7px] overflow-hidden border-[1.5px] border-border mb-2.5">

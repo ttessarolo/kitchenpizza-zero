@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { Card } from '~/components/ui/card'
-import { celsiusToFahrenheit, fahrenheitToCelsius } from '@commons/utils/recipe'
 import { STEP_TYPES } from '@/local_data'
 import { useRecipe } from './RecipeContext'
 import { StepCard } from './StepCard'
@@ -33,20 +31,12 @@ import type { ScheduledStep } from '@commons/types/recipe'
 function SortableStepCard({
   step,
   isOpen,
-  isDone,
-  isCurrent,
   onToggle,
-  onDone,
-  onUndone,
   disabled,
 }: {
   step: ScheduledStep
   isOpen: boolean
-  isDone: boolean
-  isCurrent: boolean
   onToggle: () => void
-  onDone: () => void
-  onUndone: () => void
   disabled: boolean
 }) {
   const {
@@ -71,11 +61,7 @@ function SortableStepCard({
       <StepCard
         step={step}
         isOpen={isOpen}
-        isDone={isDone}
-        isCurrent={isCurrent}
         onToggle={onToggle}
-        onDone={onDone}
-        onUndone={onUndone}
         dragHandleProps={disabled ? undefined : { ...attributes, ...listeners }}
       />
     </div>
@@ -88,19 +74,6 @@ export function StepsList() {
     schedule,
     openSteps,
     toggleStep,
-    doneMap,
-    nextUndoneStep,
-    started,
-    temperatureUnit: tu,
-    ambientTemp: at,
-    setAmbientTemp,
-    setTemperatureUnit,
-    handleStart,
-    handleDone,
-    handleUndone,
-    clearStatus,
-    editMode,
-    setEditMode,
     addStep,
     reorderSteps,
     recipe,
@@ -133,65 +106,6 @@ export function StepsList() {
 
   return (
     <section className="mt-3.5">
-      {/* Ambient temp + start/edit buttons */}
-      <Card className="p-3 mb-2 border-2 border-green-500">
-        <div className="flex items-center justify-between gap-1.5">
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-muted-foreground">🌡️</span>
-            <div className="flex flex-col items-start">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[1px] mb-0.5">Temperatura Ambiente</span>
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  value={tu === 'F' ? celsiusToFahrenheit(at) : at}
-                  step={0.1}
-                  onChange={(e) =>
-                    setAmbientTemp(tu === 'F' ? fahrenheitToCelsius(+e.target.value) : +e.target.value)
-                  }
-                  className="w-[44px] text-xs font-bold bg-background border-[1.5px] border-border rounded-[5px] px-1 py-0.5 outline-none text-center min-h-8"
-                />
-                <span className="text-xs text-muted-foreground">
-                  {tu === 'F' ? '°F' : '°C'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setTemperatureUnit(tu === 'C' ? 'F' : 'C')}
-                  className="text-xs text-[#a08060] bg-transparent border border-border rounded px-1 py-px cursor-pointer"
-                >
-                  {tu === 'C' ? '°F' : '°C'}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {!started && (
-              <button
-                type="button"
-                onClick={() => setEditMode(!editMode)}
-                className={`text-xs border-none rounded-lg px-2.5 py-1.5 cursor-pointer min-h-9 ${
-                  editMode
-                    ? 'bg-blue-100 text-blue-700 font-semibold'
-                    : 'bg-[#e8e2da] text-[#8a7a66]'
-                }`}
-              >
-                {editMode ? 'Modifica' : 'Visualizza'}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={started ? clearStatus : handleStart}
-              className={`text-xs font-bold border-none rounded-lg px-3 py-1.5 cursor-pointer min-h-9 ${
-                started
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-green-600 text-white'
-              }`}
-            >
-              {started ? '⟳ Riparti' : '🚀 Inizia!'}
-            </button>
-          </div>
-        </div>
-      </Card>
-
       {/* Steps timeline with drag & drop */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={stepIds} strategy={verticalListSortingStrategy}>
@@ -201,12 +115,8 @@ export function StepsList() {
                 key={s.id}
                 step={s}
                 isOpen={openSteps.has(s.id)}
-                isDone={!!doneMap[s.id]}
-                isCurrent={s.id === nextUndoneStep}
                 onToggle={() => toggleStep(s.id)}
-                onDone={() => handleDone(s.id)}
-                onUndone={() => handleUndone(s.id)}
-                disabled={!editMode || s.type === 'done'}
+                disabled={s.type === 'done'}
               />
             ))}
           </div>
@@ -214,7 +124,7 @@ export function StepsList() {
       </DndContext>
 
       {/* Add step button */}
-      {editMode && insertAfterId && (
+      {insertAfterId && (
         <button
           type="button"
           onClick={() => setAddStepOpen(true)}

@@ -6,12 +6,13 @@ import type { TimeSummary as TimeSummaryType } from '@commons/types/recipe'
 
 interface TimeSummaryProps {
   timeSummary: TimeSummaryType
+  hideHeader?: boolean
 }
 
-export function TimeSummary({ timeSummary }: TimeSummaryProps) {
+export function TimeSummary({ timeSummary, hideHeader }: TimeSummaryProps) {
   return (
-    <section className="mt-3.5">
-      <SectionHeader emoji="⏱️" title="Tempi" />
+    <section className={hideHeader ? '' : 'mt-3.5'}>
+      {!hideHeader && <SectionHeader emoji="⏱️" title="Tempi" />}
       <Card className="p-3">
         <div className="grid grid-cols-2 gap-1.5">
           <MetricBox label="Totale" value={fmtDuration(timeSummary.total)} color="#2c1810" />

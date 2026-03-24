@@ -36,7 +36,7 @@ native/android/
 # TanStack Router
 routeTree.gen.ts
 
-# Sentry
+# Sentryz
 .sentryclirc
 
 # Turbo

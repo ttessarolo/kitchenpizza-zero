@@ -38,6 +38,15 @@ function MainHome() {
               Pizza Bianca in Teglia alla Romana
             </Link>
           </li>
+          <li>
+            <Link
+              to="/main/recipe/$id"
+              params={{ id: '4' }}
+              className="text-primary underline hover:opacity-80"
+            >
+              Treccia Bicolore Pomodoro e Basilico
+            </Link>
+          </li>
         </ul>
       </div>
     </div>

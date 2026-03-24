@@ -16,41 +16,26 @@ import {
 interface StepCardProps {
   step: ScheduledStep
   isOpen: boolean
-  isDone: boolean
-  isCurrent: boolean
   onToggle: () => void
-  onDone: () => void
-  onUndone: () => void
   dragHandleProps?: Record<string, unknown>
 }
 
 export function StepCard({
   step: s,
   isOpen,
-  isDone,
-  isCurrent,
   onToggle,
-  onDone,
-  onUndone,
   dragHandleProps,
 }: StepCardProps) {
-  const { editMode, deleteStep, duplicateStepAction } = useRecipe()
+  const { deleteStep, duplicateStepAction } = useRecipe()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const cm = COLOR_MAP[s.type] || COLOR_MAP.dough
 
   // Done step card for "done" type
   if (s.type === 'done') {
-    const allDone = isDone
     return (
-      <div
-        className={`rounded-xl p-3 text-center ${
-          allDone
-            ? 'bg-gradient-to-br from-[#eaf5ea] to-[#d8f0d8] border-2 border-[#5aaa5a]'
-            : 'bg-white border border-primary/10'
-        }`}
-      >
+      <div className="rounded-xl p-3 text-center bg-white border border-primary/10">
         <div className="text-[26px]">{'🎉'}</div>
-        <div className="text-sm font-bold">{allDone ? 'Buon Appetito!' : 'Fine'}</div>
+        <div className="text-sm font-bold">Fine</div>
         <div className="text-xl font-bold font-display mt-0.5">{fmtTime(s.start)}</div>
       </div>
     )
@@ -59,14 +44,10 @@ export function StepCard({
   return (
     <>
       <div
-        className={`rounded-[11px] overflow-hidden ${
-          isDone ? 'bg-[#f8f5f1] opacity-50' : 'bg-white'
-        } ${
-          isCurrent
-            ? 'border-2 border-primary shadow-[0_2px_10px_rgba(212,165,116,.15)]'
-            : isOpen
-              ? 'border-[1.5px] border-primary'
-              : 'border border-primary/10'
+        className={`rounded-[11px] overflow-hidden bg-white ${
+          isOpen
+            ? 'border-[1.5px] border-primary'
+            : 'border border-primary/10'
         }`}
       >
         {/* Header row */}
@@ -82,12 +63,12 @@ export function StepCard({
           )}
           {/* Time badge */}
           <div
-            className={`min-w-[44px] px-1.5 py-0.5 rounded-md text-center shrink-0 ${isCurrent ? 'bg-primary' : ''}`}
-            style={isCurrent ? undefined : { background: cm.bg }}
+            className="min-w-[44px] px-1.5 py-0.5 rounded-md text-center shrink-0"
+            style={{ background: cm.bg }}
           >
             <div
-              className={`text-sm font-bold ${isDone ? 'line-through' : ''}`}
-              style={{ color: isCurrent ? '#fff' : cm.tx }}
+              className="text-sm font-bold"
+              style={{ color: cm.tx }}
             >
               {fmtTime(s.start)}
             </div>
@@ -95,11 +76,7 @@ export function StepCard({
 
           {/* Title */}
           <div onClick={onToggle} className="flex-1 cursor-pointer">
-            <div
-              className={`text-sm font-semibold ${
-                isDone ? 'text-[#a09888] line-through' : 'text-foreground'
-              }`}
-            >
+            <div className="text-sm font-semibold text-foreground">
               {STEP_TYPES.find((t) => t.key === s.type)?.icon} {s.title}
             </div>
             <div className="text-xs text-[#b8a08a] mt-px">
@@ -107,50 +84,25 @@ export function StepCard({
             </div>
           </div>
 
-          {/* CRUD buttons (edit mode only) */}
-          {editMode && (
-            <div className="flex items-center gap-0.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => duplicateStepAction(s.id)}
-                className="w-7 h-7 rounded-md border-none bg-[#f0e8df] text-[#8a7a66] text-xs cursor-pointer flex items-center justify-center"
-                title="Duplica"
-              >
-                ⧉
-              </button>
-              <button
-                type="button"
-                onClick={() => setDeleteOpen(true)}
-                className="w-7 h-7 rounded-md border-none bg-[#fde8e8] text-[#c45a3a] text-xs cursor-pointer flex items-center justify-center"
-                title="Elimina"
-              >
-                ✕
-              </button>
-            </div>
-          )}
-
-          {/* Done/Undo button */}
-          {isDone ? (
+          {/* CRUD buttons */}
+          <div className="flex items-center gap-0.5 shrink-0">
             <button
               type="button"
-              onClick={onUndone}
-              className="bg-[#e8e2da] border-none rounded-md px-2 py-1 text-[11px] text-[#8a7a66] cursor-pointer shrink-0 min-h-8"
+              onClick={() => duplicateStepAction(s.id)}
+              className="w-7 h-7 rounded-md border-none bg-[#f0e8df] text-[#8a7a66] text-xs cursor-pointer flex items-center justify-center"
+              title="Duplica"
             >
-              Annulla
+              ⧉
             </button>
-          ) : (
             <button
               type="button"
-              onClick={onDone}
-              className={`border-none rounded-md px-2 py-1 text-[11px] font-semibold cursor-pointer shrink-0 min-h-8 ${
-                isCurrent
-                  ? 'bg-gradient-to-br from-primary to-[#c4956a] text-primary-foreground'
-                  : 'bg-[#f0e8df] text-[#c4b8a8] opacity-60'
-              }`}
+              onClick={() => setDeleteOpen(true)}
+              className="w-7 h-7 rounded-md border-none bg-[#fde8e8] text-[#c45a3a] text-xs cursor-pointer flex items-center justify-center"
+              title="Elimina"
             >
-              Fatto {'✓'}
+              ✕
             </button>
-          )}
+          </div>
 
           {/* Chevron */}
           <span

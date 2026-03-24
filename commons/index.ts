@@ -42,6 +42,25 @@ export type {
   RecipeStatus,
 } from './types/recipe'
 
+// Graph types (v2)
+export type {
+  NodeTypeKey,
+  CookMethod,
+  CutStyle,
+  ApplicationMethod,
+  ApplicationTiming,
+  JoinMethod,
+  SplitOutput,
+  NodeData,
+  RecipeNode,
+  RecipeEdgeData,
+  RecipeEdge,
+  LaneDefinition,
+  RecipeGraph,
+  RecipeV2,
+  ScheduledNode,
+} from './types/recipe-graph'
+
 // Store
 export type { AppState } from './store/types'
 export type { UiSlice } from './store/slices/ui'
