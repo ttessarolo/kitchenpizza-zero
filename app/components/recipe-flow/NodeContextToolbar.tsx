@@ -7,8 +7,13 @@ export function NodeContextToolbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const selectedNodeId = useRecipeFlowStore((s) => s.expandedNodeId)
   const addNode = useRecipeFlowStore((s) => s.addNode)
+  const addRootNode = useRecipeFlowStore((s) => s.addRootNode)
   const removeNode = useRecipeFlowStore((s) => s.removeNode)
   const runAutoLayout = useRecipeFlowStore((s) => s.runAutoLayout)
+  const graphEmpty = useRecipeFlowStore((s) => s.graph.nodes.length === 0)
+
+  // Hide when graph is empty — user should use "Genera Impasto" from toolbar
+  if (graphEmpty) return null
 
   return (
     <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
@@ -28,13 +33,18 @@ export function NodeContextToolbar() {
                 <button
                   type="button"
                   onClick={() => {
+                    const sub = t.subtypes?.[0]?.key ?? null
                     if (selectedNodeId) {
-                      addNode(selectedNodeId, t.key as NodeTypeKey, t.subtypes?.[0]?.key ?? null)
+                      addNode(selectedNodeId, t.key as NodeTypeKey, sub)
                     } else {
-                      // Add after last non-done node
                       const graph = useRecipeFlowStore.getState().graph
                       const lastNonDone = [...graph.nodes].reverse().find((n) => n.type !== 'done')
-                      if (lastNonDone) addNode(lastNonDone.id, t.key as NodeTypeKey, t.subtypes?.[0]?.key ?? null)
+                      if (lastNonDone) {
+                        addNode(lastNonDone.id, t.key as NodeTypeKey, sub)
+                      } else {
+                        // Empty graph or only "done" → add as root node
+                        addRootNode(t.key as NodeTypeKey, sub)
+                      }
                     }
                     setMenuOpen(false)
                   }}
@@ -52,7 +62,11 @@ export function NodeContextToolbar() {
                         onClick={() => {
                           const graph = useRecipeFlowStore.getState().graph
                           const target = selectedNodeId || [...graph.nodes].reverse().find((n) => n.type !== 'done')?.id
-                          if (target) addNode(target, t.key as NodeTypeKey, s.key)
+                          if (target) {
+                            addNode(target, t.key as NodeTypeKey, s.key)
+                          } else {
+                            addRootNode(t.key as NodeTypeKey, s.key)
+                          }
                           setMenuOpen(false)
                         }}
                         className="w-full text-left px-2 py-1 text-[11px] text-muted-foreground hover:bg-[#faf8f5]"

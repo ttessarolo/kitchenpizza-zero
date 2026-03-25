@@ -16,6 +16,7 @@ interface PortioningSectionProps {
   onScaleAll: (n: number) => void
   onSetHydration: (h: number) => void
   hideHeader?: boolean
+  hideTotals?: boolean
 }
 
 function PlusMinusButton({ onClick, label }: { onClick: () => void; label: string }) {
@@ -74,6 +75,7 @@ export function PortioningSection({
   onScaleAll,
   onSetHydration,
   hideHeader,
+  hideTotals,
 }: PortioningSectionProps) {
   return (
     <section className={hideHeader ? '' : 'mt-3.5'}>
@@ -101,6 +103,12 @@ export function PortioningSection({
         </div>
 
         {po.mode === 'tray' ? (
+          (() => {
+            const isCustom = !TRAY_PRESETS.some(
+              (p) => p.l === po.tray.l && p.w === po.tray.w && p.h === po.tray.h,
+            )
+            const currentMaterial = TRAY_MATERIALS.find((m) => m.key === po.tray.material)
+            return (
           <div className="flex flex-col gap-2">
             {/* Tray preset */}
             <div>
@@ -108,8 +116,9 @@ export function PortioningSection({
                 Teglia
               </label>
               <select
-                value={po.tray.preset || ''}
+                value={isCustom ? '__custom' : (po.tray.preset || '')}
                 onChange={(e) => {
+                  if (e.target.value === '__custom') return
                   const p = TRAY_PRESETS.find((x) => x.key === e.target.value)
                   if (p)
                     onPortioningChange({
@@ -132,67 +141,97 @@ export function PortioningSection({
                     {p.label}
                   </option>
                 ))}
+                {isCustom && (
+                  <option value="__custom">
+                    Teglia {po.tray.l}×{po.tray.w}×{po.tray.h}
+                  </option>
+                )}
               </select>
             </div>
 
-            {/* Dimensions */}
-            <div className="grid grid-cols-3 gap-1.5">
-              <NumberInput
-                label="L (cm)"
-                value={po.tray.l}
-                onChange={(v) => onPortioningChange({ ...po, tray: { ...po.tray, l: v } })}
-              />
-              <NumberInput
-                label="P (cm)"
-                value={po.tray.w}
-                onChange={(v) => onPortioningChange({ ...po, tray: { ...po.tray, w: v } })}
-              />
-              <NumberInput
-                label="H (cm)"
-                value={po.tray.h}
-                onChange={(v) => onPortioningChange({ ...po, tray: { ...po.tray, h: v } })}
-                step={0.5}
-              />
-            </div>
+            {/* Collapsible dimensions + material */}
+            <details className="group">
+              <summary className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-foreground">
+                Dimensioni e materiale ▾
+              </summary>
+              <div className="mt-1.5 flex flex-col gap-2">
+                {/* Dimensions */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  <NumberInput
+                    label="L (cm)"
+                    value={po.tray.l}
+                    onChange={(v) => onPortioningChange({ ...po, tray: { ...po.tray, l: v, preset: '' } })}
+                  />
+                  <NumberInput
+                    label="P (cm)"
+                    value={po.tray.w}
+                    onChange={(v) => onPortioningChange({ ...po, tray: { ...po.tray, w: v, preset: '' } })}
+                  />
+                  <NumberInput
+                    label="H (cm)"
+                    value={po.tray.h}
+                    onChange={(v) => onPortioningChange({ ...po, tray: { ...po.tray, h: v, preset: '' } })}
+                    step={0.5}
+                  />
+                </div>
 
-            {/* Material + griglia */}
-            <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
-              <div>
-                <label className="text-xs text-muted-foreground font-semibold uppercase tracking-[1px]">
-                  Materiale
-                </label>
-                <select
-                  value={po.tray.material}
-                  onChange={(e) =>
-                    onUpdatePortioning((p) => ({
-                      ...p,
-                      tray: { ...p.tray, material: e.target.value },
-                    }))
-                  }
-                  className="w-full text-xs font-medium text-foreground bg-background border-[1.5px] border-border rounded-lg py-1.5 pl-2 pr-7 cursor-pointer outline-none appearance-none min-h-11"
-                >
-                  {TRAY_MATERIALS.map((m) => (
-                    <option key={m.key} value={m.key}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+                {/* Material */}
+                <div>
+                  <label className="text-xs text-muted-foreground font-semibold uppercase tracking-[1px]">
+                    Materiale
+                  </label>
+                  <select
+                    value={po.tray.material}
+                    onChange={(e) =>
+                      onUpdatePortioning((p) => ({
+                        ...p,
+                        tray: { ...p.tray, material: e.target.value },
+                      }))
+                    }
+                    className="w-full text-xs font-medium text-foreground bg-background border-[1.5px] border-border rounded-lg py-1.5 pl-2 pr-7 cursor-pointer outline-none appearance-none min-h-11"
+                  >
+                    {TRAY_MATERIALS.map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Foro di sfiato — only for materials that support it */}
+                {currentMaterial?.hasVent && (
+                  <label className="text-xs text-[#6a5a48] flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={po.tray.griglia || false}
+                      onChange={(e) =>
+                        onUpdatePortioning((p) => ({
+                          ...p,
+                          tray: { ...p.tray, griglia: e.target.checked },
+                        }))
+                      }
+                      className="accent-primary"
+                    />
+                    Foro di sfiato
+                  </label>
+                )}
               </div>
-              <label className="text-xs text-[#6a5a48] flex items-center gap-1 cursor-pointer pb-1.5">
-                <input
-                  type="checkbox"
-                  checked={po.tray.griglia || false}
-                  onChange={(e) =>
-                    onUpdatePortioning((p) => ({
-                      ...p,
-                      tray: { ...p.tray, griglia: e.target.checked },
-                    }))
-                  }
-                  className="accent-primary"
-                />
-                Foro di sfiato
-              </label>
-            </div>
+            </details>
+
+            {/* Save custom tray */}
+            {isCustom && (
+              <button
+                type="button"
+                onClick={() => {
+                  // TODO: save to user preferences — implement when persistence layer is ready
+                  // Should persist { key, label, l, w, h, material, griglia } to user's custom tray list
+                  alert('Salvataggio teglia personalizzata — funzionalità in arrivo!')
+                }}
+                className="text-[11px] font-medium text-primary border border-dashed border-primary rounded-lg py-1.5 hover:bg-primary/5"
+              >
+                💾 Salva Teglia {po.tray.l}×{po.tray.w}×{po.tray.h}
+              </button>
+            )}
 
             {/* Tray count */}
             <div className="flex items-center gap-2">
@@ -244,6 +283,8 @@ export function PortioningSection({
               </div>
             </div>
           </div>
+            )
+          })()
         ) : (
           <div className="flex flex-col gap-2">
             <NumberInput
@@ -284,8 +325,8 @@ export function PortioningSection({
           </div>
         )}
 
-        {/* Dough summary */}
-        <div className="mt-2.5 p-2.5 bg-gradient-to-br from-[#f9f3ec] to-[#f5ede3] rounded-[7px]">
+        {/* Dough summary (hidden when managed by separate panel) */}
+        {!hideTotals && <div className="mt-2.5 p-2.5 bg-gradient-to-br from-[#f9f3ec] to-[#f5ede3] rounded-[7px]">
           <div className="flex justify-between items-center text-xs">
             <span className="text-muted-foreground">Totale impasto</span>
             <div className="flex items-center gap-1">
@@ -300,23 +341,28 @@ export function PortioningSection({
               <span className="text-muted-foreground">g</span>
             </div>
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground mt-1 flex-wrap gap-1">
-            <div className="flex items-center gap-1">
-              Idrataz.:{' '}
-              <input
-                type="number"
-                value={currentHydration}
-                step={1}
-                onChange={(e) => onSetHydration(+e.target.value || 0)}
-                className="w-[50px] text-xs font-bold text-accent bg-white border border-border rounded px-1.5 py-px outline-none text-center min-h-7"
-              />
-              %
-            </div>
-            <span>
-              Liq: <b>{rnd(totalLiquid)}g</b> · Far: <b>{rnd(totalFlour)}g</b>
-            </span>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+            <span>Idratazione:</span>
+            <input
+              type="number"
+              value={currentHydration}
+              step={1}
+              onChange={(e) => onSetHydration(+e.target.value || 0)}
+              className="w-[50px] text-xs font-bold text-accent bg-white border border-border rounded px-1.5 py-px outline-none text-center min-h-7"
+            />
+            <span>%</span>
           </div>
-        </div>
+          <div className="flex justify-between text-xs mt-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Farine</span>
+              <span className="font-bold text-foreground">{rnd(totalFlour)}g</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Liquidi</span>
+              <span className="font-bold text-foreground">{rnd(totalLiquid)}g</span>
+            </div>
+          </div>
+        </div>}
       </Card>
     </section>
   )

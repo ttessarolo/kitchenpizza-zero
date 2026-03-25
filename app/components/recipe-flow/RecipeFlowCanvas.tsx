@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import {
   ReactFlow,
   Background,
@@ -36,6 +36,26 @@ export function RecipeFlowCanvas() {
   const closePeek = useRecipeFlowStore((s) => s.closePeek)
   const peekNodeIds = useRecipeFlowStore((s) => s.peekNodeIds)
   const selectEdge = useRecipeFlowStore((s) => s.selectEdge)
+  const resetRecipe = useRecipeFlowStore((s) => s.resetRecipe)
+  const undo = useRecipeFlowStore((s) => s.undo)
+  const canUndo = useRecipeFlowStore((s) => s.canUndo)
+  const hasNodes = useRecipeFlowStore((s) => s.graph.nodes.length > 0)
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [confirmUndo, setConfirmUndo] = useState(false)
+
+  // CTRL+Z / CMD+Z keyboard shortcut
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        if (useRecipeFlowStore.getState().canUndo) {
+          setConfirmUndo(true)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
@@ -86,6 +106,91 @@ export function RecipeFlowCanvas() {
       <NodeContextToolbar />
       <UndoToast />
       <EdgeCallout />
+
+      {/* Top-right buttons */}
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
+        {canUndo && (
+          <button
+            type="button"
+            onClick={() => setConfirmUndo(true)}
+            className="h-8 px-3 rounded-lg bg-white border border-border shadow-sm text-xs font-medium text-[#8a7a66] hover:bg-[#faf8f5] flex items-center gap-1"
+            title="Annulla ultima azione (⌘Z)"
+          >
+            ↩ Annulla
+          </button>
+        )}
+        {hasNodes && (
+          <button
+            type="button"
+            onClick={() => setConfirmReset(true)}
+            className="h-8 px-3 rounded-lg bg-white border border-border shadow-sm text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-1"
+          >
+            ⟳ Ricomincia
+          </button>
+        )}
+      </div>
+
+      {/* Confirm undo dialog */}
+      {confirmUndo && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-xl shadow-xl p-5 max-w-sm mx-4">
+            <div className="text-base font-bold text-foreground mb-2">Annullare l'ultima azione?</div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Il grafo verrà ripristinato allo stato precedente all'ultima modifica.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmUndo(false)}
+                className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-[#faf8f5]"
+              >
+                No, tieni
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  undo()
+                  setConfirmUndo(false)
+                }}
+                className="text-sm font-bold px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+              >
+                Sì, annulla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm reset dialog */}
+      {confirmReset && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-xl shadow-xl p-5 max-w-sm mx-4">
+            <div className="text-base font-bold text-foreground mb-2">Ricomincia da capo?</div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Tutti i nodi della ricetta verranno eliminati. Le impostazioni generali verranno ripristinate ai valori di default del tipo selezionato. Questa azione non può essere annullata.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmReset(false)}
+                className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-[#faf8f5]"
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetRecipe()
+                  setConfirmReset(false)
+                }}
+                className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              >
+                Elimina tutto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}

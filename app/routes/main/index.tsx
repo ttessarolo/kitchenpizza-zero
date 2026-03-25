@@ -14,6 +14,15 @@ function MainHome() {
           <li>
             <Link
               to="/main/recipe/$id"
+              params={{ id: '0' }}
+              className="text-primary underline hover:opacity-80"
+            >
+              Nuova ricetta (vuota)
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/main/recipe/$id"
               params={{ id: '1' }}
               className="text-primary underline hover:opacity-80"
             >
@@ -45,6 +54,15 @@ function MainHome() {
               className="text-primary underline hover:opacity-80"
             >
               Treccia Bicolore Pomodoro e Basilico
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/main/recipe/$id"
+              params={{ id: '5' }}
+              className="text-primary underline hover:opacity-80"
+            >
+              Treccia Integrale-Bianca (2 impasti)
             </Link>
           </li>
         </ul>

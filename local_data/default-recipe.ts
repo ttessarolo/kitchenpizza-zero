@@ -20,7 +20,7 @@ export const DEFAULT_RECIPE: Recipe = {
     },
     thickness: 0.6,
     ball: { weight: 250, count: 3 },
-    targetHyd: 81,
+    targetHyd: 81, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null,
   },
   ingredientGroups: ["Tangzhong", "Impasto", "Finitura"],
   steps: [

@@ -55,13 +55,9 @@ export function getNodeDuration(
   const d = node.data
   const rest = d.restDur || 0
 
-  if (node.type === 'bake' && d.ovenCfg) {
-    const profile = getBakingProfile(recipeType, recipeSubtype)
-    if (profile) {
-      return calcBakeDuration(profile, d.ovenCfg, thickness) + rest
-    }
-  }
-
+  // For bake nodes: always use baseDur (user-set).
+  // calcBakeDuration is used only as initial suggestion (in generate-dough.ts),
+  // not as an override. The user controls the final duration.
   return d.baseDur + rest
 }
 

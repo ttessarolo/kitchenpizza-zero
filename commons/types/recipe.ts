@@ -35,6 +35,7 @@ export interface TrayMaterial {
   bMin: number
   bMax: number
   defTemp: number
+  hasVent: boolean  // whether this material supports a vent hole (e.g. cassette with lid)
 }
 
 export interface FlourCatalogEntry {
@@ -157,6 +158,14 @@ export interface Portioning {
   ball: Ball
   thickness: number
   targetHyd: number
+  // Dough composition profile (global settings)
+  doughHours: number    // desired dough duration (1-98 hours)
+  yeastPct: number      // % fresh yeast on flour
+  saltPct: number       // % salt on flour
+  fatPct: number        // % fat on flour
+  // Pre-techniques (used by "Genera Impasto" to build the node graph)
+  preImpasto: string | null   // null | "tangzhong" | "autolisi"
+  preFermento: string | null  // null | "biga" | "poolish" | "sponge" | "idrobiga" | "sourdough" | "old_dough"
 }
 
 export interface RecipeMeta {

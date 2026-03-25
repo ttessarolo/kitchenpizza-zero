@@ -31,7 +31,12 @@ import {
 } from '@commons/utils/recipe'
 import { graphToRecipeV1, nodeToStep, stepToNodeData } from '@commons/utils/graph-adapter'
 import { computeGraphTotals, scaleNodeData } from '~/hooks/useGraphCalculator'
+import { generateDoughGraph } from '~/lib/generate-dough'
 import { RECIPE_SUBTYPES } from '@/local_data'
+import { getDoughDefaults } from '@/local_data/dough-defaults'
+import { calcYeastPct } from '@commons/utils/yeast-calculator'
+import { reconcileGraph } from '~/server/services/graph-reconciler.service'
+import type { RecipeWarning } from '@commons/utils/warning-manager'
 import type { BaseNodeData } from '~/components/recipe-flow/nodes/BaseNode'
 import { getNodeDuration } from '~/hooks/useGraphCalculator'
 
@@ -86,7 +91,8 @@ interface RecipeFlowState {
   selectedNodeId: string | null
   expandedNodeId: string | null
   peekNodeIds: string[]              // max 2 — CTRL+click panels
-  lastAddedNodeId: string | null     // for undo
+  lastAddedNodeId: string | null     // for undo toast
+  undoSnapshot: { graph: RecipeGraph; portioning: Portioning } | null
   temperatureUnit: TemperatureUnit
   ambientTemp: number
 
@@ -106,9 +112,12 @@ interface RecipeFlowState {
   closePeek: (id: string) => void
   closeAll: () => void
   undoLastAdd: () => void
+  undo: () => void
+  canUndo: boolean
   setTemperatureUnit: (u: TemperatureUnit) => void
   setAmbientTemp: (t: number) => void
-  updateNodeData: (id: string, patch: Partial<NodeData>) => void
+  updateNodeCosmetic: (id: string, patch: Partial<NodeData>) => void  // title, desc — NO reconciliation
+  updateNodeData: (id: string, patch: Partial<NodeData>) => void    // ingredients — WITH reconciliation
   updateNodeWithReconcile: (id: string, fn: (step: RecipeStep) => RecipeStep) => void
 
   // Edge actions
@@ -117,6 +126,7 @@ interface RecipeFlowState {
   addDep: (nodeId: string, parentId: string) => void
   removeDep: (nodeId: string, parentId: string) => void
   updateDep: (nodeId: string, parentId: string, field: 'wait' | 'grams', value: number) => void  // v1 compat: 'wait'→scheduleTimeRatio, 'grams'→scheduleQtyRatio
+  warnings: RecipeWarning[]
   selectedEdgeId: string | null
   edgeCalloutPos: { x: number; y: number } | null
   selectEdge: (id: string | null, pos?: { x: number; y: number }) => void
@@ -124,6 +134,9 @@ interface RecipeFlowState {
   setGlobalHydration: (h: number) => void
   handlePortioningChangeWithScale: (np: Portioning) => void
   applyTypeDefaults: (typeKey: string, subtypeKey: string) => void
+  resetRecipe: () => void
+  generateDough: () => void
+  addRootNode: (type: NodeTypeKey, subtype?: string | null) => void
   addNode: (afterNodeId: string, type: NodeTypeKey, subtype?: string | null) => void
   removeNode: (id: string) => void
   runAutoLayout: () => void
@@ -248,6 +261,43 @@ function syncFlowNodes(
 // ── Create store ────────────────────────────────────────────────
 
 export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
+  /** Save current state as undo snapshot before any mutation */
+  function saveSnapshot() {
+    const s = get()
+    set({
+      undoSnapshot: {
+        graph: JSON.parse(JSON.stringify(s.graph)),
+        portioning: JSON.parse(JSON.stringify(s.portioning)),
+      },
+      canUndo: true,
+    })
+  }
+
+  /**
+   * Apply a mutation to the graph, then run the reconciliation engine.
+   * This is THE central mutation point — all graph changes should go through here.
+   */
+  function applyMutation(fn: (s: RecipeFlowState) => { graph?: RecipeGraph; portioning?: Portioning; meta?: RecipeMeta }) {
+    saveSnapshot()
+    set((s) => {
+      const partial = fn(s)
+      const newGraph = partial.graph ?? s.graph
+      const newPortioning = partial.portioning ?? s.portioning
+      const newMeta = partial.meta ?? s.meta
+
+      // Run reconciliation engine
+      const result = reconcileGraph(newGraph, newPortioning, newMeta)
+
+      return {
+        graph: result.graph,
+        portioning: result.portioning,
+        warnings: result.warnings,
+        flowNodes: syncFlowNodes(result.graph, newMeta, result.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+        flowEdges: result.graph.edges.map(toFlowEdge),
+      }
+    })
+  }
+
   const onExpandHandler = (id: string) => {
     set((s) => ({ expandedNodeId: s.expandedNodeId === id ? null : id }))
   }
@@ -259,7 +309,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       tray: { preset: 't', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
       ball: { weight: 250, count: 4 },
       thickness: 0.5,
-      targetHyd: 65,
+      targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null,
     },
     ingredientGroups: ['Impasto'],
     graph: { nodes: [], edges: [], lanes: [] },
@@ -270,6 +320,9 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     expandedNodeId: null,
     peekNodeIds: [],
     lastAddedNodeId: null,
+    undoSnapshot: null,
+    canUndo: false,
+    warnings: [],
     selectedEdgeId: null,
     edgeCalloutPos: null,
     temperatureUnit: 'C' as TemperatureUnit,
@@ -393,10 +446,27 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       set({ lastAddedNodeId: null })
     },
 
+    undo: () => {
+      const { undoSnapshot } = get()
+      if (!undoSnapshot) return
+      set((s) => ({
+        graph: undoSnapshot.graph,
+        portioning: undoSnapshot.portioning,
+        flowNodes: syncFlowNodes(undoSnapshot.graph, s.meta, undoSnapshot.portioning, onExpandHandler, null, []),
+        flowEdges: undoSnapshot.graph.edges.map(toFlowEdge),
+        undoSnapshot: null,
+        canUndo: false,
+        expandedNodeId: null,
+        peekNodeIds: [],
+        lastAddedNodeId: null,
+      }))
+    },
+
     setTemperatureUnit: (u) => set({ temperatureUnit: u }),
     setAmbientTemp: (t) => set({ ambientTemp: t }),
 
-    updateNodeData: (id, patch) => {
+    // Cosmetic update — title, desc, position — NO reconciliation
+    updateNodeCosmetic: (id, patch) => {
       set((s) => {
         const newNodes = s.graph.nodes.map((n) =>
           n.id === id ? { ...n, data: { ...n.data, ...patch } } : n,
@@ -409,100 +479,62 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       })
     },
 
+    // Ingredient/composition update — WITH reconciliation (NO portioning overwrite)
+    updateNodeData: (id, patch) => {
+      const finalPatch = patch.baseDur !== undefined
+        ? { ...patch, userOverrideDuration: true }
+        : patch
+
+      applyMutation((s) => ({
+        graph: {
+          ...s.graph,
+          nodes: s.graph.nodes.map((n) =>
+            n.id === id ? { ...n, data: { ...n.data, ...finalPatch } } : n,
+          ),
+        },
+      }))
+    },
+
     // ── Reconciliation: the core update with cascading logic ─────
+    // Simplified: apply v1 step mutation then let reconcileGraph handle cascading
     updateNodeWithReconcile: (id, fn) => {
-      set((s) => {
-        // Convert graph to v1 steps
+      applyMutation((s) => {
         const recipe = graphToRecipeV1(s.graph, s.meta, s.portioning, s.ingredientGroups)
-        const oldStep = recipe.steps.find((st) => st.id === id)
-        if (!oldStep) return s
-
-        // Apply mutation
-        let newSteps = recipe.steps.map((st) => (st.id === id ? fn(st) : st))
-        const newStep = newSteps.find((st) => st.id === id)
-        if (!newStep) return s
-
-        // Calculate target for pre-ferment reconciliation
-        const target = s.portioning.mode === 'tray'
-          ? Math.round(s.portioning.tray.l * s.portioning.tray.w * s.portioning.thickness * s.portioning.tray.count)
-          : s.portioning.ball.weight * s.portioning.ball.count
-
-        // Pre-ferment auto-reconcile
-        if (newStep.type === 'pre_ferment' && newStep.preFermentCfg) {
-          newSteps = newSteps.map((st) =>
-            st.id === id ? recalcPreFermentIngredients(st, target) : st,
-          )
-          newSteps = adjustDoughForPreFerment(newSteps, id, target, s.portioning.targetHyd)
-        } else {
-          // Auto-scale propagation to children
-          const oldWeight = getStepTotalWeight(oldStep)
-          const newWeight = getStepTotalWeight(newStep)
-          if (oldWeight > 0 && newWeight > 0 && Math.abs(newWeight - oldWeight) > 0.01) {
-            const ratio = newWeight / oldWeight
-            const childIds = getChildIds(id, newSteps)
-            if (childIds.length > 0) {
-              // Simple one-level scale (v1-compatible propagateScale)
-              for (const childId of childIds) {
-                const ci = newSteps.findIndex((st) => st.id === childId)
-                if (ci === -1) continue
-                const child = newSteps[ci]
-                const dep = child.deps.find((d) => d.id === id)
-                if (!dep || dep.grams <= 0) continue
-                newSteps[ci] = {
-                  ...child,
-                  flours: child.flours.map((f) => ({ ...f, g: rnd(f.g * ratio) })),
-                  liquids: child.liquids.map((l) => ({ ...l, g: rnd(l.g * ratio) })),
-                  extras: child.extras.map((e) => (e.unit ? e : { ...e, g: rnd(e.g * ratio) })),
-                  yeasts: (child.yeasts || []).map((y) => ({ ...y, g: rnd(y.g * ratio) })),
-                  salts: (child.salts || []).map((x) => ({ ...x, g: rnd(x.g * ratio) })),
-                  sugars: (child.sugars || []).map((x) => ({ ...x, g: rnd(x.g * ratio) })),
-                  fats: (child.fats || []).map((x) => ({ ...x, g: rnd(x.g * ratio) })),
-                }
-              }
-            }
-          }
-        }
-
-        // Map modified steps back to graph nodes
-        const newGraphNodes = s.graph.nodes.map((n) => {
+        const newSteps = recipe.steps.map((st) => (st.id === id ? fn(st) : st))
+        const newNodes = s.graph.nodes.map((n) => {
           const step = newSteps.find((st) => st.id === n.id)
           if (!step) return n
           return { ...n, data: { ...n.data, ...stepToNodeData(step) } }
         })
-        const newGraph = { ...s.graph, nodes: newGraphNodes }
-
-        return {
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
-        }
+        return { graph: { ...s.graph, nodes: newNodes } }
       })
     },
 
     // ── Scale all nodes uniformly ────────────────────────────────
     scaleAllNodes: (newTotal) => {
-      set((s) => {
+      applyMutation((s) => {
         const totals = computeGraphTotals(s.graph)
-        if (totals.totalDough <= 0) return s
+        if (totals.totalDough <= 0) return { portioning: s.portioning }
         const factor = newTotal / totals.totalDough
-
         const newNodes = s.graph.nodes.map((n) => ({
           ...n,
           data: scaleNodeData(n.data, factor),
         }))
-        const newGraph = { ...s.graph, nodes: newNodes }
-
-        return {
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
-        }
+        return { graph: { ...s.graph, nodes: newNodes } }
       })
     },
 
-    // ── Set global hydration (scale all liquids) ─────────────────
+    // ── Set global hydration (scale all liquids + save targetHyd) ──
     setGlobalHydration: (h) => {
+      saveSnapshot()
       set((s) => {
+        // Always save targetHyd in portioning
+        const newPortioning = { ...s.portioning, targetHyd: h }
+
         const totals = computeGraphTotals(s.graph)
-        if (totals.totalFlour <= 0 || totals.totalLiquid <= 0) return s
+        if (totals.totalFlour <= 0 || totals.totalLiquid <= 0) {
+          return { portioning: newPortioning }
+        }
         const targetLiquid = (totals.totalFlour * h) / 100
         const factor = targetLiquid / totals.totalLiquid
 
@@ -516,14 +548,16 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const newGraph = { ...s.graph, nodes: newNodes }
 
         return {
+          portioning: newPortioning,
           graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, newPortioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
         }
       })
     },
 
     // ── Portioning change with scaling ───────────────────────────
     handlePortioningChangeWithScale: (np) => {
+      saveSnapshot()
       set((s) => {
         const newTarget = np.mode === 'tray'
           ? Math.round(np.tray.l * np.tray.w * np.thickness * np.tray.count)
@@ -549,6 +583,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
     // ── Apply type defaults ──────────────────────────────────────
     applyTypeDefaults: (typeKey, subtypeKey) => {
+      saveSnapshot()
       const subs = RECIPE_SUBTYPES[typeKey] || []
       const sub = subs.find((s) => s.key === subtypeKey)
       if (!sub) return
@@ -557,16 +592,22 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       const np = { ...s.portioning, mode: d.mode } as Portioning
       if (d.thickness) np.thickness = d.thickness
       if (d.ballG) np.ball = { ...np.ball, weight: d.ballG }
+      if (d.hyd) np.targetHyd = d.hyd
+      // Apply dough composition defaults
+      const doughDefs = getDoughDefaults(typeKey, subtypeKey)
+      np.doughHours = doughDefs.defaultDoughHours
+      np.saltPct = doughDefs.saltPctDefault
+      np.fatPct = doughDefs.fatPctDefault
+      // Calculate yeast from Formula L
+      np.yeastPct = calcYeastPct(doughDefs.defaultDoughHours, np.targetHyd || 60)
       get().handlePortioningChangeWithScale(np)
-      if (d.hyd) {
-        setTimeout(() => get().setGlobalHydration(d.hyd), 50)
-      }
     },
 
     // ── Edge actions ──────────────────────────────────────────────
     selectEdge: (id, pos) => set({ selectedEdgeId: id, edgeCalloutPos: pos ?? null }),
 
     updateEdgeData: (edgeId, patch) => {
+      saveSnapshot()
       set((s) => {
         const newEdges = s.graph.edges.map((e) =>
           e.id === edgeId ? { ...e, data: { ...e.data, ...patch } } : e,
@@ -580,6 +621,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     },
 
     removeEdge: (edgeId) => {
+      saveSnapshot()
       set((s) => {
         const newEdges = s.graph.edges.filter((e) => e.id !== edgeId)
         const newGraph = { ...s.graph, edges: newEdges }
@@ -594,6 +636,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     },
 
     addDep: (nodeId, parentId) => {
+      saveSnapshot()
       set((s) => {
         if (s.graph.edges.some((e) => e.source === parentId && e.target === nodeId)) return s
         const newEdge: RecipeEdge = {
@@ -612,6 +655,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     },
 
     removeDep: (nodeId, parentId) => {
+      saveSnapshot()
       set((s) => {
         const newEdges = s.graph.edges.filter(
           (e) => !(e.source === parentId && e.target === nodeId),
@@ -651,7 +695,136 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       })
     },
 
+    // ── Reset recipe to empty state with defaults ──────────────
+    resetRecipe: () => {
+      set((s) => {
+        const doughDefs = getDoughDefaults(s.meta.type, s.meta.subtype)
+        const subs = RECIPE_SUBTYPES[s.meta.type] || []
+        const sub = subs.find((x) => x.key === s.meta.subtype)
+        const d = sub?.defaults
+
+        const np: Portioning = {
+          mode: d?.mode || 'ball',
+          tray: { preset: 'teglia_40x30', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
+          ball: { weight: d?.ballG || 250, count: 4 },
+          thickness: d?.thickness || 0.5,
+          targetHyd: d?.hyd || 65,
+          doughHours: doughDefs.defaultDoughHours,
+          yeastPct: calcYeastPct(doughDefs.defaultDoughHours, d?.hyd || 65),
+          saltPct: doughDefs.saltPctDefault,
+          fatPct: doughDefs.fatPctDefault,
+          preImpasto: null,
+          preFermento: null,
+        }
+
+        const emptyGraph: RecipeGraph = { nodes: [], edges: [], lanes: [] }
+        return {
+          portioning: np,
+          graph: emptyGraph,
+          flowNodes: [],
+          flowEdges: [],
+          expandedNodeId: null,
+          peekNodeIds: [],
+          selectedEdgeId: null,
+          lastAddedNodeId: null,
+        }
+      })
+    },
+
+    // ── Generate full dough graph from settings ─────────────────
+    generateDough: () => {
+      saveSnapshot()
+      set((s) => {
+        const portioningTarget = s.portioning.mode === 'tray'
+          ? Math.round(s.portioning.thickness * s.portioning.tray.l * s.portioning.tray.w * s.portioning.tray.count)
+          : s.portioning.ball.weight * s.portioning.ball.count
+        const graph = generateDoughGraph({
+          meta: s.meta,
+          portioning: s.portioning,
+          totalDough: portioningTarget,
+        })
+        return {
+          graph,
+          flowNodes: syncFlowNodes(graph, s.meta, s.portioning, onExpandHandler, null, []),
+          flowEdges: graph.edges.map(toFlowEdge),
+          expandedNodeId: null,
+          peekNodeIds: [],
+        }
+      })
+    },
+
+    // ── Add root node (no parent — for empty graphs) ────────────
+    addRootNode: (type, subtype = null) => {
+      saveSnapshot()
+      set((s) => {
+        const newId = `${type}_${Date.now().toString(36)}`
+        const newNode: RecipeNode = {
+          id: newId,
+          type,
+          subtype: subtype ?? null,
+          position: { x: 0, y: 0 },
+          lane: 'main',
+          data: {
+            title: '',
+            desc: '',
+            group: s.ingredientGroups[0] ?? 'Impasto',
+            baseDur: type === 'split' ? 5 : 10,
+            restDur: 0,
+            restTemp: null,
+            flours: [],
+            liquids: [],
+            extras: [],
+            yeasts: [],
+            salts: [],
+            sugars: [],
+            fats: [],
+          },
+        }
+
+        // Auto-add "done" node if not present
+        const hasDone = s.graph.nodes.some((n) => n.type === 'done')
+        const newNodes = [...s.graph.nodes, newNode]
+        const newEdges = [...s.graph.edges]
+
+        if (!hasDone) {
+          const doneId = `done_${Date.now().toString(36)}`
+          newNodes.push({
+            id: doneId,
+            type: 'done',
+            subtype: null,
+            position: { x: 0, y: 150 },
+            lane: 'main',
+            data: {
+              title: 'Buon Appetito!',
+              desc: '',
+              group: s.ingredientGroups[0] ?? 'Impasto',
+              baseDur: 0,
+              restDur: 0,
+              restTemp: null,
+              flours: [], liquids: [], extras: [], yeasts: [], salts: [], sugars: [], fats: [],
+            },
+          })
+          newEdges.push({
+            id: `e_${newId}__${doneId}`,
+            source: newId,
+            target: doneId,
+            data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
+          })
+        }
+
+        const newGraph = autoLayout({ ...s.graph, nodes: newNodes, edges: newEdges })
+
+        return {
+          graph: newGraph,
+          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowEdges: newGraph.edges.map(toFlowEdge),
+          lastAddedNodeId: newId,
+        }
+      })
+    },
+
     addNode: (afterNodeId, type, subtype = null) => {
+      saveSnapshot()
       set((s) => {
         const newId = `${type}_${Date.now().toString(36)}`
         const afterNode = s.graph.nodes.find((n) => n.id === afterNodeId)
@@ -731,6 +904,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     },
 
     removeNode: (id) => {
+      saveSnapshot()
       set((s) => {
         const newGraph = autoLayout(removeNodeFromGraph(id, s.graph))
         return {

@@ -143,6 +143,11 @@ export interface NodeData {
 
   // ── Join ──
   joinMethod?: JoinMethod | null
+
+  // ── Duration override ──
+  /** If true, reconcileGraph() will NOT recalculate baseDur for this node.
+   *  Set to true when the user manually changes the duration. */
+  userOverrideDuration?: boolean
 }
 
 // ── Recipe Node ─────────────────────────────────────────────────

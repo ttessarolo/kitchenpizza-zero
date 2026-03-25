@@ -58,7 +58,7 @@ function SplitNodeInner({ id, data }: NodeProps<BaseNodeData>) {
             <span className="font-bold opacity-50 shrink-0 w-6">IN</span>
             <span className="opacity-60 truncate">
               {(inFlow ?? []).length > 0
-                ? (inFlow ?? []).map((f) => `${f.label} ${f.grams}g`).join(' · ')
+                ? (inFlow ?? []).map((f) => `${f.label} ${Math.round(f.grams * 10) / 10}g`).join(' · ')
                 : '—'}
             </span>
           </div>
@@ -66,7 +66,7 @@ function SplitNodeInner({ id, data }: NodeProps<BaseNodeData>) {
             <span className="font-bold opacity-50 shrink-0 w-6">OUT</span>
             <span className="opacity-60 truncate">
               {(outFlow ?? []).length > 0
-                ? (outFlow ?? []).map((f) => `${f.label} ${f.grams}g`).join(' · ')
+                ? (outFlow ?? []).map((f) => `${f.label} ${Math.round(f.grams * 10) / 10}g`).join(' · ')
                 : '—'}
             </span>
           </div>

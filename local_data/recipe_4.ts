@@ -24,7 +24,7 @@ export const RECIPE_4: Recipe = {
     tray: { preset: "teglia_40x30", l: 40, w: 30, h: 2, material: "alu", griglia: false, count: 1 },
     ball: { weight: 415, count: 2 },
     thickness: 0.5,
-    targetHyd: 60,
+    targetHyd: 60, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null,
   },
   ingredientGroups: ["Impasto"],
   steps: [

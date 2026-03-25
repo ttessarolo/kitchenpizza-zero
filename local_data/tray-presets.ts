@@ -85,23 +85,11 @@ export const TRAY_PRESETS = [
 ] as const satisfies ReadonlyArray<TrayPreset>
 
 export const TRAY_MATERIALS = [
-  {
-    key: "ci_lid",
-    label: "Ghisa con coperchio",
-    bMin: 35,
-    bMax: 40,
-    defTemp: 170,
-  },
-  { key: "ci_no", label: "Ghisa", bMin: 30, bMax: 35, defTemp: 170 },
-  { key: "alu", label: "Alluminio", bMin: 30, bMax: 40, defTemp: 180 },
-  { key: "glass", label: "Vetro / Pirex", bMin: 35, bMax: 45, defTemp: 175 },
-  { key: "steel", label: "Acciaio", bMin: 30, bMax: 40, defTemp: 180 },
-  { key: "copper", label: "Rame", bMin: 28, bMax: 35, defTemp: 175 },
-  {
-    key: "stone",
-    label: "Pietra refrattaria",
-    bMin: 25,
-    bMax: 35,
-    defTemp: 250,
-  },
+  { key: "ci_lid", label: "Ghisa con coperchio", bMin: 35, bMax: 40, defTemp: 170, hasVent: true },
+  { key: "ci_no", label: "Ghisa", bMin: 30, bMax: 35, defTemp: 170, hasVent: false },
+  { key: "alu", label: "Alluminio", bMin: 30, bMax: 40, defTemp: 180, hasVent: false },
+  { key: "glass", label: "Vetro / Pirex", bMin: 35, bMax: 45, defTemp: 175, hasVent: false },
+  { key: "steel", label: "Acciaio", bMin: 30, bMax: 40, defTemp: 180, hasVent: false },
+  { key: "copper", label: "Rame", bMin: 28, bMax: 35, defTemp: 175, hasVent: false },
+  { key: "stone", label: "Pietra refrattaria", bMin: 25, bMax: 35, defTemp: 250, hasVent: false },
 ] as const satisfies ReadonlyArray<TrayMaterial>

@@ -36,7 +36,7 @@ export const RECIPE_3: Recipe = {
     },
     ball: { weight: 250, count: 4 },
     thickness: 0.54,
-    targetHyd: 80,
+    targetHyd: 80, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null,
   },
   ingredientGroups: ["Impasto"],
   steps: [
