@@ -977,6 +977,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           baseDur={s.baseDur}
           recipeType={recipe.meta.type}
           recipeSubtype={recipe.meta.subtype}
+          nodeId={s.id}
         />
       )}
 
@@ -1152,9 +1153,10 @@ interface OvenEditorProps {
   baseDur: number
   recipeType: string
   recipeSubtype: string | null
+  nodeId: string
 }
 
-function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd, recipeType, recipeSubtype }: OvenEditorProps) {
+function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd, recipeType, recipeSubtype, nodeId }: OvenEditorProps) {
   const ms = MODE_MAP[cfg.ovenType] || ['static']
   const pp = 100 - cfg.cieloPct
 
@@ -1286,6 +1288,25 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
         </select>
       </div>
 
+      {/* Steam % slider — visible when mode is steam */}
+      {cfg.ovenMode === 'steam' && (
+        <div className="mt-2">
+          <div className="flex items-center justify-between text-xs mb-0.5">
+            <span className="text-[#8a6e55] font-semibold uppercase tracking-[1px]">% Vapore</span>
+            <span className="font-bold text-foreground">{cfg.steamPct ?? 100}%</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={cfg.steamPct ?? 100}
+            onChange={(e) => ch('steamPct', +e.target.value)}
+            className="w-full accent-primary"
+          />
+        </div>
+      )}
+
       {sd !== bd && (
         <div className="text-xs text-[#8a6e55] mt-1">
           Cottura: <b>{fmtDuration(sd)}</b> (base: {fmtDuration(bd)})
@@ -1298,6 +1319,7 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
         recipeSubtype={recipeSubtype}
         calculatedDur={sd}
         baseDur={bd}
+        nodeId={nodeId}
       />
     </div>
   )

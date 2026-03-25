@@ -36,6 +36,7 @@ import { RECIPE_SUBTYPES } from '@/local_data'
 import { getDoughDefaults } from '@/local_data/dough-defaults'
 import { calcYeastPct } from '@commons/utils/yeast-calculator'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
+import type { ActionableWarning, GraphMutation, NodeRef } from '@commons/types/recipe-graph'
 import type { RecipeWarning } from '@commons/utils/warning-manager'
 import type { BaseNodeData } from '~/components/recipe-flow/nodes/BaseNode'
 import { getNodeDuration } from '~/hooks/useGraphCalculator'
@@ -133,6 +134,7 @@ interface RecipeFlowState {
   scaleAllNodes: (newTotal: number) => void
   setGlobalHydration: (h: number) => void
   handlePortioningChangeWithScale: (np: Portioning) => void
+  applyWarningAction: (warning: import('@commons/types/recipe-graph').ActionableWarning, actionIdx: number) => void
   applyTypeDefaults: (typeKey: string, subtypeKey: string) => void
   resetRecipe: () => void
   generateDough: () => void
@@ -582,6 +584,70 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     },
 
     // ── Apply type defaults ──────────────────────────────────────
+    // ── Execute warning action with relative ref resolution ─────
+    applyWarningAction: (warning, actionIdx) => {
+      const action = warning.actions?.[actionIdx]
+      if (!action) return
+
+      const s = get()
+      const srcId = warning.sourceNodeId
+
+      // Resolve relative ref → actual node ID
+      function resolveRef(ref: NodeRef): string | null {
+        if (ref.ref === 'self') return srcId ?? null
+        if (ref.ref === 'upstream_dough' && srcId) {
+          const visited = new Set<string>()
+          const queue = s.graph.edges.filter((e) => e.target === srcId).map((e) => e.source)
+          while (queue.length) {
+            const id = queue.shift()!
+            if (visited.has(id)) continue
+            visited.add(id)
+            const n = s.graph.nodes.find((x) => x.id === id)
+            if (n?.type === 'dough') return n.id
+            s.graph.edges.filter((e) => e.target === id).forEach((e) => queue.push(e.source))
+          }
+        }
+        if ((ref.ref === 'downstream_rise' || ref.ref === 'downstream_bake') && srcId) {
+          const targetType = ref.ref === 'downstream_rise' ? 'rise' : 'bake'
+          const visited = new Set<string>()
+          const queue = s.graph.edges.filter((e) => e.source === srcId).map((e) => e.target)
+          while (queue.length) {
+            const id = queue.shift()!
+            if (visited.has(id)) continue
+            visited.add(id)
+            const n = s.graph.nodes.find((x) => x.id === id)
+            if (n?.type === targetType) return n.id
+            s.graph.edges.filter((e) => e.source === id).forEach((e) => queue.push(e.target))
+          }
+        }
+        return null
+      }
+
+      for (const m of action.mutations) {
+        const targetId = resolveRef(m.target)
+        switch (m.type) {
+          case 'updateNode':
+            if (targetId) get().updateNodeData(targetId, m.patch as any)
+            break
+          case 'addNodeAfter': {
+            const afterId = targetId ?? srcId
+            if (afterId) get().addNode(afterId, m.nodeType as any, m.subtype ?? null)
+            // If data was provided, update the newly created node
+            if (m.data && get().lastAddedNodeId) {
+              get().updateNodeCosmetic(get().lastAddedNodeId!, m.data as any)
+            }
+            break
+          }
+          case 'removeNode':
+            if (targetId) get().removeNode(targetId)
+            break
+          case 'updatePortioning':
+            get().setPortioning((p) => ({ ...p, ...m.patch }))
+            break
+        }
+      }
+    },
+
     applyTypeDefaults: (typeKey, subtypeKey) => {
       saveSnapshot()
       const subs = RECIPE_SUBTYPES[typeKey] || []

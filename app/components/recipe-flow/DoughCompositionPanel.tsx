@@ -4,6 +4,7 @@ import { calcYeastPct } from '@commons/utils/yeast-calculator'
 import { getDoughWarnings, type RecipeWarning } from '@commons/utils/warning-manager'
 import { rnd } from '@commons/utils/recipe'
 import { YEAST_TYPES } from '@/local_data'
+import { WarningCard } from './WarningCard'
 import type { NodeData } from '@commons/types/recipe-graph'
 
 // ── Shared slider component ────────────────────────────────────
@@ -227,15 +228,9 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
         onChange={setFatPct} />
 
       {warnings.length > 0 && (
-        <div className="mt-2 space-y-1">
+        <div className="mt-2 space-y-1.5">
           {warnings.map((w) => (
-            <div key={w.id} className={`text-[10px] px-2 py-1 rounded-lg ${
-              w.severity === 'error' ? 'bg-red-50 text-red-700 border border-red-200'
-                : w.severity === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                  : 'bg-stone-50 text-stone-600 border border-stone-200'
-            }`}>
-              {w.severity === 'error' ? '🔴' : w.severity === 'warning' ? '⚠️' : '💡'} {w.message}
-            </div>
+            <WarningCard key={w.id} warning={w as any} />
           ))}
         </div>
       )}
@@ -303,15 +298,9 @@ function GlobalCompositionSettings() {
         onChange={(v) => update({ fatPct: v })} />
 
       {warnings.length > 0 && (
-        <div className="mt-2 space-y-1">
+        <div className="mt-2 space-y-1.5">
           {warnings.map((w) => (
-            <div key={w.id} className={`text-[10px] px-2 py-1 rounded-lg ${
-              w.severity === 'error' ? 'bg-red-50 text-red-700 border border-red-200'
-                : w.severity === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                  : 'bg-stone-50 text-stone-600 border border-stone-200'
-            }`}>
-              {w.severity === 'error' ? '🔴' : w.severity === 'warning' ? '⚠️' : '💡'} {w.message}
-            </div>
+            <WarningCard key={w.id} warning={w as any} />
           ))}
         </div>
       )}

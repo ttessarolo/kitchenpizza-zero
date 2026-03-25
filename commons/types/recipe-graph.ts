@@ -239,3 +239,36 @@ export interface ScheduledNode extends RecipeNode {
   start: Date
   end: Date
 }
+
+// ── Actionable Warnings ─────────────────────────────────────────
+
+/** Relative reference to a node in the graph — resolved at execution time */
+export type NodeRef =
+  | { ref: 'self' }
+  | { ref: 'upstream_dough' }
+  | { ref: 'downstream_rise' }
+  | { ref: 'downstream_bake' }
+  | { ref: 'new_after_self' }
+
+/** A single mutation to apply to the graph */
+export type GraphMutation =
+  | { type: 'updateNode'; target: NodeRef; patch: Record<string, unknown> }
+  | { type: 'addNodeAfter'; target: NodeRef; nodeType: string; subtype?: string; data?: Partial<NodeData> }
+  | { type: 'removeNode'; target: NodeRef }
+  | { type: 'updatePortioning'; patch: Record<string, unknown> }
+
+/** An action the user can accept to resolve a warning */
+export interface WarningAction {
+  label: string
+  mutations: GraphMutation[]
+}
+
+/** A warning with optional actionable suggestions */
+export interface ActionableWarning {
+  id: string
+  sourceNodeId?: string
+  category: 'yeast' | 'salt' | 'fat' | 'hydration' | 'temp' | 'baking' | 'flour' | 'steam' | 'general'
+  severity: 'info' | 'warning' | 'error'
+  message: string
+  actions?: WarningAction[]
+}

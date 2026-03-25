@@ -200,6 +200,19 @@ export const BAKING_PROFILES: BakingProfile[] = [
   },
   {
     type: "pane",
+    subtype: "pentola",
+    timeRange: [35, 45],     // fase 1 coperto (~25min) + fase 2 scoperto (~15min)
+    refTemp: 240,
+    tempRange: [220, 250],
+    cieloPctRange: [45, 55],
+    materialFactors: { ci_lid: 1.0, ci_no: 0.95 },
+    thicknessFactor: 0.07,
+    baseThickness: 0,
+    isPrecottura: false,
+    recommendedModes: ["steam"],
+  },
+  {
+    type: "pane",
     subtype: "ciabatta",
     timeRange: [20, 30],
     refTemp: 230,

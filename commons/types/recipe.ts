@@ -227,6 +227,8 @@ export interface OvenConfig {
   temp: number
   cieloPct: number
   shelfPosition: number
+  /** Steam percentage (0-100). Only relevant when ovenMode === 'steam'. */
+  steamPct?: number
 }
 
 export interface PreFermentConfig {

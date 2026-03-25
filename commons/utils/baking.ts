@@ -1,5 +1,8 @@
 import type { OvenConfig } from '@commons/types/recipe'
+import type { ActionableWarning } from '@commons/types/recipe-graph'
 import { BAKING_PROFILES, type BakingProfile } from '../../local_data/baking-profiles'
+import { evaluateAdvisories as _evaluateAdvisories } from './advisory-manager'
+import { ADVISORY_RULES as _ADVISORY_RULES } from './advisory-rules'
 
 /**
  * Look up the best matching baking profile for a recipe type/subtype.
@@ -52,6 +55,7 @@ export function calcBakeDuration(
 // ── Advisory warnings ────────────────────────────────────────
 
 export interface BakingWarning {
+  id: string
   type:
     | 'temp_low'
     | 'temp_high'
@@ -59,8 +63,14 @@ export interface BakingWarning {
     | 'cielo_unusual'
     | 'mode_warning'
     | 'double_bake_hint'
+    | 'steam_with_pizza'
+    | 'steam_too_long'
+    | 'pentola_two_phase'
   severity: 'info' | 'warning'
   message: string
+  category: string
+  sourceNodeId?: string
+  actions?: import('@commons/types/recipe-graph').WarningAction[]
 }
 
 export function getBakingWarnings(
@@ -71,90 +81,43 @@ export function getBakingWarnings(
   baseDur: number,
 ): BakingWarning[] {
   const profile = getBakingProfile(recipeType, recipeSubtype)
-  if (!profile) return []
 
-  const warnings: BakingWarning[] = []
-  const [tempMin, tempMax] = profile.tempRange
-  const [cieloMin, cieloMax] = profile.cieloPctRange
-
-  // Temperature too low
-  if (ovenCfg.temp < tempMin) {
-    warnings.push({
-      type: 'temp_low',
-      severity: 'warning',
-      message: `Temperatura bassa per questo prodotto. Consigliata: ${tempMin}–${tempMax}°C. Un forno troppo freddo allunga la cottura e può rendere il prodotto secco.`,
-    })
+  // Build context for the advisory manager
+  const ctx: import('./advisory-manager').AdvisoryContext = {
+    nodeType: 'bake',
+    nodeSubtype: null,
+    nodeData: { title: '', desc: '', group: '', baseDur, restDur: 0, restTemp: null, flours: [], liquids: [], extras: [], yeasts: [], salts: [], sugars: [], fats: [] },
+    ovenCfg,
+    recipeType,
+    recipeSubtype,
+    baseDur,
+    totalFlour: 0,
+    yeastPct: 0,
+    saltPct: 0,
+    fatPct: 0,
+    hydration: 0,
+    flourW: 0,
+    // Baking profile computed values
+    _tempMin: profile?.tempRange[0],
+    _tempMax: profile?.tempRange[1],
+    _suggestedTemp: profile ? Math.round((profile.tempRange[0] + profile.tempRange[1]) / 2) : undefined,
+    _cieloMin: profile?.cieloPctRange[0],
+    _cieloMax: profile?.cieloPctRange[1],
+    _isPrecottura: profile?.isPrecottura,
+    _recommendedModes: profile?.recommendedModes,
   }
 
-  // Temperature too high
-  if (ovenCfg.temp > tempMax) {
-    warnings.push({
-      type: 'temp_high',
-      severity: 'warning',
-      message: `Temperatura alta per questo prodotto. Consigliata: ${tempMin}–${tempMax}°C. Rischio di bruciatura esterna con interno crudo.`,
-    })
-  }
+  // Evaluate using the advisory manager
+  const advisories = _evaluateAdvisories(ctx, _ADVISORY_RULES)
 
-  // Cielo/platea balance unusual
-  if (ovenCfg.cieloPct < cieloMin) {
-    const plateaPct = 100 - ovenCfg.cieloPct
-    warnings.push({
-      type: 'cielo_unusual',
-      severity: 'info',
-      message: `Calore concentrato sulla platea (${plateaPct}%). Per questo prodotto è consigliato cielo ${cieloMin}–${cieloMax}%. Attenzione alla base che potrebbe bruciare.`,
-    })
-  } else if (ovenCfg.cieloPct > cieloMax) {
-    warnings.push({
-      type: 'cielo_unusual',
-      severity: 'info',
-      message: `Calore concentrato sul cielo (${ovenCfg.cieloPct}%). Per questo prodotto è consigliato cielo ${cieloMin}–${cieloMax}%. La parte superiore potrebbe colorire troppo.`,
-    })
-  }
-
-  // Mode warning
-  if (
-    profile.recommendedModes.length > 0 &&
-    !profile.recommendedModes.includes(ovenCfg.ovenMode)
-  ) {
-    const modesIt: Record<string, string> = {
-      static: 'statico',
-      fan: 'ventilato',
-      steam: 'vapore',
-    }
-    const rec = profile.recommendedModes.map((m) => modesIt[m] ?? m).join(' o ')
-    warnings.push({
-      type: 'mode_warning',
-      severity: 'info',
-      message: `Per questo prodotto è consigliata la modalità ${rec}. La ventilazione può asciugare troppo l'impasto.`,
-    })
-  }
-
-  // Time mismatch (baseDur vs calculated)
-  if (baseDur > 0 && calculatedDur > 0) {
-    const ratio = baseDur / calculatedDur
-    if (ratio > 1.4) {
-      warnings.push({
-        type: 'time_mismatch',
-        severity: 'warning',
-        message: `Il tempo impostato (${baseDur} min) è molto più lungo del tempo calcolato (${calculatedDur} min). Verifica temperatura e parametri.`,
-      })
-    } else if (ratio < 0.6) {
-      warnings.push({
-        type: 'time_mismatch',
-        severity: 'warning',
-        message: `Il tempo impostato (${baseDur} min) è molto più corto del tempo calcolato (${calculatedDur} min). Il prodotto potrebbe risultare crudo all'interno.`,
-      })
-    }
-  }
-
-  // Double bake hint for teglia/pala/pinsa
-  if (profile.isPrecottura) {
-    warnings.push({
-      type: 'double_bake_hint',
-      severity: 'info',
-      message: `Questo prodotto prevede tipicamente una precottura seguita da una seconda cottura con ingredienti. Considera di aggiungere uno step di precottura separato.`,
-    })
-  }
-
-  return warnings
+  // Convert to BakingWarning format for backward compatibility
+  return advisories.map((a) => ({
+    id: a.id,
+    type: a.id as BakingWarning['type'],
+    severity: a.severity as 'info' | 'warning',
+    message: a.message,
+    category: a.category,
+    sourceNodeId: a.sourceNodeId,
+    actions: a.actions,
+  }))
 }

@@ -57,7 +57,15 @@ export const STEP_TYPES: StepTypeEntry[] = [
       { key: "generic", label: "Generico", defaults: {} },
     ],
   },
-  { key: "bake", label: "Cottura", icon: "🔥" },
+  {
+    key: "bake",
+    label: "Cottura",
+    icon: "🔥",
+    subtypes: [
+      { key: "forno", label: "In forno", defaults: { baseDur: 30 } },
+      { key: "pentola", label: "In pentola (Dutch oven)", defaults: { baseDur: 40 } },
+    ],
+  },
   {
     key: "post_bake",
     label: "Post-Cottura",

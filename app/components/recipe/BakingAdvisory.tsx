@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { OvenConfig } from '@commons/types/recipe'
-import { getBakingWarnings, type BakingWarning } from '@commons/utils/baking'
+import { getBakingWarnings } from '@commons/utils/baking'
+import { WarningCard } from '~/components/recipe-flow/WarningCard'
 
 interface BakingAdvisoryProps {
   ovenCfg: OvenConfig
@@ -8,6 +9,7 @@ interface BakingAdvisoryProps {
   recipeSubtype: string | null
   calculatedDur: number
   baseDur: number
+  nodeId?: string
 }
 
 export function BakingAdvisory({
@@ -16,37 +18,29 @@ export function BakingAdvisory({
   recipeSubtype,
   calculatedDur,
   baseDur,
+  nodeId,
 }: BakingAdvisoryProps) {
   const warnings = getBakingWarnings(ovenCfg, recipeType, recipeSubtype, calculatedDur, baseDur)
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
 
-  const visible = warnings.filter((w) => !dismissed.has(w.type))
+  const visible = warnings.filter((w) => !dismissed.has(w.id))
   if (visible.length === 0) return null
 
   return (
     <div className="mt-2 space-y-1.5">
       {visible.map((w) => (
-        <div
-          key={w.type}
-          className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs leading-relaxed ${
-            w.severity === 'warning'
-              ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200'
-              : 'border-stone-300 bg-stone-50 text-stone-700 dark:border-stone-600 dark:bg-stone-900/40 dark:text-stone-300'
-          }`}
-        >
-          <span className="mt-0.5 shrink-0">
-            {w.severity === 'warning' ? '⚠️' : '💡'}
-          </span>
-          <span className="flex-1">{w.message}</span>
-          <button
-            type="button"
-            onClick={() => setDismissed((s) => new Set(s).add(w.type))}
-            className="mt-0.5 shrink-0 text-[10px] opacity-50 hover:opacity-100"
-            aria-label="Chiudi"
-          >
-            ✕
-          </button>
-        </div>
+        <WarningCard
+          key={w.id}
+          warning={{
+            id: w.id,
+            sourceNodeId: nodeId,
+            category: w.category as any,
+            severity: w.severity,
+            message: w.message,
+            actions: w.actions,
+          }}
+          onDismiss={() => setDismissed((s) => new Set(s).add(w.id))}
+        />
       ))}
     </div>
   )
