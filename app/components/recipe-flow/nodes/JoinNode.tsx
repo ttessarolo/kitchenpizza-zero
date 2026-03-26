@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, useEdges, type NodeProps } from '@xyflow/react'
 import { COLOR_MAP } from '@/local_data'
-import { fmtDuration } from '@commons/utils/recipe'
+import { fmtDuration } from '@commons/utils/format'
 import type { BaseNodeData } from './BaseNode'
 
 const JOIN_METHODS: Record<string, string> = {

@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { COLOR_MAP } from '@/local_data'
-import { fmtDuration } from '@commons/utils/recipe'
+import { fmtDuration } from '@commons/utils/format'
 import type { BaseNodeData } from './BaseNode'
 
 function SplitNodeInner({ id, data }: NodeProps<BaseNodeData>) {

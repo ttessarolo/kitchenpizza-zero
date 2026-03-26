@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { fmtDuration } from '@commons/utils/recipe'
+import { fmtDuration } from '@commons/utils/format'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { computeSchedule } from '~/hooks/useGraphCalculator'
 import type { BaseNodeData } from './BaseNode'

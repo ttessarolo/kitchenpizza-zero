@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { STEP_TYPES, COLOR_MAP } from '@/local_data'
-import { fmtDuration } from '@commons/utils/recipe'
+import { fmtDuration } from '@commons/utils/format'
 import type { NodeData, NodeTypeKey } from '@commons/types/recipe-graph'
 
 export interface FlowSummary {

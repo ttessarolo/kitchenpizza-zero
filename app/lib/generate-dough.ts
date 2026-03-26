@@ -6,7 +6,7 @@
 import type { RecipeGraph, RecipeNode, RecipeEdge } from '@commons/types/recipe-graph'
 import type { Portioning, RecipeMeta } from '@commons/types/recipe'
 import { STEP_TYPES } from '@/local_data'
-import { rnd } from '@commons/utils/recipe'
+import { rnd } from '@commons/utils/format'
 import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
 import { autoLayout } from './auto-layout'
 

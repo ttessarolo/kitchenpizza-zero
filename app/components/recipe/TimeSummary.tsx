@@ -1,7 +1,7 @@
 import { Card } from '~/components/ui/card'
 import { SectionHeader } from './shared/SectionHeader'
 import { MetricBox } from './shared/MetricBox'
-import { fmtDuration } from '@commons/utils/recipe'
+import { fmtDuration } from '@commons/utils/format'
 import type { TimeSummary as TimeSummaryType } from '@commons/types/recipe'
 
 interface TimeSummaryProps {

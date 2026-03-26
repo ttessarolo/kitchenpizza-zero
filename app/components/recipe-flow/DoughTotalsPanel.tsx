@@ -1,6 +1,6 @@
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { computeGraphTotals } from '~/hooks/useGraphCalculator'
-import { rnd } from '@commons/utils/recipe'
+import { rnd } from '@commons/utils/format'
 
 export function DoughTotalsPanel() {
   const portioning = useRecipeFlowStore((s) => s.portioning)

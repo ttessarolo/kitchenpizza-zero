@@ -25,16 +25,19 @@ import type {
   BlendedFlourProps,
 } from '@commons/types/recipe'
 import {
-  rnd,
-  blendFlourProperties,
-  calcRiseDuration,
   recalcPreFermentIngredients,
   adjustDoughForPreFerment,
   getStepTotalWeight,
+} from '@commons/utils/recipe'
+import { calcRiseDuration } from '@commons/utils/rise-manager'
+import {
+  rnd,
+  blendFlourProperties,
   getSaltPct,
   getSugarPct,
   getFatPct,
-} from '@commons/utils/recipe'
+  maxRiseHoursForW,
+} from '@commons/utils/dough-manager'
 import {
   topologicalSortGraph,
   getNodeTotalWeight,
@@ -47,8 +50,7 @@ import {
 import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
 import { calcDuration as calcBakeDurationV2, syncCookingFats } from '@commons/utils/bake-manager'
 import type { FryConfig } from '@commons/types/recipe'
-import { getDoughWarnings, type RecipeWarning } from '@commons/utils/warning-manager'
-import { getDoughDefaults } from '../../../local_data/dough-defaults'
+import { getDoughWarnings, getDoughDefaults, type DoughWarning as RecipeWarning } from '@commons/utils/dough-manager'
 import { RISE_METHODS, YEAST_TYPES, FLOUR_CATALOG } from '../../../local_data'
 
 // ── Result type ─────────────────────────────────────────────────
@@ -59,16 +61,7 @@ export interface ReconcileResult {
   warnings: RecipeWarning[]
 }
 
-// ── Flour W → Max hours at room temp (Casucci, Cap. 44) ────────
-
-function maxRiseHoursForW(W: number): number {
-  if (W > 380) return 20
-  if (W > 320) return 14
-  if (W > 290) return 10
-  if (W > 220) return 6
-  if (W > 180) return 2
-  return 1
-}
+// maxRiseHoursForW → imported from dough-manager
 
 // ── Helper: compute graph totals (pure, no React dependency) ────
 

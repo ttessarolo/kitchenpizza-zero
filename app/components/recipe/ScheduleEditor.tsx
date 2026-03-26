@@ -1,5 +1,5 @@
 import { Card } from '~/components/ui/card'
-import { pad, fmtTime, relativeDate } from '@commons/utils/recipe'
+import { pad, fmtTime, relativeDate } from '@commons/utils/format'
 import type { PlanningMode } from '@commons/types/recipe'
 
 const DAY_LABELS = ['Oggi', 'Domani', 'Dopodomani', 'Tra 3gg']

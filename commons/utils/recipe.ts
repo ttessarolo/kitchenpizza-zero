@@ -16,203 +16,53 @@ import type {
   FatIngredient,
 } from '@commons/types/recipe'
 
-/** Intelligent rounding: >=100 round to int, >=10 round to 0.5, else round to 0.1 */
-export function rnd(v: number): number {
-  return v >= 100
-    ? Math.round(v)
-    : v >= 10
-      ? Math.round(v * 2) / 2
-      : Math.round(v * 10) / 10
-}
+// ── Re-exports from DoughManager (canonical source) ────────────
+// These were originally defined here. Now centralized in dough-manager.ts.
+// Re-exported for backward compatibility — consumers can import from either.
+export {
+  getFlour,
+  blendFlourProperties,
+  estimateW,
+  calcYeastPct,
+  yeastGrams,
+  calcFinalDoughTemp,
+  computeSuggestedSalt,
+  getSaltPct,
+  getSugarPct,
+  getFatPct,
+  getDoughDefaults,
+  getDoughWarnings,
+  maxRiseHoursForW,
+} from './dough-manager'
+export type { DoughWarning, DoughProfileInput } from './dough-manager'
 
-/** Left-pad a number to 2 digits */
-export function pad(n: number): string {
-  return String(n).padStart(2, '0')
-}
+// Re-exports from RiseManager
+export { calcRiseDuration, riseTemperatureFactor } from './rise-manager'
 
-/** Format a Date to "HH:MM" */
-export function fmtTime(d: Date): string {
-  return pad(d.getHours()) + ':' + pad(d.getMinutes())
-}
+// Re-exports from PreFermentManager
+export {
+  computePreFermentAmounts,
+  validatePreFerment,
+  recalcPreFermentIngredients,
+  adjustDoughForPreFerment,
+  reconcilePreFerments,
+} from './pre-ferment-manager'
 
-/** Format minutes: "<60min" or "Xh" or "Xh Ymin" */
-export function fmtDuration(m: number): string {
-  if (m < 60) return m + ' min'
-  const h = Math.floor(m / 60)
-  const r = m % 60
-  return r ? h + 'h ' + r + 'min' : h + 'h'
-}
+// Re-exports from format.ts (pure display helpers — safe for client-side)
+export {
+  rnd, pad, fmtTime, fmtDuration,
+  celsiusToFahrenheit, fahrenheitToCelsius,
+  nextId, relativeDate, thicknessLabel,
+} from './format'
 
-/** Convert Celsius to Fahrenheit, rounded */
-export function celsiusToFahrenheit(c: number): number {
-  return Math.round((c * 9) / 5 + 32)
-}
+// Local alias for internal use
+import { rnd } from './format'
 
-/** Convert Fahrenheit to Celsius, rounded */
-export function fahrenheitToCelsius(f: number): number {
-  return Math.round(((f - 32) * 5) / 9)
-}
+// getFlour, blendFlourProperties, estimateW → moved to dough-manager.ts (re-exported above)
 
-/** Next sequential id from an array of items with numeric ids, or 0 if empty */
-export function nextId(items: { id: number }[]): number {
-  return items.length ? Math.max(...items.map((x) => x.id)) + 1 : 0
-}
+// calcRiseDuration, riseTemperatureFactor → moved to rise-manager.ts (re-exported above)
 
-/** Find a flour by key in the catalog, fallback to index 5 */
-export function getFlour(key: string, catalog: FlourCatalogEntry[]): FlourCatalogEntry {
-  return catalog.find((f) => f.key === key) || catalog[5]
-}
-
-/** Weighted average of flour properties from a blend */
-export function blendFlourProperties(
-  flours: FlourIngredient[],
-  catalog: FlourCatalogEntry[],
-): BlendedFlourProps {
-  let t = 0
-  let wP = 0, wW = 0, wPL = 0, wA = 0, wAsh = 0, wFib = 0, wSD = 0, wFS = 0, wFN = 0
-
-  for (const f of flours) {
-    const c = getFlour(f.type, catalog)
-    t += f.g
-    wP += f.g * c.protein
-    wW += f.g * c.W
-    wPL += f.g * c.PL
-    wA += f.g * c.absorption
-    wAsh += f.g * c.ash
-    wFib += f.g * c.fiber
-    wSD += f.g * c.starchDamage
-    wFS += f.g * c.fermentSpeed
-    wFN += f.g * (c.fallingNumber ?? 300)
-  }
-
-  if (t <= 0) {
-    return {
-      protein: 12, W: 280, PL: 0.55, absorption: 60, ash: 0.55,
-      fiber: 2.5, starchDamage: 7, fermentSpeed: 1, fallingNumber: 300,
-    }
-  }
-
-  return {
-    protein: rnd(wP / t),
-    W: Math.round(wW / t),
-    PL: rnd((wPL / t) * 100) / 100,
-    absorption: Math.round(wA / t),
-    ash: rnd((wAsh / t) * 100) / 100,
-    fiber: rnd((wFib / t) * 10) / 10,
-    starchDamage: rnd((wSD / t) * 10) / 10,
-    fermentSpeed: rnd((wFS / t) * 100) / 100,
-    fallingNumber: Math.round(wFN / t),
-  }
-}
-
-/** Estimate W strength from protein percentage (Italian soft wheat correlation) */
-export function estimateW(protein: number): number {
-  return Math.round(Math.max(60, Math.min(420, 22 * protein - 70)))
-}
-
-/** Calculate rise duration in minutes */
-export function calcRiseDuration(
-  base: number,
-  method: string,
-  bp: BlendedFlourProps,
-  yPct: number,
-  ySF: number,
-  tf: number,
-  riseMethods: RiseMethod[],
-  saltPct = 2.5,
-  sugarPct = 0,
-  fatPct = 0,
-): number {
-  const rm = riseMethods.find((m) => m.key === method) || riseMethods[0]
-  const fnFactor = 300 / Math.max(bp.fallingNumber || 300, 150)
-  const fiberFactor = 1 + Math.max(0, ((bp.fiber || 2.5) - 3) * 0.02)
-  const saltFactor = 1 + Math.max(0, (saltPct - 2.5) * 0.1)
-  const sugarFactor = 1 + Math.max(0, (sugarPct - 5) * 0.05)
-  const fatFactor = 1 + Math.max(0, (fatPct - 3) * 0.02)
-  return Math.round(
-    ((base *
-      rm.tf *
-      (2 / Math.max(yPct, 0.5)) *
-      (280 / Math.max(bp.W || 280, 50)) *
-      (1 - ((bp.starchDamage || 7) - 7) * 0.02) *
-      fnFactor *
-      fiberFactor) /
-      Math.max(ySF, 0.1)) *
-      (tf || 1) *
-      saltFactor *
-      sugarFactor *
-      fatFactor,
-  )
-}
-
-/** Calculate final dough temperature */
-export function calcFinalDoughTemp(
-  flours: FlourIngredient[],
-  liquids: LiquidIngredient[],
-  ambientTemp: number,
-  frictionFactor: number,
-): number {
-  let t = 0
-  let s = 0
-
-  for (const f of flours) {
-    t += f.g
-    s += f.g * (f.temp ?? ambientTemp)
-  }
-  for (const l of liquids) {
-    t += l.g
-    s += l.g * (l.temp ?? ambientTemp)
-  }
-
-  const aw = t * 0.15
-  t += aw
-  s += aw * ambientTemp
-
-  return t > 0 ? Math.round((s / t + frictionFactor) * 10) / 10 : ambientTemp
-}
-
-/** Exponential temperature factor for rise based on FDT and rise method */
-export function riseTemperatureFactor(fdt: number, riseMethod: string): number {
-  return Math.pow(
-    2,
-    (-(fdt - 24) *
-      ({ room: 1, ctrl18: 0.2, ctrl12: 0.1, fridge: 0.05 }[riseMethod] ?? 1)) /
-      10,
-  )
-}
-
-/** Relative date label in Italian: "oggi", "domani", "dopodomani", "tra Ngg", "Ngg fa" */
-export function relativeDate(d: Date): string {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const df = Math.round(
-    (new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - today.getTime()) / 864e5,
-  )
-  return df === 0
-    ? 'oggi'
-    : df === 1
-      ? 'domani'
-      : df === 2
-        ? 'dopodomani'
-        : df < 0
-          ? Math.abs(df) + 'gg fa'
-          : 'tra ' + df + 'gg'
-}
-
-/** Map thickness value to Italian label */
-export function thicknessLabel(t: number): string {
-  return t <= 0.2
-    ? 'Sottilissimo'
-    : t <= 0.4
-      ? 'Sottile'
-      : t <= 0.6
-        ? 'Medio'
-        : t <= 0.9
-          ? 'Alto'
-          : t <= 1.4
-            ? 'Molto alto'
-            : 'Molto spesso'
-}
+// relativeDate, thicknessLabel → moved to format.ts (re-exported above)
 
 // ── Graph utilities ──────────────────────────────────────────────
 
@@ -555,166 +405,6 @@ export function cloneStep(step: RecipeStep, newId: string): RecipeStep {
   return JSON.parse(JSON.stringify({ ...step, id: newId }))
 }
 
-// ── Salt & sugar utilities ───────────────────────────────────────
+// Salt & sugar utilities → moved to dough-manager.ts (re-exported above)
 
-/** Compute suggested salt in grams based on flour weight and hydration */
-export function computeSuggestedSalt(totalFlour: number, hydration: number): number {
-  const basePct = 2.5
-  const adjustment = Math.max(0, (hydration - 60) * 0.01)
-  const pct = Math.min(3.0, Math.max(2.0, basePct + adjustment))
-  return rnd(totalFlour * pct / 100)
-}
-
-/** Get salt percentage relative to flour */
-export function getSaltPct(salts: SaltIngredient[], totalFlour: number): number {
-  if (totalFlour <= 0) return 0
-  const totalSalt = salts.reduce((a, s) => a + s.g, 0)
-  return rnd((totalSalt / totalFlour) * 1000) / 10
-}
-
-/** Get sugar percentage relative to flour */
-export function getSugarPct(sugars: SugarIngredient[], totalFlour: number): number {
-  if (totalFlour <= 0) return 0
-  const totalSugar = sugars.reduce((a, s) => a + s.g, 0)
-  return rnd((totalSugar / totalFlour) * 1000) / 10
-}
-
-/** Get fat percentage relative to flour */
-export function getFatPct(fats: FatIngredient[], totalFlour: number): number {
-  if (totalFlour <= 0) return 0
-  const totalFat = fats.reduce((a, f) => a + f.g, 0)
-  return rnd((totalFat / totalFlour) * 1000) / 10
-}
-
-// ── Pre-ferment utilities ────────────────────────────────────────
-
-/** Compute pre-ferment flour, water, yeast from totalDough and config */
-export function computePreFermentAmounts(totalDough: number, cfg: PreFermentConfig): {
-  pfWeight: number
-  pfFlour: number
-  pfWater: number
-  pfYeast: number
-} {
-  const pfWeight = rnd(totalDough * (cfg.preFermentPct / 100))
-  // Denominator includes yeast so that pfFlour + pfWater + pfYeast = pfWeight
-  const yeastRatio = (cfg.yeastPct != null && cfg.yeastPct > 0) ? cfg.yeastPct / 100 : 0
-  const pfFlour = rnd(pfWeight / (1 + cfg.hydrationPct / 100 + yeastRatio))
-  const pfWater = rnd(pfFlour * (cfg.hydrationPct / 100))
-  const pfYeast = yeastRatio > 0 ? rnd(pfFlour * yeastRatio) : 0
-  return { pfWeight, pfFlour, pfWater, pfYeast }
-}
-
-/** Validate pre-ferment config against available dough resources */
-export function validatePreFerment(
-  cfg: PreFermentConfig,
-  totalFlour: number,
-  totalLiquid: number,
-  totalDough: number,
-): string[] {
-  const errors: string[] = []
-  const { pfFlour, pfWater } = computePreFermentAmounts(totalDough, cfg)
-
-  if (cfg.preFermentPct <= 0 || cfg.preFermentPct > 100) {
-    errors.push('La percentuale di prefermento deve essere tra 1% e 100%')
-  }
-  if (cfg.hydrationPct < 40 || cfg.hydrationPct > 130) {
-    errors.push("L'idratazione del prefermento deve essere tra 40% e 130%")
-  }
-  if (pfFlour > totalFlour * 1.01) {
-    errors.push("Il prefermento richiede più farina di quella disponibile nella ricetta")
-  }
-  if (pfWater > totalLiquid * 1.01) {
-    errors.push("Il prefermento richiede più liquidi di quelli disponibili nella ricetta")
-  }
-  return errors
-}
-
-/** Recalculate a pre-ferment step's ingredient arrays from its config and totalDough.
- *  Returns a new step with updated flours/liquids/yeasts. */
-export function recalcPreFermentIngredients(
-  step: RecipeStep,
-  totalDough: number,
-): RecipeStep {
-  const cfg = step.preFermentCfg
-  if (!cfg) return step
-
-  const { pfFlour, pfWater, pfYeast } = computePreFermentAmounts(totalDough, cfg)
-
-  const flourType = step.flours[0]?.type || 'gt_0_for'
-  const flourTemp = step.flours[0]?.temp ?? null
-  const liquidType = step.liquids[0]?.type || 'Acqua'
-  const liquidTemp = step.liquids[0]?.temp ?? null
-  const yeastType = cfg.yeastType || step.yeasts[0]?.type || 'fresh'
-
-  const isTwoPhase = cfg.yeastPct != null && cfg.yeastPct > 0
-
-  return {
-    ...step,
-    flours: [{ id: 0, type: flourType, g: pfFlour, temp: flourTemp }],
-    liquids: [{ id: 0, type: liquidType, g: pfWater, temp: liquidTemp }],
-    yeasts: isTwoPhase ? [{ id: 0, type: yeastType, g: pfYeast }] : [],
-  }
-}
-
-/** After a pre-ferment changes, adjust the linked dough step's flour/water to be the remainder.
- *  Uses target (portioning weight) and targetHyd (target hydration %) to derive
- *  the recipe's total flour/liquid — NOT the sum of step ingredients (which is circular).
- *  Returns updated steps array. */
-export function adjustDoughForPreFerment(
-  steps: RecipeStep[],
-  preFermentId: string,
-  target: number,
-  targetHyd: number,
-): RecipeStep[] {
-  const pfStep = steps.find((s) => s.id === preFermentId)
-  if (!pfStep?.preFermentCfg) return steps
-
-  const { pfFlour, pfWater } = computePreFermentAmounts(target, pfStep.preFermentCfg)
-
-  // Derive total flour/liquid from target weight and hydration — NOT from summing steps
-  const targetFlour = rnd(target / (1 + targetHyd / 100))
-  const targetLiquid = rnd(targetFlour * (targetHyd / 100))
-
-  // Find the dough step that depends (transitively) on this pre-ferment
-  const descendants = getDescendantIds(preFermentId, steps)
-  const doughStep = steps.find((s) => s.type === 'dough' && descendants.has(s.id))
-  if (!doughStep) return steps
-
-  const remainingFlour = Math.max(0, rnd(targetFlour - pfFlour))
-  const remainingWater = Math.max(0, rnd(targetLiquid - pfWater))
-
-  return steps.map((s) => {
-    if (s.id !== doughStep.id) return s
-    return {
-      ...s,
-      flours: remainingFlour > 0
-        ? (s.flours.length > 0 ? [{ ...s.flours[0], g: remainingFlour }, ...s.flours.slice(1)] : [{ id: 0, type: 'gt_0_for', g: remainingFlour, temp: null }])
-        : [],
-      liquids: remainingWater > 0
-        ? (s.liquids.length > 0 ? [{ ...s.liquids[0], g: remainingWater }, ...s.liquids.slice(1)] : [{ id: 0, type: 'Acqua', g: remainingWater, temp: null }])
-        : [],
-    }
-  })
-}
-
-/** Reconcile all pre-ferment steps in a recipe: recalculate ingredients from config
- *  and adjust linked dough steps. Call once at recipe load. */
-export function reconcilePreFerments(recipe: Recipe): Recipe {
-  const target = recipe.portioning.mode === 'tray'
-    ? Math.round(recipe.portioning.tray.l * recipe.portioning.tray.w * recipe.portioning.thickness * recipe.portioning.tray.count)
-    : recipe.portioning.ball.weight * recipe.portioning.ball.count
-  const targetHyd = recipe.portioning.targetHyd
-
-  let steps = [...recipe.steps]
-  for (const s of steps) {
-    if (s.type === 'pre_ferment' && s.preFermentCfg) {
-      // Recalc pre-ferment step ingredients from config
-      steps = steps.map((st) =>
-        st.id === s.id ? recalcPreFermentIngredients(st, target) : st,
-      )
-      // Adjust the linked dough step
-      steps = adjustDoughForPreFerment(steps, s.id, target, targetHyd)
-    }
-  }
-  return { ...recipe, steps }
-}
+// Pre-ferment utilities → moved to pre-ferment-manager.ts (re-exported above)

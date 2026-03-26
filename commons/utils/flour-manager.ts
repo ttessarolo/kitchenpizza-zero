@@ -1,0 +1,149 @@
+/**
+ * FlourManager — Centralized flour catalog, blending, and classification logic.
+ *
+ * Owns:
+ * - Flour catalog lookup and filtering
+ * - Weighted blending of flour properties (W, protein, P/L, absorption)
+ * - Strength estimation and classification
+ * - Search and suggestion functions
+ *
+ * Scientific references:
+ * - [C] Casucci "La Pizza è un Arte" (2020) — Cap. 01-16 (cereali), Cap. 17-23 (reologia, W, P/L)
+ * - All blending uses linear weighted average (valid for same-grain-type mixtures)
+ */
+
+import type {
+  FlourCatalogEntry,
+  FlourIngredient,
+  BlendedFlourProps,
+} from '@commons/types/recipe'
+import { FLOUR_CATALOG, FLOUR_GROUPS } from '../../local_data/flour-catalog'
+
+// Re-export catalog data for convenience
+export { FLOUR_CATALOG, FLOUR_GROUPS }
+
+import { rnd } from './format'
+
+// ── Catalog lookup ─────────────────────────────────────────────
+
+/** Find a flour by key in the catalog, fallback to index 5 (00 forte). */
+export function getFlour(key: string, catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[]): FlourCatalogEntry {
+  return catalog.find((f) => f.key === key) || catalog[5]
+}
+
+/** Get all flours belonging to a group ("Grano Tenero", "Grano Duro", "Speciali"). */
+export function getFloursByGroup(group: string, catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[]): FlourCatalogEntry[] {
+  return catalog.filter((f) => f.group === group)
+}
+
+/** Search flours by query string (matches label, sub, group). Case-insensitive. */
+export function searchFlours(query: string, catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[]): FlourCatalogEntry[] {
+  const q = query.toLowerCase()
+  return catalog.filter((f) =>
+    (f.label + ' ' + f.sub + ' ' + f.group).toLowerCase().includes(q),
+  )
+}
+
+// ── Blending ───────────────────────────────────────────────────
+
+/**
+ * Weighted average of flour properties from a blend.
+ *
+ * For each property (W, protein, P/L, absorption, ash, fiber, starch damage,
+ * ferment speed, falling number), computes the weighted average by flour weight (g).
+ *
+ * [C] Cap. 17-23 — W, P/L, and absorption blend linearly for same-grain mixtures.
+ */
+export function blendFlourProperties(
+  flours: FlourIngredient[],
+  catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[],
+): BlendedFlourProps {
+  let t = 0
+  let wP = 0, wW = 0, wPL = 0, wA = 0, wAsh = 0, wFib = 0, wSD = 0, wFS = 0, wFN = 0
+
+  for (const f of flours) {
+    const c = getFlour(f.type, catalog)
+    t += f.g
+    wP += f.g * c.protein
+    wW += f.g * c.W
+    wPL += f.g * c.PL
+    wA += f.g * c.absorption
+    wAsh += f.g * c.ash
+    wFib += f.g * c.fiber
+    wSD += f.g * c.starchDamage
+    wFS += f.g * c.fermentSpeed
+    wFN += f.g * (c.fallingNumber ?? 300)
+  }
+
+  if (t <= 0) {
+    return {
+      protein: 12, W: 280, PL: 0.55, absorption: 60, ash: 0.55,
+      fiber: 2.5, starchDamage: 7, fermentSpeed: 1, fallingNumber: 300,
+    }
+  }
+
+  return {
+    protein: rnd(wP / t),
+    W: Math.round(wW / t),
+    PL: rnd((wPL / t) * 100) / 100,
+    absorption: Math.round(wA / t),
+    ash: rnd((wAsh / t) * 100) / 100,
+    fiber: rnd((wFib / t) * 10) / 10,
+    starchDamage: rnd((wSD / t) * 10) / 10,
+    fermentSpeed: rnd((wFS / t) * 100) / 100,
+    fallingNumber: Math.round(wFN / t),
+  }
+}
+
+/**
+ * Estimate W strength from protein percentage.
+ * Linear correlation for Italian soft wheat: W ≈ 22·protein - 70.
+ * Clamped to [60, 420].
+ *
+ * [C] Cap. 20 — Relationship between protein content and alveographic W.
+ */
+export function estimateW(protein: number): number {
+  return Math.round(Math.max(60, Math.min(420, 22 * protein - 70)))
+}
+
+// ── Classification ─────────────────────────────────────────────
+
+export type FlourStrength = 'weak' | 'medium' | 'strong' | 'very_strong'
+
+/**
+ * Classify flour by W strength.
+ * [C] Cap. 20 — W ranges:
+ *   weak < 180, medium 180-260, strong 260-350, very_strong > 350
+ */
+export function classifyStrength(W: number): FlourStrength {
+  if (W < 180) return 'weak'
+  if (W < 260) return 'medium'
+  if (W <= 350) return 'strong'
+  return 'very_strong'
+}
+
+/** Is this a whole grain flour? (fiber > 6%) */
+export function isWholeGrain(flour: FlourCatalogEntry): boolean {
+  return flour.fiber > 6
+}
+
+/** Is this a gluten-free flour? (W === 0 and fermentSpeed === 0) */
+export function isGlutenFree(flour: FlourCatalogEntry): boolean {
+  return flour.W === 0 && flour.fermentSpeed === 0
+}
+
+// ── Suggestions ────────────────────────────────────────────────
+
+/**
+ * Find flours near a target W strength, sorted by distance.
+ * @param tolerance — max W distance (default 50)
+ */
+export function suggestForW(
+  targetW: number,
+  catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[],
+  tolerance = 50,
+): FlourCatalogEntry[] {
+  return catalog
+    .filter((f) => Math.abs(f.W - targetW) <= tolerance && f.W > 0)
+    .sort((a, b) => Math.abs(a.W - targetW) - Math.abs(b.W - targetW))
+}

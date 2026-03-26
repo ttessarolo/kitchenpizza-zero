@@ -21,23 +21,25 @@ import type {
 import type { RecipeMeta, Portioning, TemperatureUnit, RecipeStep } from '@commons/types/recipe'
 import { autoLayout } from '~/lib/auto-layout'
 import { removeNodeFromGraph, getNodeTotalWeight } from '@commons/utils/graph-utils'
+import { rnd } from '@commons/utils/format'
 import {
-  rnd,
   getStepTotalWeight,
   getChildIds,
+} from '@commons/utils/recipe'
+import {
   recalcPreFermentIngredients,
   adjustDoughForPreFerment,
   reconcilePreFerments,
-} from '@commons/utils/recipe'
+} from '@commons/utils/pre-ferment-manager'
 import { graphToRecipeV1, nodeToStep, stepToNodeData } from '@commons/utils/graph-adapter'
 import { computeGraphTotals, scaleNodeData } from '~/hooks/useGraphCalculator'
 import { generateDoughGraph } from '~/lib/generate-dough'
 import { RECIPE_SUBTYPES } from '@/local_data'
-import { getDoughDefaults } from '@/local_data/dough-defaults'
-import { calcYeastPct } from '@commons/utils/yeast-calculator'
+import { getDoughDefaults } from '@commons/utils/dough-manager'
+import { calcYeastPct } from '@commons/utils/dough-manager'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
 import type { ActionableWarning, GraphMutation, NodeRef } from '@commons/types/recipe-graph'
-import type { RecipeWarning } from '@commons/utils/warning-manager'
+import type { DoughWarning as RecipeWarning } from '@commons/utils/dough-manager'
 import type { BaseNodeData } from '~/components/recipe-flow/nodes/BaseNode'
 import { getNodeDuration } from '~/hooks/useGraphCalculator'
 

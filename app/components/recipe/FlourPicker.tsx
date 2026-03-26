@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { FLOUR_CATALOG, FLOUR_GROUPS } from '@/local_data'
-import { getFlour, estimateW } from '@commons/utils/recipe'
+import { getFlour, estimateW } from '@commons/utils/flour-manager'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
 import {
   Dialog,

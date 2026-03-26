@@ -1,7 +1,7 @@
 import { Card } from '~/components/ui/card'
 import { SectionHeader } from './shared/SectionHeader'
 import { TRAY_PRESETS, TRAY_MATERIALS } from '@/local_data'
-import { rnd, thicknessLabel } from '@commons/utils/recipe'
+import { rnd, thicknessLabel } from '@commons/utils/format'
 import type { Portioning } from '@commons/types/recipe'
 
 interface PortioningSectionProps {

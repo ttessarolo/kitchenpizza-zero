@@ -4,7 +4,9 @@ import { getDefaultConfig as getBakeDefaultConfig, getWarnings as getBakeWarning
 import type { ActionableWarning } from '@commons/types/recipe-graph'
 import { FAT_TYPES } from '@/local_data/fat-catalog'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
-import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius, getAncestorIds, getStepTotalWeight, blendFlourProperties, getSaltPct, getSugarPct, getFatPct } from '@commons/utils/recipe'
+import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius } from '@commons/utils/format'
+import { blendFlourProperties, getSaltPct, getSugarPct, getFatPct } from '@commons/utils/dough-manager'
+import { getAncestorIds, getStepTotalWeight } from '@commons/utils/recipe'
 import {
   STEP_TYPES,
   KNEAD_METHODS,

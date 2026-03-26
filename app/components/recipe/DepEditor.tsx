@@ -1,5 +1,6 @@
 import type { RecipeStep } from '@commons/types/recipe'
-import { fmtDuration, getStepTotalWeight, rnd } from '@commons/utils/recipe'
+import { fmtDuration, rnd } from '@commons/utils/format'
+import { getStepTotalWeight } from '@commons/utils/recipe'
 import { STEP_TYPES } from '@/local_data'
 import { Slider } from '~/components/ui/slider'
 import { useRecipe } from './RecipeContext'

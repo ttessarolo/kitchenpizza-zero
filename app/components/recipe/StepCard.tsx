@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fmtTime, fmtDuration } from '@commons/utils/recipe'
+import { fmtTime, fmtDuration } from '@commons/utils/format'
 import { STEP_TYPES, COLOR_MAP } from '@/local_data'
 import type { ScheduledStep } from '@commons/types/recipe'
 import { StepBody } from './StepBody'

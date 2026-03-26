@@ -23,7 +23,7 @@ import type {
   SugarIngredient,
   FatIngredient,
 } from '@commons/types/recipe'
-import { rnd } from '@commons/utils/recipe'
+import { rnd } from '@commons/utils/format'
 import { topologicalSortGraph, getNodeTotalWeight } from '@commons/utils/graph-utils'
 import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
 
