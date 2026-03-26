@@ -155,6 +155,12 @@ export function computeGroupedIngredients(
       if (e) e.g += f.g
       else gr.fats.push({ ...f })
     }
+    // Cooking fats (frying oil, etc.) — separate from dough fats but shown in group
+    for (const f of d.cookingFats ?? []) {
+      const e = gr.fats.find((x) => x.type === f.type)
+      if (e) e.g += f.g
+      else gr.fats.push({ ...f })
+    }
   }
 
   return g

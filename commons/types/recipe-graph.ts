@@ -16,6 +16,8 @@ import type {
   SugarIngredient,
   FatIngredient,
   OvenConfig,
+  CookingConfig,
+  PreBakeConfig,
   PreFermentConfig,
 } from './recipe'
 
@@ -124,7 +126,12 @@ export interface NodeData {
   riseMethod?: string | null            // rise
   sourcePrep?: string | null            // rise, shape
   shapeCount?: number | null            // shape
+  /** @deprecated Use cookingCfg instead. Kept for backward compatibility. */
   ovenCfg?: OvenConfig | null           // bake, prep:cook(oven)
+  cookingCfg?: CookingConfig | null     // bake (all sub-types)
+  preBakeCfg?: PreBakeConfig | null     // pre_bake (boil, dock, flour_dust, oil_coat, steam_inject)
+  /** Fats used for cooking (frying, pan, etc.) — NOT counted in dough totals. */
+  cookingFats?: FatIngredient[]
   preFermentCfg?: PreFermentConfig | null // pre_ferment
 
   // ── Prep ──
@@ -148,6 +155,8 @@ export interface NodeData {
   /** If true, reconcileGraph() will NOT recalculate baseDur for this node.
    *  Set to true when the user manually changes the duration. */
   userOverrideDuration?: boolean
+  /** ID of the advisory rule that created this node (via addNodeAfter action). */
+  advisorySourceId?: string
 }
 
 // ── Recipe Node ─────────────────────────────────────────────────
@@ -267,7 +276,7 @@ export interface WarningAction {
 export interface ActionableWarning {
   id: string
   sourceNodeId?: string
-  category: 'yeast' | 'salt' | 'fat' | 'hydration' | 'temp' | 'baking' | 'flour' | 'steam' | 'general'
+  category: 'yeast' | 'salt' | 'fat' | 'hydration' | 'temp' | 'baking' | 'flour' | 'steam' | 'general' | 'frying' | 'grilling' | 'pre_bake'
   severity: 'info' | 'warning' | 'error'
   message: string
   actions?: WarningAction[]

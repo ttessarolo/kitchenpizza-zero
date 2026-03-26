@@ -45,6 +45,8 @@ import {
   graphToRecipeV1,
 } from '@commons/utils/graph-adapter'
 import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
+import { calcDuration as calcBakeDurationV2, syncCookingFats } from '@commons/utils/bake-manager'
+import type { FryConfig } from '@commons/types/recipe'
 import { getDoughWarnings, type RecipeWarning } from '@commons/utils/warning-manager'
 import { getDoughDefaults } from '../../../local_data/dough-defaults'
 import { RISE_METHODS, YEAST_TYPES, FLOUR_CATALOG } from '../../../local_data'
@@ -273,11 +275,42 @@ export function reconcileGraph(
     }
 
     // ── Bake: recalculate duration if not user-overridden ──
-    if (nodeRef.type === 'bake' && nodeRef.data.ovenCfg && !nodeRef.data.userOverrideDuration) {
-      const profile = getBakingProfile(meta.type, meta.subtype)
-      if (profile) {
-        nodeRef.data.baseDur = calcBakeDuration(profile, nodeRef.data.ovenCfg, portioning.thickness)
+    if (nodeRef.type === 'bake' && !nodeRef.data.userOverrideDuration) {
+      if (nodeRef.data.cookingCfg) {
+        // New path: use BakeManager for all cooking methods
+        nodeRef.data.baseDur = calcBakeDurationV2(
+          nodeRef.subtype ?? 'forno',
+          nodeRef.data.cookingCfg,
+          meta.type,
+          meta.subtype,
+          portioning.thickness,
+        )
+      } else if (nodeRef.data.ovenCfg) {
+        // Legacy path: backward compat for nodes without cookingCfg
+        const profile = getBakingProfile(meta.type, meta.subtype)
+        if (profile) {
+          nodeRef.data.baseDur = calcBakeDuration(profile, nodeRef.data.ovenCfg, portioning.thickness)
+        }
       }
+    }
+
+    // ── Bake: auto-sync cooking fats ──
+    if (nodeRef.type === 'bake') {
+      const method = nodeRef.data.cookingCfg?.method
+      const OIL_METHODS = ['frittura', 'aria', 'padella']
+      if (method === 'frittura') {
+        nodeRef.data.cookingFats = syncCookingFats(nodeRef.data.cookingFats ?? [], nodeRef.data.cookingCfg!.cfg as FryConfig)
+      } else if (!OIL_METHODS.includes(method ?? '')) {
+        // Clear cooking fats for methods that don't use oil (forno, pentola, vapore, griglia)
+        nodeRef.data.cookingFats = []
+      }
+    }
+
+    // ── Bake/pre_bake/post_bake: ALWAYS assign "Cottura [dough title]" group ──
+    if (nodeRef.type === 'bake' || nodeRef.type === 'pre_bake' || nodeRef.type === 'post_bake') {
+      const upstreamDough = findUpstreamDough(nodeRef.id, nodes, edges)
+      const autoGroupName = 'Cottura' + (upstreamDough ? ` ${upstreamDough.data.title}` : '')
+      nodeRef.data.group = autoGroupName
     }
 
     // ── Split: validate sum ──

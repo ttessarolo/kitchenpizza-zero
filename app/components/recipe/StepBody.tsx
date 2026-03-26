@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import type { RecipeStep, TemperatureUnit, FlourCatalogEntry } from '@commons/types/recipe'
+import type { RecipeStep, TemperatureUnit, FlourCatalogEntry, CookingConfig, FatIngredient, SteamerConfig, FryConfig, AirFryerConfig, GrillConfig, PanConfig } from '@commons/types/recipe'
+import { getDefaultConfig as getBakeDefaultConfig, getWarnings as getBakeWarnings } from '@commons/utils/bake-manager'
+import type { ActionableWarning } from '@commons/types/recipe-graph'
+import { FAT_TYPES } from '@/local_data/fat-catalog'
+import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius, getAncestorIds, getStepTotalWeight, blendFlourProperties, getSaltPct, getSugarPct, getFatPct } from '@commons/utils/recipe'
 import {
   STEP_TYPES,
@@ -48,6 +52,8 @@ export function StepBody({ step: s }: StepBodyProps) {
 
   const currentTypeEntry = STEP_TYPES.find((t) => t.key === s.type)
   const subtypes = currentTypeEntry?.subtypes || []
+  // Bake/pre_bake/post_bake/done nodes should NOT show dough ingredient editors
+  const showDoughIngredients = !['bake', 'pre_bake', 'post_bake', 'done'].includes(s.type)
 
   // Duration helpers (baseDur in minutes → h/m/s)
   const baseDurH = Math.floor(s.baseDur / 60)
@@ -121,6 +127,22 @@ export function StepBody({ step: s }: StepBodyProps) {
                     fermentDur: d.fermentDur ?? null,
                     roomTempDur: d.roomTempDur ?? null,
                     starterForm: null,
+                  }
+                }
+                // Re-create cookingCfg when switching bake subtype
+                if (st.type === 'bake' && newSubtype) {
+                  try {
+                    const newCfg = getBakeDefaultConfig(newSubtype)
+                    updated.cookingCfg = newCfg
+                    // Keep ovenCfg in sync for legacy compat (forno/pentola)
+                    if (newCfg.method === 'forno' || newCfg.method === 'pentola') {
+                      updated.ovenCfg = newCfg.cfg
+                    } else {
+                      updated.ovenCfg = null
+                    }
+                  } catch {
+                    // Unknown subtype — clear config
+                    updated.cookingCfg = null
                   }
                 }
                 return updated
@@ -378,8 +400,8 @@ export function StepBody({ step: s }: StepBodyProps) {
         )
       })()}
 
-      {/* Ingredients */}
-      {hasI && (
+      {/* Ingredients — hidden for bake/pre_bake/post_bake/done */}
+      {showDoughIngredients && hasI && (
         <div className="flex flex-col gap-1.5 mt-1">
           {/* Flours */}
           {s.flours.length > 0 && (
@@ -963,23 +985,110 @@ export function StepBody({ step: s }: StepBodyProps) {
         </div>
       )}
 
-      {/* Oven config */}
-      {s.ovenCfg && (
-        <OvenEditor
-          cfg={s.ovenCfg}
-          tu={tu}
-          setTU={setTemperatureUnit}
-          dT={dTf}
-          onChange={(f, v) =>
-            uS(s.id, (st) => ({ ...st, ovenCfg: { ...st.ovenCfg!, [f]: v } }))
-          }
-          stepDur={sDur(s)}
-          baseDur={s.baseDur}
-          recipeType={recipe.meta.type}
-          recipeSubtype={recipe.meta.subtype}
-          nodeId={s.id}
-        />
-      )}
+      {/* Cooking config — dispatches to method-specific editor */}
+      {s.type === 'bake' && (() => {
+        const cc = s.cookingCfg
+        if (!cc && s.ovenCfg) {
+          // Legacy: render OvenEditor for old nodes without cookingCfg
+          return (
+            <OvenEditor
+              cfg={s.ovenCfg}
+              tu={tu}
+              setTU={setTemperatureUnit}
+              dT={dTf}
+              onChange={(f, v) =>
+                uS(s.id, (st) => ({ ...st, ovenCfg: { ...st.ovenCfg!, [f]: v } }))
+              }
+              stepDur={sDur(s)}
+              baseDur={s.baseDur}
+              recipeType={recipe.meta.type}
+              recipeSubtype={recipe.meta.subtype}
+              nodeId={s.id}
+            />
+          )
+        }
+        if (!cc) return null
+        const updateCookingCfg = (field: string, value: unknown) =>
+          uS(s.id, (st) => {
+            const prev = st.cookingCfg
+            if (!prev) return st
+            const newCfg = { ...prev, cfg: { ...prev.cfg, [field]: value } } as CookingConfig
+            const update: Partial<RecipeStep> = { cookingCfg: newCfg }
+            // Keep ovenCfg in sync for forno/pentola
+            if (prev.method === 'forno' || prev.method === 'pentola') {
+              update.ovenCfg = newCfg.cfg as RecipeStep['ovenCfg']
+            }
+            return { ...st, ...update }
+          })
+        switch (cc.method) {
+          case 'forno':
+          case 'pentola':
+            return (
+              <OvenEditor
+                cfg={cc.cfg}
+                tu={tu}
+                setTU={setTemperatureUnit}
+                dT={dTf}
+                onChange={updateCookingCfg}
+                stepDur={sDur(s)}
+                baseDur={s.baseDur}
+                recipeType={recipe.meta.type}
+                recipeSubtype={recipe.meta.subtype}
+                nodeId={s.id}
+                method={cc.method}
+              />
+            )
+          case 'vapore':
+            return (
+              <>
+                <SteamerEditor cfg={cc.cfg} onChange={updateCookingCfg} />
+                <CookingAdvisory cookingCfg={cc} recipeType={recipe.meta.type} recipeSubtype={recipe.meta.subtype} baseDur={s.baseDur} nodeId={s.id} />
+              </>
+            )
+          case 'frittura':
+            return (
+              <>
+                <FryEditor cfg={cc.cfg} onChange={updateCookingCfg} />
+                <CookingFatsEditor
+                  cookingFats={s.cookingFats ?? []}
+                  onChange={(fats) => uS(s.id, (st) => ({ ...st, cookingFats: fats }))}
+                />
+                <CookingAdvisory cookingCfg={cc} recipeType={recipe.meta.type} recipeSubtype={recipe.meta.subtype} baseDur={s.baseDur} nodeId={s.id} />
+              </>
+            )
+          case 'aria':
+            return (
+              <>
+                <AirFryerEditor cfg={cc.cfg} onChange={updateCookingCfg} dT={dTf} />
+                <CookingFatsEditor
+                  cookingFats={s.cookingFats ?? []}
+                  onChange={(fats) => uS(s.id, (st) => ({ ...st, cookingFats: fats }))}
+                />
+                <CookingAdvisory cookingCfg={cc} recipeType={recipe.meta.type} recipeSubtype={recipe.meta.subtype} baseDur={s.baseDur} nodeId={s.id} />
+              </>
+            )
+          case 'griglia':
+            return (
+              <>
+                <GrillEditor cfg={cc.cfg} onChange={updateCookingCfg} dT={dTf} />
+                <CookingAdvisory cookingCfg={cc} recipeType={recipe.meta.type} recipeSubtype={recipe.meta.subtype} baseDur={s.baseDur} nodeId={s.id} />
+              </>
+            )
+          case 'padella':
+            return (
+              <>
+                <PanEditor cfg={cc.cfg} onChange={updateCookingCfg} dT={dTf} />
+                <CookingFatsEditor
+                  cookingFats={s.cookingFats ?? []}
+                  onChange={(fats) => uS(s.id, (st) => ({ ...st, cookingFats: fats }))}
+                />
+                <CookingAdvisory cookingCfg={cc} recipeType={recipe.meta.type} recipeSubtype={recipe.meta.subtype} baseDur={s.baseDur} nodeId={s.id} />
+              </>
+            )
+          default:
+            return null
+        }
+      })()}
 
       {/* Formatura (shape) config */}
       {s.type === 'shape' && (() => {
@@ -1154,9 +1263,10 @@ interface OvenEditorProps {
   recipeType: string
   recipeSubtype: string | null
   nodeId: string
+  method?: string
 }
 
-function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd, recipeType, recipeSubtype, nodeId }: OvenEditorProps) {
+function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd, recipeType, recipeSubtype, nodeId, method }: OvenEditorProps) {
   const ms = MODE_MAP[cfg.ovenType] || ['static']
   const pp = 100 - cfg.cieloPct
 
@@ -1288,6 +1398,25 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
         </select>
       </div>
 
+      {/* Lid toggle — only for pentola */}
+      {method === 'pentola' && (
+        <div className="mt-2">
+          <label className={editorCheckLabel}>
+            <input
+              type="checkbox"
+              checked={cfg.lidOn ?? true}
+              onChange={(e) => {
+                ch('lidOn', e.target.checked)
+                // Auto-sync ovenMode: lid on → steam (vapore intrappolato), lid off → static (calore secco)
+                ch('ovenMode', e.target.checked ? 'steam' : 'static')
+              }}
+              className="accent-primary"
+            />
+            Con coperchio
+          </label>
+        </div>
+      )}
+
       {/* Steam % slider — visible when mode is steam */}
       {cfg.ovenMode === 'steam' && (
         <div className="mt-2">
@@ -1320,7 +1449,355 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
         calculatedDur={sd}
         baseDur={bd}
         nodeId={nodeId}
+        method={method}
       />
+    </div>
+  )
+}
+
+// ── Shared editor styles ──────────────────────────────────────
+const editorLabel = "text-xs font-semibold text-muted-foreground uppercase tracking-[1px] mb-0.5"
+const editorSelect = "w-full text-xs font-medium text-foreground bg-background border-[1.5px] border-border rounded-lg py-1.5 pl-2 pr-7 cursor-pointer outline-none appearance-none min-h-8"
+const editorSlider = "flex-1 accent-primary"
+const editorRow = "mt-1"
+const editorCheckLabel = "flex items-center gap-1.5 text-xs text-foreground cursor-pointer"
+
+// ── SteamerEditor ─────────────────────────────────────────────
+function SteamerEditor({ cfg, onChange: ch }: { cfg: SteamerConfig; onChange: (f: string, v: unknown) => void }) {
+  return (
+    <div className="mt-1.5 flex flex-col gap-1">
+      <div className={editorRow}>
+        <div className={editorLabel}>Tipo Vaporiera</div>
+        <select value={cfg.steamerType} onChange={(e) => ch('steamerType', e.target.value)} className={editorSelect}>
+          <option value="bamboo">Bambù</option>
+          <option value="electric">Elettrica</option>
+          <option value="pot_basket">Pentola con cestello</option>
+        </select>
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Temperatura: {cfg.temp}°C</div>
+        <input type="range" min={95} max={105} step={1} value={cfg.temp} onChange={(e) => ch('temp', +e.target.value)} className={editorSlider} />
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Livello acqua</div>
+        <select value={cfg.waterLevel} onChange={(e) => ch('waterLevel', e.target.value)} className={editorSelect}>
+          <option value="full">Pieno</option>
+          <option value="half">Metà</option>
+        </select>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.paperLiner} onChange={(e) => ch('paperLiner', e.target.checked)} />
+          Carta forno forata
+        </label>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.lidLift} onChange={(e) => ch('lidLift', e.target.checked)} />
+          Apertura graduale coperchio (anti-condensa)
+        </label>
+      </div>
+    </div>
+  )
+}
+
+// ── FryEditor ─────────────────────────────────────────────────
+function FryEditor({ cfg, onChange: ch }: { cfg: FryConfig; onChange: (f: string, v: unknown) => void }) {
+  return (
+    <div className="mt-1.5 flex flex-col gap-1">
+      <div className={editorRow}>
+        <div className={editorLabel}>Metodo</div>
+        <select value={cfg.fryMethod} onChange={(e) => ch('fryMethod', e.target.value)} className={editorSelect}>
+          <option value="deep">Immersione (deep fry)</option>
+          <option value="shallow">Padella (shallow fry)</option>
+        </select>
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Temp. olio: {cfg.oilTemp}°C</div>
+        <input type="range" min={170} max={195} step={5} value={cfg.oilTemp} onChange={(e) => ch('oilTemp', +e.target.value)} className={editorSlider} />
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Peso max impasto: {cfg.maxDoughWeight}g</div>
+        <input type="range" min={120} max={200} step={5} value={cfg.maxDoughWeight} onChange={(e) => ch('maxDoughWeight', +e.target.value)} className={editorSlider} />
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.flipHalf} onChange={(e) => ch('flipHalf', e.target.checked)} />
+          Capovolgere a metà cottura
+        </label>
+      </div>
+    </div>
+  )
+}
+
+// ── AirFryerEditor ────────────────────────────────────────────
+function AirFryerEditor({ cfg, onChange: ch, dT }: { cfg: AirFryerConfig; onChange: (f: string, v: unknown) => void; dT: (c: number) => string }) {
+  return (
+    <div className="mt-1.5 flex flex-col gap-1">
+      <div className={editorRow}>
+        <div className={editorLabel}>Tipo friggitrice</div>
+        <select value={cfg.basketType} onChange={(e) => ch('basketType', e.target.value)} className={editorSelect}>
+          <option value="drawer">Cassetto</option>
+          <option value="oven_style">Stile forno</option>
+          <option value="dual_zone">Doppia zona</option>
+        </select>
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Capacità</div>
+        <select value={cfg.capacity} onChange={(e) => ch('capacity', e.target.value)} className={editorSelect}>
+          <option value="small">Piccola</option>
+          <option value="standard">Standard</option>
+          <option value="large">Grande</option>
+        </select>
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Temperatura: {dT(cfg.temp)}</div>
+        <input type="range" min={150} max={220} step={5} value={cfg.temp} onChange={(e) => ch('temp', +e.target.value)} className={editorSlider} />
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.preheat} onChange={(e) => ch('preheat', e.target.checked)} />
+          Preriscaldamento ({cfg.preheatDur} min)
+        </label>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.oilSpray} onChange={(e) => ch('oilSpray', e.target.checked)} />
+          Spruzzata olio
+        </label>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.flipHalf} onChange={(e) => ch('flipHalf', e.target.checked)} />
+          Capovolgere a metà cottura
+        </label>
+      </div>
+    </div>
+  )
+}
+
+// ── GrillEditor ───────────────────────────────────────────────
+function GrillEditor({ cfg, onChange: ch, dT }: { cfg: GrillConfig; onChange: (f: string, v: unknown) => void; dT: (c: number) => string }) {
+  return (
+    <div className="mt-1.5 flex flex-col gap-1">
+      <div className={editorRow}>
+        <div className={editorLabel}>Tipo griglia</div>
+        <select value={cfg.grillType} onChange={(e) => ch('grillType', e.target.value)} className={editorSelect}>
+          <option value="gas">Gas</option>
+          <option value="charcoal">Carbone</option>
+        </select>
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Temp. zona diretta: {dT(cfg.directTemp)}</div>
+        <input type="range" min={370} max={480} step={10} value={cfg.directTemp} onChange={(e) => ch('directTemp', +e.target.value)} className={editorSlider} />
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Temp. zona indiretta: {dT(cfg.indirectTemp)}</div>
+        <input type="range" min={150} max={250} step={10} value={cfg.indirectTemp} onChange={(e) => ch('indirectTemp', +e.target.value)} className={editorSlider} />
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.twoZone} onChange={(e) => ch('twoZone', e.target.checked)} />
+          Cottura a due zone
+        </label>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.lidClosed} onChange={(e) => ch('lidClosed', e.target.checked)} />
+          Coperchio chiuso (effetto forno)
+        </label>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.oilSpray} onChange={(e) => ch('oilSpray', e.target.checked)} />
+          Oliare impasto
+        </label>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.flipOnce} onChange={(e) => ch('flipOnce', e.target.checked)} />
+          Capovolgere una volta
+        </label>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.dockDough} onChange={(e) => ch('dockDough', e.target.checked)} />
+          Forare impasto (dock)
+        </label>
+      </div>
+    </div>
+  )
+}
+
+// ── PanEditor ─────────────────────────────────────────────────
+function PanEditor({ cfg, onChange: ch, dT }: { cfg: PanConfig; onChange: (f: string, v: unknown) => void; dT: (c: number) => string }) {
+  return (
+    <div className="mt-1.5 flex flex-col gap-1">
+      <div className={editorRow}>
+        <div className={editorLabel}>Tipo padella</div>
+        <select value={cfg.panMaterial} onChange={(e) => ch('panMaterial', e.target.value)} className={editorSelect}>
+          <option value="cast_iron">Ghisa</option>
+          <option value="nonstick">Antiaderente</option>
+          <option value="steel">Acciaio</option>
+        </select>
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Diametro: {cfg.panSize}cm</div>
+        <input type="range" min={20} max={36} step={2} value={cfg.panSize} onChange={(e) => ch('panSize', +e.target.value)} className={editorSlider} />
+      </div>
+      <div className={editorRow}>
+        <div className={editorLabel}>Temperatura: {dT(cfg.temp)}</div>
+        <input type="range" min={180} max={250} step={5} value={cfg.temp} onChange={(e) => ch('temp', +e.target.value)} className={editorSlider} />
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.oilSpray} onChange={(e) => ch('oilSpray', e.target.checked)} />
+          Oliare padella/impasto
+        </label>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.flipOnce} onChange={(e) => ch('flipOnce', e.target.checked)} />
+          Capovolgere una volta
+        </label>
+      </div>
+      <div className={editorRow}>
+        <label className={editorCheckLabel}>
+          <input type="checkbox" checked={cfg.lidUsed} onChange={(e) => ch('lidUsed', e.target.checked)} />
+          Coperchio (per sciogliere formaggio)
+        </label>
+      </div>
+    </div>
+  )
+}
+
+// ── CookingFatsEditor — dropdown fryable fats + grams ─────────
+const fryableFats = FAT_TYPES.filter((f) => f.fryable)
+
+function CookingFatsEditor({
+  cookingFats,
+  onChange,
+}: {
+  cookingFats: FatIngredient[]
+  onChange: (fats: FatIngredient[]) => void
+}) {
+  const addFat = () => {
+    const defaultType = fryableFats[0]?.key ?? 'olio_arachidi'
+    onChange([...cookingFats, { id: Date.now(), type: defaultType, g: 500 }])
+  }
+
+  const updateFat = (idx: number, field: 'type' | 'g', value: string | number) => {
+    onChange(cookingFats.map((f, i) => (i === idx ? { ...f, [field]: value } : f)))
+  }
+
+  const removeFat = (idx: number) => {
+    onChange(cookingFats.filter((_, i) => i !== idx))
+  }
+
+  return (
+    <div className="mt-1.5">
+      <div className={editorLabel}>Grassi per cottura</div>
+      {cookingFats.map((fat, idx) => (
+        <div key={fat.id} className="flex gap-1 items-center mt-1">
+          <select
+            value={fat.type}
+            onChange={(e) => updateFat(idx, 'type', e.target.value)}
+            className={editorSelect + ' flex-1'}
+          >
+            {fryableFats.map((ft) => (
+              <option key={ft.key} value={ft.key}>{ft.label}</option>
+            ))}
+          </select>
+          <input
+            type="number"
+            value={fat.g}
+            onChange={(e) => updateFat(idx, 'g', Math.max(0, +e.target.value))}
+            className="w-[80px] text-xs font-medium text-foreground bg-background border-[1.5px] border-border rounded-lg py-1.5 px-2 text-right min-h-8"
+          />
+          <span className="text-xs text-muted-foreground">g</span>
+          {cookingFats.length > 1 && (
+            <button type="button" onClick={() => removeFat(idx)} className="text-xs text-destructive cursor-pointer px-1">✕</button>
+          )}
+        </div>
+      ))}
+      <button type="button" onClick={addFat} className="text-xs text-primary mt-1 cursor-pointer">+ Aggiungi grasso</button>
+    </div>
+  )
+}
+
+// ── CookingAdvisory — warnings for ALL cooking methods ────────
+function CookingAdvisory({
+  cookingCfg,
+  recipeType,
+  recipeSubtype,
+  baseDur,
+  nodeId,
+}: {
+  cookingCfg: CookingConfig
+  recipeType: string
+  recipeSubtype: string | null
+  baseDur: number
+  nodeId: string
+}) {
+  const applyWarningAction = useRecipeFlowStore((s) => s.applyWarningAction)
+  const graphNodes = useRecipeFlowStore((s) => s.graph.nodes)
+  const graphEdges = useRecipeFlowStore((s) => s.graph.edges)
+
+  const emptyNodeData = {
+    title: '', desc: '', group: '', baseDur, restDur: 0, restTemp: null,
+    flours: [], liquids: [], extras: [], yeasts: [], salts: [], sugars: [], fats: [],
+  }
+  const rawWarnings = getBakeWarnings(cookingCfg, recipeType, recipeSubtype, baseDur, emptyNodeData)
+  const warnings: ActionableWarning[] = rawWarnings.map((w) => ({ ...w, sourceNodeId: nodeId }))
+  if (warnings.length === 0) return null
+
+  // Check which advisory IDs already have downstream nodes tagged with advisorySourceId
+  const appliedAdvisoryIds = new Set<string>()
+  const downstreamIds = graphEdges.filter((e) => e.source === nodeId).map((e) => e.target)
+  for (const dId of downstreamIds) {
+    const dNode = graphNodes.find((n) => n.id === dId)
+    if (dNode?.data.advisorySourceId) appliedAdvisoryIds.add(dNode.data.advisorySourceId)
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-1">
+      {warnings.map((w) => {
+        const alreadyApplied = appliedAdvisoryIds.has(w.id)
+        return (
+          <div
+            key={w.id}
+            className={`p-2 rounded border text-xs ${
+              w.severity === 'warning'
+                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                : w.severity === 'error'
+                  ? 'bg-red-50 border-red-200 text-red-800'
+                  : 'bg-blue-50 border-blue-200 text-blue-800'
+            }`}
+          >
+            <div>{w.message}</div>
+            {w.actions?.map((action, ai) => {
+              const hasAddNode = action.mutations.some((m) => m.type === 'addNodeAfter')
+              if (hasAddNode && alreadyApplied) {
+                return (
+                  <span key={ai} className="mt-1.5 inline-block text-[10px] font-semibold text-muted-foreground px-2.5 py-1 rounded-lg bg-muted">
+                    ✓ Già aggiunto
+                  </span>
+                )
+              }
+              return (
+                <button
+                  key={ai}
+                  type="button"
+                  onClick={() => applyWarningAction(w, ai)}
+                  className="mt-1.5 text-[10px] font-semibold text-white px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors cursor-pointer"
+                >
+                  ✓ {action.label}
+                </button>
+              )
+            })}
+          </div>
+        )
+      })}
     </div>
   )
 }

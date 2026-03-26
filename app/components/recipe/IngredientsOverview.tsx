@@ -3,6 +3,7 @@ import { SectionHeader } from './shared/SectionHeader'
 import { IngredientRow } from './shared/IngredientRow'
 import { rnd, getFlour } from '@commons/utils/recipe'
 import { FLOUR_CATALOG, YEAST_TYPES } from '@/local_data'
+import { FAT_TYPES } from '@/local_data/fat-catalog'
 import type { GroupedIngredients } from '~/hooks/useRecipeCalculator'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
 
@@ -24,7 +25,7 @@ export function IngredientsOverview({
         const grp = groupedIngredients[g]
         if (
           !grp ||
-          grp.flours.length + grp.liquids.length + grp.extras.length + grp.yeasts.length === 0
+          grp.flours.length + grp.liquids.length + grp.extras.length + grp.yeasts.length + (grp.salts?.length ?? 0) + (grp.sugars?.length ?? 0) + (grp.fats?.length ?? 0) === 0
         )
           return null
         return (
@@ -57,6 +58,20 @@ export function IngredientsOverview({
                 name={e.name}
                 amount={e.unit ? e.g : rnd(e.g)}
                 unit={e.unit || 'g'}
+              />
+            ))}
+            {(grp.salts ?? []).map((s) => (
+              <IngredientRow key={'s' + s.type} name={s.type === 'sale_fino' ? 'Sale fino' : s.type === 'sale_grosso' ? 'Sale grosso' : s.type} amount={rnd(s.g)} unit="g" />
+            ))}
+            {(grp.sugars ?? []).map((s) => (
+              <IngredientRow key={'su' + s.type} name={s.type === 'zucchero' ? 'Zucchero' : s.type === 'miele' ? 'Miele' : s.type} amount={rnd(s.g)} unit="g" />
+            ))}
+            {(grp.fats ?? []).map((f) => (
+              <IngredientRow
+                key={'fat' + f.type}
+                name={FAT_TYPES.find((ft) => ft.key === f.type)?.label ?? f.type}
+                amount={rnd(f.g)}
+                unit="g"
               />
             ))}
           </Card>

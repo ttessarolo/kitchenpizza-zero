@@ -6,7 +6,7 @@
  */
 
 import type { ActionableWarning, WarningAction, NodeData } from '@commons/types/recipe-graph'
-import type { OvenConfig } from '@commons/types/recipe'
+import type { OvenConfig, CookingConfig, PreBakeConfig } from '@commons/types/recipe'
 
 // ── Context passed to rule evaluation ───────────────────────────
 
@@ -25,6 +25,10 @@ export interface AdvisoryContext {
   fatPct: number
   hydration: number
   flourW: number
+  // Cooking config (new — all bake sub-types)
+  cookingCfg?: CookingConfig | null
+  preBakeCfg?: PreBakeConfig | null
+  _cookingMethod?: string
   // Baking profile computed values (injected by caller)
   _tempMin?: number
   _tempMax?: number
@@ -33,6 +37,15 @@ export interface AdvisoryContext {
   _cieloMax?: number
   _recommendedModes?: string[]
   _isPrecottura?: boolean
+  // Frying-specific
+  _oilTemp?: number
+  _oilTempMin?: number
+  _oilTempMax?: number
+  _maxDoughWeight?: number
+  // Grilling-specific
+  _directTemp?: number
+  _directTempMin?: number
+  _directTempMax?: number
   [key: string]: unknown
 }
 

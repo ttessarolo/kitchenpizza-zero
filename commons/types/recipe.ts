@@ -229,7 +229,108 @@ export interface OvenConfig {
   shelfPosition: number
   /** Steam percentage (0-100). Only relevant when ovenMode === 'steam'. */
   steamPct?: number
+  /** Whether the Dutch oven lid is on. Only relevant for pentola. Default: true. */
+  lidOn?: boolean
 }
+
+// ── Cooking configs (per bake sub-type) ─────────────────────────
+
+export interface SteamerConfig {
+  steamerType: 'bamboo' | 'electric' | 'pot_basket'
+  temp: number
+  lidLift: boolean
+  waterLevel: 'full' | 'half'
+  paperLiner: boolean
+}
+
+export interface FryConfig {
+  fryMethod: 'deep' | 'shallow'
+  oilTemp: number
+  flipHalf: boolean
+  maxDoughWeight: number
+}
+
+export interface AirFryerConfig {
+  temp: number
+  preheat: boolean
+  preheatDur: number
+  oilSpray: boolean
+  flipHalf: boolean
+  basketType: 'drawer' | 'oven_style' | 'dual_zone'
+  capacity: 'small' | 'standard' | 'large'
+}
+
+export interface GrillConfig {
+  grillType: 'charcoal' | 'gas'
+  directTemp: number
+  indirectTemp: number
+  twoZone: boolean
+  lidClosed: boolean
+  oilSpray: boolean
+  flipOnce: boolean
+  dockDough: boolean
+}
+
+export interface PanConfig {
+  panMaterial: 'cast_iron' | 'nonstick' | 'steel'
+  panSize: number
+  temp: number
+  oilSpray: boolean
+  flipOnce: boolean
+  lidUsed: boolean
+}
+
+export type CookingConfig =
+  | { method: 'forno'; cfg: OvenConfig }
+  | { method: 'pentola'; cfg: OvenConfig }
+  | { method: 'vapore'; cfg: SteamerConfig }
+  | { method: 'frittura'; cfg: FryConfig }
+  | { method: 'aria'; cfg: AirFryerConfig }
+  | { method: 'griglia'; cfg: GrillConfig }
+  | { method: 'padella'; cfg: PanConfig }
+
+// ── Pre-bake configs (per pre_bake sub-type) ────────────────────
+
+export interface BoilConfig {
+  liquidType: 'water_malt' | 'water_honey' | 'water_sugar' | 'lye_solution' | 'baking_soda'
+  liquidTemp: number
+  additivePct: number
+  flipOnce: boolean
+  drainTime: number
+}
+
+export interface DockConfig {
+  tool: 'fork' | 'docker_roller' | 'skewer'
+  pattern: 'uniform' | 'center_only' | 'edge_sparing'
+}
+
+export interface FlourDustConfig {
+  flourType: 'rice' | 'semolina' | 'tipo00' | 'rye' | 'cornmeal'
+  application: 'surface' | 'base_only' | 'all_over'
+}
+
+export interface OilCoatConfig {
+  oilType: 'olive' | 'canola' | 'peanut' | 'sunflower' | 'avocado'
+  method: 'spray' | 'brush' | 'drizzle'
+  surface: 'top' | 'bottom' | 'both'
+}
+
+export interface SteamInjectConfig {
+  method: 'water_pan' | 'ice_cubes' | 'spray_bottle' | 'steam_injection'
+  waterVolume: 'small' | 'medium' | 'large'
+  removeAfter: number
+}
+
+export type PreBakeConfig =
+  | { method: 'boil'; cfg: BoilConfig }
+  | { method: 'dock'; cfg: DockConfig }
+  | { method: 'flour_dust'; cfg: FlourDustConfig }
+  | { method: 'oil_coat'; cfg: OilCoatConfig }
+  | { method: 'steam_inject'; cfg: SteamInjectConfig }
+  | { method: 'brush'; cfg: null }
+  | { method: 'topping'; cfg: null }
+  | { method: 'scoring'; cfg: null }
+  | { method: 'generic'; cfg: null }
 
 export interface PreFermentConfig {
   preFermentPct: number
@@ -268,7 +369,12 @@ export interface RecipeStep {
   sugars: SugarIngredient[]
   fats: FatIngredient[]
   riseMethod: string | null
+  /** @deprecated Use cookingCfg instead. Kept for backward compatibility. */
   ovenCfg: OvenConfig | null
+  cookingCfg?: CookingConfig | null
+  preBakeCfg?: PreBakeConfig | null
+  /** Fats used for cooking (frying, pan, etc.) — NOT counted in dough totals. */
+  cookingFats?: FatIngredient[]
   sourcePrep: string | null
   shapeCount: number | null
   preFermentCfg: PreFermentConfig | null

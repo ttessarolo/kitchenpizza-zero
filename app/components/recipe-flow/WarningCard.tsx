@@ -27,12 +27,14 @@ const SEVERITY_STYLES = {
 
 interface WarningCardProps {
   warning: ActionableWarning
+  appliedAdvisoryIds?: Set<string>
   onDismiss?: () => void
 }
 
-export function WarningCard({ warning, onDismiss }: WarningCardProps) {
+export function WarningCard({ warning, appliedAdvisoryIds, onDismiss }: WarningCardProps) {
   const applyWarningAction = useRecipeFlowStore((s) => s.applyWarningAction)
   const style = SEVERITY_STYLES[warning.severity]
+  const alreadyApplied = appliedAdvisoryIds?.has(warning.id) ?? false
 
   return (
     <div className={`${style.bg} ${style.border} border rounded-xl p-3 ${style.text}`}>
@@ -44,16 +46,26 @@ export function WarningCard({ warning, onDismiss }: WarningCardProps) {
           {/* Action buttons */}
           {warning.actions && warning.actions.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {warning.actions.map((action, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => applyWarningAction(warning, i)}
-                  className={`text-[10px] font-semibold text-white px-2.5 py-1 rounded-lg ${style.btnBg} transition-colors`}
-                >
-                  ✓ {action.label}
-                </button>
-              ))}
+              {warning.actions.map((action, i) => {
+                const hasAddNode = action.mutations.some((m) => m.type === 'addNodeAfter')
+                if (hasAddNode && alreadyApplied) {
+                  return (
+                    <span key={i} className="mt-1.5 inline-block text-[10px] font-semibold text-muted-foreground px-2.5 py-1 rounded-lg bg-muted">
+                      ✓ Già aggiunto
+                    </span>
+                  )
+                }
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => applyWarningAction(warning, i)}
+                    className={`text-[10px] font-semibold text-white px-2.5 py-1 rounded-lg ${style.btnBg} transition-colors`}
+                  >
+                    ✓ {action.label}
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>

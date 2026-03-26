@@ -54,6 +54,11 @@ export const STEP_TYPES: StepTypeEntry[] = [
       { key: "brush", label: "Spennellatura", defaults: { baseDur: 5 } },
       { key: "topping", label: "Topping / Farcitura", defaults: { baseDur: 5 } },
       { key: "scoring", label: "Tagli / Incisioni", defaults: { baseDur: 3 } },
+      { key: "boil", label: "Bollitura (Bagel/Pretzel)", defaults: { baseDur: 2 } },
+      { key: "dock", label: "Foratura / Docking", defaults: { baseDur: 2 } },
+      { key: "flour_dust", label: "Infarinatura", defaults: { baseDur: 1 } },
+      { key: "oil_coat", label: "Oliatura / Spray Olio", defaults: { baseDur: 2 } },
+      { key: "steam_inject", label: "Vaporizzazione", defaults: { baseDur: 1 } },
       { key: "generic", label: "Generico", defaults: {} },
     ],
   },
@@ -64,6 +69,11 @@ export const STEP_TYPES: StepTypeEntry[] = [
     subtypes: [
       { key: "forno", label: "In forno", defaults: { baseDur: 30 } },
       { key: "pentola", label: "In pentola (Dutch oven)", defaults: { baseDur: 40 } },
+      { key: "vapore", label: "A vapore (Vaporiera)", defaults: { baseDur: 15 } },
+      { key: "frittura", label: "Frittura", defaults: { baseDur: 5 } },
+      { key: "aria", label: "Friggitrice ad Aria", defaults: { baseDur: 10 } },
+      { key: "griglia", label: "Griglia / BBQ", defaults: { baseDur: 8 } },
+      { key: "padella", label: "Padella / Fornello", defaults: { baseDur: 8 } },
     ],
   },
   {

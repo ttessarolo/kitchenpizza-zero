@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { OvenConfig } from '@commons/types/recipe'
 import { getBakingWarnings } from '@commons/utils/baking'
 import { WarningCard } from '~/components/recipe-flow/WarningCard'
+import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 
 interface BakingAdvisoryProps {
   ovenCfg: OvenConfig
@@ -10,6 +11,7 @@ interface BakingAdvisoryProps {
   calculatedDur: number
   baseDur: number
   nodeId?: string
+  method?: string
 }
 
 export function BakingAdvisory({
@@ -19,9 +21,22 @@ export function BakingAdvisory({
   calculatedDur,
   baseDur,
   nodeId,
+  method,
 }: BakingAdvisoryProps) {
-  const warnings = getBakingWarnings(ovenCfg, recipeType, recipeSubtype, calculatedDur, baseDur)
+  const warnings = getBakingWarnings(ovenCfg, recipeType, recipeSubtype, calculatedDur, baseDur, method)
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+  const graphNodes = useRecipeFlowStore((s) => s.graph.nodes)
+  const graphEdges = useRecipeFlowStore((s) => s.graph.edges)
+
+  // Check which advisory IDs already have downstream nodes tagged with advisorySourceId
+  const appliedAdvisoryIds = new Set<string>()
+  if (nodeId) {
+    const downstreamIds = graphEdges.filter((e) => e.source === nodeId).map((e) => e.target)
+    for (const dId of downstreamIds) {
+      const dNode = graphNodes.find((n) => n.id === dId)
+      if (dNode?.data.advisorySourceId) appliedAdvisoryIds.add(dNode.data.advisorySourceId)
+    }
+  }
 
   const visible = warnings.filter((w) => !dismissed.has(w.id))
   if (visible.length === 0) return null
@@ -39,6 +54,7 @@ export function BakingAdvisory({
             message: w.message,
             actions: w.actions,
           }}
+          appliedAdvisoryIds={appliedAdvisoryIds}
           onDismiss={() => setDismissed((s) => new Set(s).add(w.id))}
         />
       ))}

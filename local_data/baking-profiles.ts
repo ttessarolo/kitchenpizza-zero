@@ -333,6 +333,98 @@ export const BAKING_PROFILES: BakingProfile[] = [
     recommendedModes: ["static", "fan"],
   },
 
+  // ── Frittura ─────────────────────────────────────────────────
+  // [M] Cap. 11, p.187 — pizza fritta, montanara, calzoni fritti
+  {
+    type: "pizza",
+    subtype: "fritta",
+    timeRange: [3, 6],
+    refTemp: 180,
+    tempRange: [170, 195],
+    cieloPctRange: [0, 0],     // non applicabile
+    materialFactors: {},
+    thicknessFactor: 0,
+    baseThickness: 0,
+    isPrecottura: false,
+    recommendedModes: ["deep", "shallow"],
+  },
+  // Generic fry fallback
+  {
+    type: "frittura",
+    subtype: null,
+    timeRange: [3, 8],
+    refTemp: 180,
+    tempRange: [170, 195],
+    cieloPctRange: [0, 0],
+    materialFactors: {},
+    thicknessFactor: 0,
+    baseThickness: 0,
+    isPrecottura: false,
+    recommendedModes: ["deep", "shallow"],
+  },
+
+  // ── Griglia / BBQ ──────────────────────────────────────────
+  // [M] Cap. 11, p.186 — griglia a carbone e gas
+  {
+    type: "griglia",
+    subtype: null,
+    timeRange: [4, 12],
+    refTemp: 400,
+    tempRange: [370, 480],
+    cieloPctRange: [0, 0],
+    materialFactors: {},
+    thicknessFactor: 0,
+    baseThickness: 0,
+    isPrecottura: false,
+    recommendedModes: ["charcoal", "gas"],
+  },
+
+  // ── Padella / Fornello ─────────────────────────────────────
+  // [M] Cap. 11, p.185 — ghisa + pistola termica
+  {
+    type: "padella",
+    subtype: null,
+    timeRange: [5, 12],
+    refTemp: 220,
+    tempRange: [180, 250],
+    cieloPctRange: [0, 0],
+    materialFactors: { cast_iron: 0.90, nonstick: 1.0, steel: 0.95 },
+    thicknessFactor: 0,
+    baseThickness: 0,
+    isPrecottura: false,
+    recommendedModes: ["cast_iron", "nonstick", "steel"],
+  },
+
+  // ── Friggitrice ad Aria ────────────────────────────────────
+  {
+    type: "aria",
+    subtype: null,
+    timeRange: [5, 18],
+    refTemp: 180,
+    tempRange: [150, 220],
+    cieloPctRange: [0, 0],
+    materialFactors: {},
+    thicknessFactor: 0,
+    baseThickness: 0,
+    isPrecottura: false,
+    recommendedModes: ["drawer", "oven_style"],
+  },
+
+  // ── Vapore (Vaporiera) ─────────────────────────────────────
+  {
+    type: "vapore",
+    subtype: null,
+    timeRange: [8, 25],
+    refTemp: 100,
+    tempRange: [95, 105],
+    cieloPctRange: [0, 0],
+    materialFactors: {},
+    thicknessFactor: 0,
+    baseThickness: 0,
+    isPrecottura: false,
+    recommendedModes: ["bamboo", "electric", "pot_basket"],
+  },
+
   // ── Altro (generic fallback) ───────────────────────────────
   {
     type: "altro",

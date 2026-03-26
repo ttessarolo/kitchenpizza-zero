@@ -290,10 +290,19 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       // Run reconciliation engine
       const result = reconcileGraph(newGraph, newPortioning, newMeta)
 
+      // Auto-ensure "Cottura *" groups from bake nodes exist in ingredientGroups
+      const updatedGroups = [...s.ingredientGroups]
+      for (const node of result.graph.nodes) {
+        if (node.data.group?.startsWith('Cottura') && !updatedGroups.includes(node.data.group)) {
+          updatedGroups.push(node.data.group)
+        }
+      }
+
       return {
         graph: result.graph,
         portioning: result.portioning,
         warnings: result.warnings,
+        ingredientGroups: updatedGroups,
         flowNodes: syncFlowNodes(result.graph, newMeta, result.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
         flowEdges: result.graph.edges.map(toFlowEdge),
       }
@@ -506,7 +515,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const newNodes = s.graph.nodes.map((n) => {
           const step = newSteps.find((st) => st.id === n.id)
           if (!step) return n
-          return { ...n, data: { ...n.data, ...stepToNodeData(step) } }
+          return { ...n, subtype: step.subtype, data: { ...n.data, ...stepToNodeData(step) } }
         })
         return { graph: { ...s.graph, nodes: newNodes } }
       })
@@ -626,15 +635,28 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       for (const m of action.mutations) {
         const targetId = resolveRef(m.target)
         switch (m.type) {
-          case 'updateNode':
-            if (targetId) get().updateNodeData(targetId, m.patch as any)
+          case 'updateNode': {
+            if (targetId) {
+              const patch = { ...(m.patch as Record<string, unknown>) }
+              // Sync ovenCfg patch into cookingCfg for forno/pentola nodes
+              if (patch.ovenCfg) {
+                const node = get().graph.nodes.find((n) => n.id === targetId)
+                const cc = node?.data.cookingCfg
+                if (cc && (cc.method === 'forno' || cc.method === 'pentola')) {
+                  patch.cookingCfg = { ...cc, cfg: patch.ovenCfg }
+                }
+              }
+              get().updateNodeData(targetId, patch as any)
+            }
             break
+          }
           case 'addNodeAfter': {
             const afterId = targetId ?? srcId
             if (afterId) get().addNode(afterId, m.nodeType as any, m.subtype ?? null)
-            // If data was provided, update the newly created node
-            if (m.data && get().lastAddedNodeId) {
-              get().updateNodeCosmetic(get().lastAddedNodeId!, m.data as any)
+            if (get().lastAddedNodeId) {
+              // Tag node with advisory source ID + apply provided data
+              const nodeData = { ...(m.data || {}), advisorySourceId: warning.id } as any
+              get().updateNodeCosmetic(get().lastAddedNodeId!, nodeData)
             }
             break
           }
