@@ -1,0 +1,340 @@
+{
+  "type": "defaults",
+  "id": "dough_composition",
+  "_meta": {
+    "section": "dough",
+    "displayName": "meta.defaults.dough.name",
+    "description": "meta.defaults.dough.desc",
+    "tags": [
+      "dough",
+      "defaults",
+      "composition"
+    ],
+    "lastModified": "2026-03-27",
+    "author": "system"
+  },
+  "entries": [
+    {
+      "type": "pizza",
+      "subtype": "napoletana",
+      "defaultDoughHours": 18,
+      "saltPctDefault": 2.3,
+      "saltPctRange": [
+        1.8,
+        3
+      ],
+      "fatPctDefault": 0,
+      "fatPctRange": [
+        0,
+        3
+      ]
+    },
+    {
+      "type": "pizza",
+      "subtype": "romana_tonda",
+      "defaultDoughHours": 24,
+      "saltPctDefault": 2.5,
+      "saltPctRange": [
+        1.8,
+        3
+      ],
+      "fatPctDefault": 3,
+      "fatPctRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "type": "pizza",
+      "subtype": "teglia_romana",
+      "defaultDoughHours": 24,
+      "saltPctDefault": 2.5,
+      "saltPctRange": [
+        1.8,
+        2.8
+      ],
+      "fatPctDefault": 5,
+      "fatPctRange": [
+        3,
+        7
+      ]
+    },
+    {
+      "type": "pizza",
+      "subtype": "pala",
+      "defaultDoughHours": 24,
+      "saltPctDefault": 2.5,
+      "saltPctRange": [
+        1.8,
+        3
+      ],
+      "fatPctDefault": 3,
+      "fatPctRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "type": "pizza",
+      "subtype": "pinza",
+      "defaultDoughHours": 48,
+      "saltPctDefault": 2.5,
+      "saltPctRange": [
+        1.8,
+        3
+      ],
+      "fatPctDefault": 5,
+      "fatPctRange": [
+        3,
+        7
+      ]
+    },
+    {
+      "type": "pizza",
+      "subtype": "padellino",
+      "defaultDoughHours": 18,
+      "saltPctDefault": 2.3,
+      "saltPctRange": [
+        1.8,
+        3
+      ],
+      "fatPctDefault": 3,
+      "fatPctRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "type": "pizza",
+      "subtype": null,
+      "defaultDoughHours": 18,
+      "saltPctDefault": 2.3,
+      "saltPctRange": [
+        1.8,
+        3
+      ],
+      "fatPctDefault": 3,
+      "fatPctRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "type": "focaccia",
+      "subtype": "genovese",
+      "defaultDoughHours": 12,
+      "saltPctDefault": 2.5,
+      "saltPctRange": [
+        2,
+        3.5
+      ],
+      "fatPctDefault": 8,
+      "fatPctRange": [
+        5,
+        12
+      ]
+    },
+    {
+      "type": "focaccia",
+      "subtype": null,
+      "defaultDoughHours": 12,
+      "saltPctDefault": 2.5,
+      "saltPctRange": [
+        2,
+        3.5
+      ],
+      "fatPctDefault": 5,
+      "fatPctRange": [
+        3,
+        10
+      ]
+    },
+    {
+      "type": "pane",
+      "subtype": "shokupan",
+      "defaultDoughHours": 4,
+      "saltPctDefault": 2,
+      "saltPctRange": [
+        1.8,
+        2.5
+      ],
+      "fatPctDefault": 5,
+      "fatPctRange": [
+        3,
+        8
+      ]
+    },
+    {
+      "type": "pane",
+      "subtype": "pane_comune",
+      "defaultDoughHours": 8,
+      "saltPctDefault": 2,
+      "saltPctRange": [
+        1.8,
+        2.8
+      ],
+      "fatPctDefault": 1,
+      "fatPctRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "type": "pane",
+      "subtype": "ciabatta",
+      "defaultDoughHours": 18,
+      "saltPctDefault": 2,
+      "saltPctRange": [
+        1.8,
+        2.5
+      ],
+      "fatPctDefault": 2,
+      "fatPctRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "type": "pane",
+      "subtype": "baguette",
+      "defaultDoughHours": 12,
+      "saltPctDefault": 2,
+      "saltPctRange": [
+        1.8,
+        2.5
+      ],
+      "fatPctDefault": 0,
+      "fatPctRange": [
+        0,
+        2
+      ]
+    },
+    {
+      "type": "pane",
+      "subtype": "panino",
+      "defaultDoughHours": 4,
+      "saltPctDefault": 2,
+      "saltPctRange": [
+        1.8,
+        2.5
+      ],
+      "fatPctDefault": 2,
+      "fatPctRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "type": "pane",
+      "subtype": "pane_int",
+      "defaultDoughHours": 12,
+      "saltPctDefault": 2,
+      "saltPctRange": [
+        1.8,
+        2.5
+      ],
+      "fatPctDefault": 2,
+      "fatPctRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "type": "pane",
+      "subtype": null,
+      "defaultDoughHours": 8,
+      "saltPctDefault": 2,
+      "saltPctRange": [
+        1.8,
+        2.8
+      ],
+      "fatPctDefault": 1,
+      "fatPctRange": [
+        0,
+        5
+      ]
+    },
+    {
+      "type": "dolce",
+      "subtype": "brioche",
+      "defaultDoughHours": 4,
+      "saltPctDefault": 0.8,
+      "saltPctRange": [
+        0.3,
+        1.5
+      ],
+      "fatPctDefault": 18,
+      "fatPctRange": [
+        10,
+        25
+      ]
+    },
+    {
+      "type": "dolce",
+      "subtype": "panettone",
+      "defaultDoughHours": 12,
+      "saltPctDefault": 0.5,
+      "saltPctRange": [
+        0.3,
+        1
+      ],
+      "fatPctDefault": 15,
+      "fatPctRange": [
+        10,
+        20
+      ]
+    },
+    {
+      "type": "dolce",
+      "subtype": "colomba",
+      "defaultDoughHours": 12,
+      "saltPctDefault": 0.5,
+      "saltPctRange": [
+        0.3,
+        1
+      ],
+      "fatPctDefault": 15,
+      "fatPctRange": [
+        10,
+        20
+      ]
+    },
+    {
+      "type": "dolce",
+      "subtype": null,
+      "defaultDoughHours": 6,
+      "saltPctDefault": 0.8,
+      "saltPctRange": [
+        0.3,
+        1.5
+      ],
+      "fatPctDefault": 10,
+      "fatPctRange": [
+        5,
+        20
+      ]
+    },
+    {
+      "type": "altro",
+      "subtype": null,
+      "defaultDoughHours": 8,
+      "saltPctDefault": 2,
+      "saltPctRange": [
+        1,
+        3
+      ],
+      "fatPctDefault": 3,
+      "fatPctRange": [
+        0,
+        10
+      ]
+    }
+  ],
+  "fallback": {
+    "chain": [
+      "type+subtype",
+      "type+null",
+      "altro+null"
+    ]
+  }
+}

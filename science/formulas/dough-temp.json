@@ -1,0 +1,19 @@
+{
+  "type": "formula",
+  "id": "final_dough_temp",
+  "ref": "[C] Cap. 55 — Rule of 55",
+  "_meta": {
+    "section": "dough",
+    "displayName": "meta.formula.dough_temp.name",
+    "description": "meta.formula.dough_temp.desc",
+    "tags": ["temperature", "FDT", "rule-of-55"],
+    "lastModified": "2026-03-27",
+    "author": "system"
+  },
+  "expression": "weightedAvg + frictionFactor",
+  "constants": {
+    "airIncorporationPct": 0.15
+  },
+  "inputs": ["weightedAvg", "frictionFactor"],
+  "output": { "name": "finalTemp", "unit": "°C", "round": 1 }
+}

@@ -1,0 +1,126 @@
+[
+  {
+    "type": "rule",
+    "id": "yeast_too_low",
+    "_meta": { "section": "composition", "displayName": "meta.rule.yeast_too_low.name", "description": "meta.rule.yeast_too_low.desc", "tags": ["yeast", "composition", "error"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "yeast",
+    "severity": "error",
+    "messageKey": "warning.yeast_too_low",
+    "messageVars": ["yeastPct"],
+    "conditions": [
+      { "field": "yeastPct", "op": "gt", "value": 0 },
+      { "field": "yeastPct", "op": "lt", "value": 0.03 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "yeast_too_high",
+    "_meta": { "section": "composition", "displayName": "meta.rule.yeast_too_high.name", "description": "meta.rule.yeast_too_high.desc", "tags": ["yeast", "composition", "warning"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "yeast",
+    "severity": "warning",
+    "messageKey": "warning.yeast_too_high",
+    "messageVars": ["yeastPct"],
+    "conditions": [
+      { "field": "yeastPct", "op": "gt", "value": 3.5 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "salt_low",
+    "_meta": { "section": "composition", "displayName": "meta.rule.salt_low.name", "description": "meta.rule.salt_low.desc", "tags": ["salt", "composition"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "salt",
+    "severity": "warning",
+    "messageKey": "warning.salt_low",
+    "messageVars": ["saltPct", "recipeType", "_saltMin", "_saltMax"],
+    "conditions": [
+      { "field": "saltPct", "op": "lt", "value": "_saltMin" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "salt_high",
+    "_meta": { "section": "composition", "displayName": "meta.rule.salt_high.name", "description": "meta.rule.salt_high.desc", "tags": ["salt", "composition"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "salt",
+    "severity": "warning",
+    "messageKey": "warning.salt_high",
+    "messageVars": ["saltPct", "recipeType", "_saltMin", "_saltMax"],
+    "conditions": [
+      { "field": "saltPct", "op": "gt", "value": "_saltMax" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "salt_extreme",
+    "_meta": { "section": "composition", "displayName": "meta.rule.salt_extreme.name", "description": "meta.rule.salt_extreme.desc", "tags": ["salt", "composition", "error"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "salt",
+    "severity": "error",
+    "messageKey": "warning.salt_extreme",
+    "messageVars": ["saltPct"],
+    "conditions": [
+      { "field": "saltPct", "op": "gt", "value": 3.0 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "fat_high",
+    "_meta": { "section": "composition", "displayName": "meta.rule.fat_high.name", "description": "meta.rule.fat_high.desc", "tags": ["fat", "composition"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "fat",
+    "severity": "warning",
+    "messageKey": "warning.fat_high",
+    "messageVars": ["fatPct", "recipeType", "_fatMin", "_fatMax"],
+    "conditions": [
+      { "field": "fatPct", "op": "gt", "value": "_fatMax" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "fat_extreme",
+    "_meta": { "section": "composition", "displayName": "meta.rule.fat_extreme.name", "description": "meta.rule.fat_extreme.desc", "tags": ["fat", "composition"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "fat",
+    "severity": "warning",
+    "messageKey": "warning.fat_extreme",
+    "messageVars": ["fatPct"],
+    "conditions": [
+      { "field": "fatPct", "op": "gt", "value": 12 }
+    ],
+    "excludeIf": [
+      { "field": "recipeType", "op": "eq", "value": "dolce" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "hyd_extreme",
+    "_meta": { "section": "composition", "displayName": "meta.rule.hyd_extreme.name", "description": "meta.rule.hyd_extreme.desc", "tags": ["hydration", "composition"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "hydration",
+    "severity": "warning",
+    "messageKey": "warning.hyd_extreme",
+    "messageVars": ["hydration"],
+    "conditions": [
+      { "field": "hydration", "op": "gt", "value": 90 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "hyd_low",
+    "_meta": { "section": "composition", "displayName": "meta.rule.hyd_low.name", "description": "meta.rule.hyd_low.desc", "tags": ["hydration", "composition"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "hydration",
+    "severity": "info",
+    "messageKey": "warning.hyd_low",
+    "messageVars": ["hydration"],
+    "conditions": [
+      { "field": "hydration", "op": "lt", "value": 45 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "hours_extreme",
+    "_meta": { "section": "composition", "displayName": "meta.rule.hours_extreme.name", "description": "meta.rule.hours_extreme.desc", "tags": ["duration", "composition"], "lastModified": "2026-03-27", "author": "system" },
+    "category": "general",
+    "severity": "info",
+    "messageKey": "warning.hours_extreme",
+    "messageVars": ["doughHours"],
+    "conditions": [
+      { "field": "doughHours", "op": "gt", "value": 72 }
+    ]
+  }
+]

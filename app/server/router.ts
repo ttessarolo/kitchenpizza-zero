@@ -6,6 +6,7 @@ import { getCatalog, getById, search, suggestByW, estimateWFromProtein } from '.
 import { getMethods, calcDuration, maxHoursForW } from './procedures/rise'
 import { calcTarget } from './procedures/portioning'
 import { getDuration } from './procedures/schedule'
+import { listBlocks, getBlock, updateBlock, listI18n, updateI18n } from './procedures/science-admin'
 
 export const appRouter = os.router({
   health: healthCheck,
@@ -36,6 +37,13 @@ export const appRouter = os.router({
   }),
   schedule: os.router({
     getDuration,
+  }),
+  science: os.router({
+    listBlocks,
+    getBlock,
+    updateBlock,
+    listI18n,
+    updateI18n,
   }),
 })
 

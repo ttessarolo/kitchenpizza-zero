@@ -1,0 +1,41 @@
+[
+  {
+    "type": "formula",
+    "id": "suggested_salt",
+    "ref": "[C] Cap. 53",
+    "_meta": {
+      "section": "dough",
+      "displayName": "meta.formula.suggested_salt.name",
+      "description": "meta.formula.suggested_salt.desc",
+      "tags": ["salt", "composition", "suggestion"],
+      "lastModified": "2026-03-27",
+      "author": "system"
+    },
+    "expression": "totalFlour * clamp(basePct + max(0, (hydration - 60) * adjustFactor), minPct, maxPct) / 100",
+    "constants": {
+      "basePct": 2.5,
+      "adjustFactor": 0.01,
+      "minPct": 2.0,
+      "maxPct": 3.0
+    },
+    "inputs": ["totalFlour", "hydration"],
+    "output": { "name": "saltGrams", "unit": "g", "round": 1 }
+  },
+  {
+    "type": "formula",
+    "id": "estimate_W_from_protein",
+    "ref": "[C] Cap. 20",
+    "_meta": {
+      "section": "flour",
+      "displayName": "meta.formula.estimate_W.name",
+      "description": "meta.formula.estimate_W.desc",
+      "tags": ["flour", "W", "protein", "correlation"],
+      "lastModified": "2026-03-27",
+      "author": "system"
+    },
+    "expression": "max(60, min(420, 22 * protein - 70))",
+    "constants": {},
+    "inputs": ["protein"],
+    "output": { "name": "W", "unit": "", "round": 0 }
+  }
+]

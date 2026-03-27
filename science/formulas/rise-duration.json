@@ -1,0 +1,76 @@
+{
+  "type": "factor_chain",
+  "id": "rise_duration",
+  "ref": "[C] Cap. 44",
+  "_meta": {
+    "section": "rise",
+    "displayName": "meta.factor_chain.rise_duration.name",
+    "description": "meta.factor_chain.rise_duration.desc",
+    "tags": ["rise", "duration", "fermentation", "casucci", "factor-chain"],
+    "lastModified": "2026-03-27",
+    "author": "system"
+  },
+  "base": { "value": 60, "unit": "min" },
+  "factors": [
+    {
+      "id": "method_tf",
+      "ref": "Rise method time factor (room=1, fridge=3.6, ctrl18=1.4, ctrl12=2.2)",
+      "source": "lookup",
+      "table": "rise_methods",
+      "key": "$method",
+      "field": "tf"
+    },
+    {
+      "id": "yeast_inverse",
+      "ref": "Inverse yeast proportion — less yeast = longer rise",
+      "expression": "2 / max(yeastPct, 0.5)"
+    },
+    {
+      "id": "W_factor",
+      "ref": "Flour strength normalization to W280 reference",
+      "expression": "280 / max(W, 50)"
+    },
+    {
+      "id": "starch_damage",
+      "ref": "Higher starch damage = slightly faster fermentation",
+      "expression": "1 - ((starchDamage - 7) * 0.02)"
+    },
+    {
+      "id": "falling_number",
+      "ref": "Lower FN = more amylase = faster rise. Reference FN=300, min 150",
+      "expression": "300 / max(fallingNumber, 150)"
+    },
+    {
+      "id": "fiber",
+      "ref": "High fiber slows gluten development. Reference fiber=3%",
+      "expression": "1 + max(0, (fiber - 3) * 0.02)"
+    },
+    {
+      "id": "yeast_speed",
+      "ref": "Yeast speed factor: fresh=1, madre=0.25-0.3",
+      "expression": "1 / max(yeastSpeedFactor, 0.1)"
+    },
+    {
+      "id": "temp_factor",
+      "ref": "Temperature factor from Q10 model",
+      "source": "input",
+      "key": "temperatureFactor"
+    },
+    {
+      "id": "salt_inhibition",
+      "ref": "[C] Cap. 53 — Salt above 2.5% inhibits yeast",
+      "expression": "1 + max(0, (saltPct - 2.5) * 0.1)"
+    },
+    {
+      "id": "sugar_inhibition",
+      "ref": "Sugar above 5% inhibits yeast (osmotic stress)",
+      "expression": "1 + max(0, (sugarPct - 5) * 0.05)"
+    },
+    {
+      "id": "fat_inhibition",
+      "ref": "Fat above 3% slows fermentation slightly",
+      "expression": "1 + max(0, (fatPct - 3) * 0.02)"
+    }
+  ],
+  "output": { "name": "durationMin", "unit": "min", "round": 0, "min": 15 }
+}

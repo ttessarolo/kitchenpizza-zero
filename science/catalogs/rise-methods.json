@@ -1,0 +1,75 @@
+{
+  "type": "catalog",
+  "id": "rise_methods",
+  "_meta": {
+    "section": "rise",
+    "displayName": "meta.catalog.rise_methods.name",
+    "description": "meta.catalog.rise_methods.desc",
+    "tags": [
+      "rise",
+      "methods",
+      "yeast"
+    ],
+    "lastModified": "2026-03-27",
+    "author": "system"
+  },
+  "entries": [
+    {
+      "key": "room",
+      "label": "Ambiente (~22°C)",
+      "tf": 1
+    },
+    {
+      "key": "fridge",
+      "label": "Frigo (~4°C)",
+      "tf": 3.6
+    },
+    {
+      "key": "ctrl18",
+      "label": "Controllata 18°C",
+      "tf": 1.4
+    },
+    {
+      "key": "ctrl12",
+      "label": "Controllata 12°C",
+      "tf": 2.2
+    }
+  ],
+  "yeastTypes": [
+    {
+      "key": "fresh",
+      "label": "Birra fresco",
+      "toFresh": 1,
+      "speedF": 1,
+      "hasFW": false
+    },
+    {
+      "key": "dry",
+      "label": "Secco attivo",
+      "toFresh": 3,
+      "speedF": 1,
+      "hasFW": false
+    },
+    {
+      "key": "instant",
+      "label": "Istantaneo",
+      "toFresh": 2.5,
+      "speedF": 1.1,
+      "hasFW": false
+    },
+    {
+      "key": "madre_s",
+      "label": "Madre solido",
+      "toFresh": 0.08333333333333333,
+      "speedF": 0.3,
+      "hasFW": true
+    },
+    {
+      "key": "madre_l",
+      "label": "Madre liquido",
+      "toFresh": 0.0625,
+      "speedF": 0.25,
+      "hasFW": true
+    }
+  ]
+}

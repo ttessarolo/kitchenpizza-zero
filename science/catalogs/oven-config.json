@@ -1,0 +1,57 @@
+{
+  "type": "catalog",
+  "id": "oven_config",
+  "_meta": {
+    "section": "bake",
+    "displayName": "meta.catalog.oven_config.name",
+    "description": "meta.catalog.oven_config.desc",
+    "tags": [
+      "oven",
+      "config"
+    ],
+    "lastModified": "2026-03-27",
+    "author": "system"
+  },
+  "ovenTypes": [
+    {
+      "key": "electric",
+      "label": "Elettrico"
+    },
+    {
+      "key": "gas",
+      "label": "Gas"
+    },
+    {
+      "key": "wood",
+      "label": "Legna"
+    }
+  ],
+  "ovenModes": [
+    {
+      "key": "static",
+      "label": "Statico"
+    },
+    {
+      "key": "fan",
+      "label": "Ventilato"
+    },
+    {
+      "key": "steam",
+      "label": "Vapore"
+    }
+  ],
+  "modeMap": {
+    "electric": [
+      "static",
+      "fan",
+      "steam"
+    ],
+    "gas": [
+      "static",
+      "fan"
+    ],
+    "wood": [
+      "static"
+    ]
+  }
+}

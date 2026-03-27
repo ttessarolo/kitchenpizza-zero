@@ -1,0 +1,60 @@
+[
+  {
+    "type": "factor_chain",
+    "id": "bake_duration_oven",
+    "ref": "[C] Cap. 55-57",
+    "_meta": {
+      "section": "bake",
+      "displayName": "meta.formula.bake_dur_oven.name",
+      "description": "meta.formula.bake_dur_oven.desc",
+      "tags": ["bake", "oven", "forno", "pentola", "duration"],
+      "lastModified": "2026-03-27",
+      "author": "system"
+    },
+    "base": { "value": 1, "unit": "profile.baseTime" },
+    "factors": [
+      {
+        "id": "temp_ratio",
+        "ref": "Temperature ratio: reference temp / actual temp",
+        "expression": "refTemp / max(ovenTemp, 100)"
+      },
+      {
+        "id": "material_factor",
+        "ref": "Material thermal factor from baking profile",
+        "source": "input",
+        "key": "materialFactor"
+      },
+      {
+        "id": "mode_factor",
+        "ref": "Fan mode is 15% faster than static",
+        "expression": "ovenMode == 1 ? 0.85 : 1.0"
+      },
+      {
+        "id": "thickness_factor",
+        "ref": "Thickness adjustment: thicker dough = longer bake",
+        "expression": "1 + ((thickness - baseThickness) / 0.1) * thicknessFactor"
+      }
+    ],
+    "output": { "name": "durationMin", "unit": "min", "round": 0, "min": 5 }
+  },
+  {
+    "type": "formula",
+    "id": "rise_temp_factor",
+    "ref": "[C] Cap. 39 — Q10 temperature model",
+    "_meta": {
+      "section": "rise",
+      "displayName": "meta.formula.rise_temp_factor.name",
+      "description": "meta.formula.rise_temp_factor.desc",
+      "tags": ["temperature", "Q10", "rise", "exponential"],
+      "lastModified": "2026-03-27",
+      "author": "system"
+    },
+    "expression": "2 ^ (-(fdt - 24) * coeff / 10)",
+    "constants": {
+      "refTemp": 24,
+      "divFactor": 10
+    },
+    "inputs": ["fdt", "coeff"],
+    "output": { "name": "temperatureFactor", "unit": "", "round": 4 }
+  }
+]
