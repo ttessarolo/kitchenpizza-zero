@@ -1,3 +1,4 @@
+import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { computeGraphTotals } from '~/hooks/useGraphCalculator'
 import { getParentIds } from '@commons/utils/graph-utils'
@@ -8,6 +9,7 @@ interface SplitConfigPanelProps {
 }
 
 export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
+  const t = useT()
   const graph = useRecipeFlowStore((s) => s.graph)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)
 
@@ -67,7 +69,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
     <div className="mt-2 space-y-2">
       {/* Mode toggle */}
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Modo</span>
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_mode')}</span>
         <div className="flex rounded-md overflow-hidden border border-border text-[11px]">
           <button
             type="button"
@@ -81,7 +83,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
             onClick={() => updateNodeData(nodeId, { splitMode: 'grams' })}
             className={`px-2.5 py-1 ${mode === 'grams' ? 'bg-primary text-primary-foreground font-semibold' : 'bg-white text-muted-foreground'}`}
           >
-            Grammi
+            {t('label_grams')}
           </button>
         </div>
       </div>
@@ -136,7 +138,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
       {/* Totals + error */}
       {pctError && (
         <div className="text-[10px] text-amber-600 font-medium">
-          ⚠️ Le percentuali sommano a {Math.round(totalPct)}% (deve essere 100%)
+          {t('validation_pct_sum', { total: Math.round(totalPct) })}
         </div>
       )}
 
@@ -146,7 +148,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
         onClick={addOutput}
         className="w-full text-[11px] font-medium text-primary border border-dashed border-primary rounded-lg py-1.5 hover:bg-primary/5"
       >
-        + Aggiungi parte
+        {t('btn_add_part')}
       </button>
     </div>
   )

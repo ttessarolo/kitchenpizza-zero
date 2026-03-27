@@ -1,4 +1,5 @@
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useT } from '~/hooks/useTranslation'
 
 const JOIN_METHODS = [
   { key: 'braid', label: 'Intreccio' },
@@ -15,6 +16,7 @@ interface JoinConfigPanelProps {
 }
 
 export function JoinConfigPanel({ nodeId }: JoinConfigPanelProps) {
+  const t = useT()
   const graph = useRecipeFlowStore((s) => s.graph)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)
 
@@ -29,7 +31,7 @@ export function JoinConfigPanel({ nodeId }: JoinConfigPanelProps) {
       {/* Join method */}
       <div>
         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-          Metodo di unione
+          {t('label_join_method')}
         </label>
         <select
           value={d.joinMethod || 'generic'}
@@ -45,30 +47,30 @@ export function JoinConfigPanel({ nodeId }: JoinConfigPanelProps) {
       {/* Number of inputs */}
       <div>
         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-          N° elementi in ingresso
+          {t('label_input_count')}
         </label>
         <div className="text-sm font-bold text-foreground mt-0.5">
-          {incomingEdges.length} connessioni
+          {incomingEdges.length} {t('label_connections')}
         </div>
         <div className="text-[10px] text-muted-foreground">
-          Collega i rami trascinando le connessioni ai connettori in alto del nodo.
+          {t('hint_connect_branches')}
         </div>
       </div>
 
       {/* Output name */}
       <div>
         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-          Nome elemento di output
+          {t('label_output_name')}
         </label>
         <input
           type="text"
           value={d.title}
           onChange={(e) => updateNodeData(nodeId, { title: e.target.value })}
-          placeholder="Es. Treccia bicolore"
+          placeholder={t('label_output_name_placeholder')}
           className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-primary"
         />
         <div className="text-[10px] text-muted-foreground mt-0.5">
-          Questo nome sarà visibile nei nodi successivi come riferimento.
+          {t('hint_output_name')}
         </div>
       </div>
     </div>
