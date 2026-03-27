@@ -10,7 +10,7 @@
  */
 
 import { create } from 'zustand'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 
 // Static imports — all namespaces merged per locale
 import commonEn from '@commons/i18n/en/common.json'
@@ -36,19 +36,12 @@ interface LocaleStore {
   setLocale: (locale: SupportedLocale) => void
 }
 
-function getInitialLocale(): SupportedLocale {
-  if (typeof document !== 'undefined') {
-    const match = document.cookie.match(/PARAGLIDE_LOCALE=(\w+)/)
-    if (match?.[1] === 'en' || match?.[1] === 'it') return match[1]
-  }
-  return 'it'
-}
-
+// Always start with 'it' to match SSR output (avoids hydration mismatch).
+// Cookie sync happens in useEffect after hydration (see useSyncLocaleFromCookie).
 export const useLocaleStore = create<LocaleStore>((set) => ({
-  locale: getInitialLocale(),
+  locale: 'it',
   setLocale: (locale) => {
     set({ locale })
-    // Persist to cookie (side effect for SSR + page reloads)
     if (typeof document !== 'undefined') {
       document.cookie = `PARAGLIDE_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`
     }
@@ -93,4 +86,22 @@ export function useT() {
  */
 export function getMessages(locale: SupportedLocale): Dict {
   return messages[locale] ?? messages.it
+}
+
+/**
+ * Sync locale from cookie AFTER hydration.
+ * Call once in the root component to restore the user's language preference
+ * without causing SSR hydration mismatches.
+ */
+export function useSyncLocaleFromCookie() {
+  useEffect(() => {
+    const match = document.cookie.match(/PARAGLIDE_LOCALE=(\w+)/)
+    const cookieLocale = match?.[1]
+    if (cookieLocale === 'en' || cookieLocale === 'it') {
+      const current = useLocaleStore.getState().locale
+      if (cookieLocale !== current) {
+        useLocaleStore.getState().setLocale(cookieLocale)
+      }
+    }
+  }, [])
 }

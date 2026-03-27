@@ -7,7 +7,7 @@ import {
 import { ClerkProvider } from '@clerk/tanstack-react-start'
 import { itIT } from '@clerk/localizations'
 import appCss from '~/styles/globals.css?url'
-import { useLocale } from '~/hooks/useTranslation'
+import { useLocale, useSyncLocaleFromCookie } from '~/hooks/useTranslation'
 
 const clerkLocales: Record<string, typeof itIT | undefined> = {
   it: itIT,
@@ -32,6 +32,7 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  useSyncLocaleFromCookie() // Restore locale from cookie AFTER hydration (no SSR mismatch)
   const locale = useLocale()
 
   return (
