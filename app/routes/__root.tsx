@@ -11,7 +11,7 @@ import { useLocale } from '~/hooks/useTranslation'
 
 const clerkLocales: Record<string, typeof itIT | undefined> = {
   it: itIT,
-  en: undefined, // Clerk defaults to English
+  en: undefined,
 }
 
 export const Route = createRootRoute({

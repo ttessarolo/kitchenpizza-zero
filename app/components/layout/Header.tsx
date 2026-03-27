@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useLocale, useSetLocale, useT } from '~/hooks/useTranslation'
-import type { SupportedLocale } from '@commons/store/slices/locale'
+import { useLocale, useSetLocale, useT, type SupportedLocale } from '~/hooks/useTranslation'
 
 const LOCALES: { key: SupportedLocale; label: string }[] = [
   { key: 'it', label: 'IT' },
@@ -11,14 +10,6 @@ export function Header() {
   const locale = useLocale()
   const setLocale = useSetLocale()
   const t = useT()
-
-  const handleLocaleChange = (newLocale: SupportedLocale) => {
-    setLocale(newLocale)
-    // Persist to cookie for SSR (side effect, no reload)
-    if (typeof document !== 'undefined') {
-      document.cookie = `PARAGLIDE_LOCALE=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}`
-    }
-  }
 
   return (
     <header className="border-b bg-background px-4 py-2.5 flex items-center gap-4">
@@ -42,7 +33,7 @@ export function Header() {
           <button
             key={l.key}
             type="button"
-            onClick={() => handleLocaleChange(l.key)}
+            onClick={() => setLocale(l.key)}
             className={`text-xs px-2 py-1 rounded transition-colors cursor-pointer ${
               locale === l.key
                 ? 'bg-primary text-primary-foreground font-semibold'
