@@ -1,16 +1,19 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { RECIPE_LIST } from '@/local_data'
+import { useT } from '~/hooks/useTranslation'
 
 export const Route = createFileRoute('/main/')({
   component: MainHome,
 })
 
 function MainHome() {
+  const t = useT()
+
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Home</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('nav_home')}</h1>
       <div className="rounded-lg border border-border p-6">
-        <h2 className="text-xl font-semibold mb-4">Recipes</h2>
+        <h2 className="text-xl font-semibold mb-4">{t('recipe_list_title')}</h2>
         <ul className="space-y-2">
           {RECIPE_LIST.map((r) => (
             <li key={r.id}>

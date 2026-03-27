@@ -7,6 +7,12 @@ import {
 import { ClerkProvider } from '@clerk/tanstack-react-start'
 import { itIT } from '@clerk/localizations'
 import appCss from '~/styles/globals.css?url'
+import { useLocale } from '~/hooks/useTranslation'
+
+const clerkLocales: Record<string, typeof itIT | undefined> = {
+  it: itIT,
+  en: undefined, // Clerk defaults to English
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -26,10 +32,12 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  const locale = useLocale()
+
   return (
-    <RootDocument>
+    <RootDocument locale={locale}>
       <ClerkProvider
-        localization={itIT}
+        localization={clerkLocales[locale]}
         signInFallbackRedirectUrl="/main"
         signUpFallbackRedirectUrl="/main"
       >
@@ -39,9 +47,9 @@ function RootComponent() {
   )
 }
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument({ children, locale }: { children: React.ReactNode; locale: string }) {
   return (
-    <html lang="it">
+    <html lang={locale}>
       <head>
         <HeadContent />
       </head>

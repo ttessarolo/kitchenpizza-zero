@@ -326,18 +326,23 @@ commons/i18n/
 
 **File format**: i18next syntax (`{{variable}}`) — compatible with both Paraglide (via plugin) and react-i18next.
 
-**Web (TanStack Start)**: Paraglide JS (`@inlang/paraglide-js`)
-- Vite plugin in `vite.config.ts` (BEFORE `tanstackStart()`)
-- Config in `project.inlang/settings.json` with i18next plugin
-- Generated runtime in `app/paraglide/` (type-safe `m.key()` functions)
-- Locale detection: cookie `PARAGLIDE_LOCALE` → Accept-Language → baseLocale
-- Language switcher in `app/components/layout/Header.tsx`
+**Web (TanStack Start)**: Zustand locale slice + `useT()` hook
+- Locale state in `commons/store/slices/locale.ts` (shared web+native, persisted)
+- `useT()` hook (`app/hooks/useTranslation.ts`) — reactive translation function
+- `useLocale()` / `useSetLocale()` — read/write current locale
+- All JSON files statically imported, merged per locale — zero runtime fetch
+- Changing locale triggers instant re-render of all `useT()` consumers (no page reload)
+- Cookie `PARAGLIDE_LOCALE` persisted as side-effect for SSR
+- Language switcher: IT/EN buttons in `app/components/layout/Header.tsx`
+- `<html lang>` dynamically set via `useLocale()` in `__root.tsx`
+- Paraglide JS Vite plugin configured (`project.inlang/settings.json`) for future type-safe `m.key()` usage
 
-**Native (Expo)**: react-i18next + expo-localization
+**Native (Expo)**: react-i18next + expo-localization (planned)
 - Same JSON files from `commons/i18n/`
+- Same Zustand locale slice
 - Device locale detection via `expo-localization`
 
-**Clerk UI**: localized via `@clerk/localizations` (dynamically selected by current locale)
+**Clerk UI**: `<ClerkProvider localization={clerkLocales[locale]}>` — dynamically switches between `itIT` and English based on Zustand locale.
 
 **Science domain**: all warnings, advisories, and actions use `messageKey` pointing to `commons/i18n/`. Science JSON files (`/science/`) never contain human text — only i18n keys.
 
