@@ -3,16 +3,17 @@ import { createServerFn } from '@tanstack/react-start'
 import { FileScienceProvider } from '@commons/utils/science/science-provider'
 import * as path from 'path'
 
-const loadBlock = createServerFn().validator((id: string) => id).handler(async ({ input: id }) => {
-  const provider = new FileScienceProvider(
-    path.resolve(process.cwd(), 'science'),
-    path.resolve(process.cwd(), 'i18n'),
-  )
-  const block = provider.getBlock(id)
-  const i18nIt = provider.getI18nKeys('it')
-  const i18nEn = provider.getI18nKeys('en')
-  return { block, i18nIt, i18nEn }
-})
+const loadBlock = createServerFn()
+  .handler(async ({ data: id }: { data: string }) => {
+    const provider = new FileScienceProvider(
+      path.resolve(process.cwd(), 'science'),
+      path.resolve(process.cwd(), 'i18n'),
+    )
+    const block = provider.getBlock(id)
+    const i18nIt = provider.getI18nKeys('it')
+    const i18nEn = provider.getI18nKeys('en')
+    return { block, i18nIt, i18nEn }
+  })
 
 export const Route = createFileRoute('/admin/science/rules/$id')({
   loader: ({ params }) => loadBlock({ data: params.id }),
