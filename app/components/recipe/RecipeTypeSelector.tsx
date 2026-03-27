@@ -1,5 +1,6 @@
 import { RECIPE_TYPES, RECIPE_SUBTYPES } from '@/local_data'
 import { Card } from '~/components/ui/card'
+import { useT } from '~/hooks/useTranslation'
 import type { RecipeMeta } from '@commons/types/recipe'
 
 interface RecipeTypeSelectorProps {
@@ -15,13 +16,14 @@ export function RecipeTypeSelector({
   onTypeChange,
   onSubtypeChange,
 }: RecipeTypeSelectorProps) {
+  const t = useT()
   return (
     <section className="mt-3.5">
       <Card className="p-3">
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[11px] text-muted-foreground font-semibold uppercase tracking-[1px]">
-              Tipologia
+              {t('section_type')}
             </label>
             <select
               value={meta.type}
@@ -41,7 +43,7 @@ export function RecipeTypeSelector({
           </div>
           <div>
             <label className="text-[11px] text-muted-foreground font-semibold uppercase tracking-[1px]">
-              Sotto-tipologia
+              {t('section_subtype')}
             </label>
             <select
               value={meta.subtype}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { computeGraphTotals, computeGroupedIngredients, computeSchedule, computeTimeSummary } from '~/hooks/useGraphCalculator'
 import { RecipeTypeSelector } from '~/components/recipe/RecipeTypeSelector'
@@ -51,6 +52,7 @@ export function RecipeToolbar() {
   const applyTypeDefaults = useRecipeFlowStore((s) => s.applyTypeDefaults)
   const generateDough = useRecipeFlowStore((s) => s.generateDough)
   const graphEmpty = useRecipeFlowStore((s) => s.graph.nodes.length === 0)
+  const t = useT()
 
   const currentSubtypes = (RECIPE_SUBTYPES[meta.type] || []).map((s) => ({
     key: s.key,
@@ -98,19 +100,19 @@ export function RecipeToolbar() {
     <div className="w-[320px] shrink-0 bg-white border-l border-border overflow-y-auto flex flex-col">
       {/* Collapse button */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <span className="text-xs font-semibold text-[#8a7a66] uppercase tracking-wider">Configurazione</span>
+        <span className="text-xs font-semibold text-[#8a7a66] uppercase tracking-wider">{t('section_configuration')}</span>
         <button
           type="button"
           onClick={() => setCollapsed(true)}
           className="w-6 h-6 rounded flex items-center justify-center text-[#8a7a66] hover:bg-[#faf8f5] text-xs"
-          title="Chiudi toolbar"
+          title={t('close_toolbar')}
         >
           ▶
         </button>
       </div>
 
       {/* 1. Tipologia */}
-      <AccordionSection title="Tipologia" icon="📋">
+      <AccordionSection title={t('section_type')} icon="📋">
         <RecipeTypeSelector
           meta={meta}
           currentSubtypes={currentSubtypes}
@@ -126,25 +128,25 @@ export function RecipeToolbar() {
       </AccordionSection>
 
       {/* 1b. Dettagli ricetta */}
-      <AccordionSection title="Dettagli Ricetta" icon="📝">
+      <AccordionSection title={t('section_recipe_details')} icon="📝">
         <div className="space-y-2">
           <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nome ricetta</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_recipe_name')}</label>
             <input
               type="text"
               value={meta.name}
               onChange={(e) => setMeta((m) => ({ ...m, name: e.target.value }))}
-              placeholder="Es. Pizza Margherita"
+              placeholder={t('label_recipe_name_placeholder')}
               className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-primary"
             />
           </div>
           <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Autore</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_author')}</label>
             <input
               type="text"
               value={meta.author}
               onChange={(e) => setMeta((m) => ({ ...m, author: e.target.value }))}
-              placeholder="Il tuo nome"
+              placeholder={t('label_author_placeholder')}
               className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-primary"
             />
           </div>
@@ -152,7 +154,7 @@ export function RecipeToolbar() {
       </AccordionSection>
 
       {/* 2. Porzionatura */}
-      <AccordionSection title="Porzionatura" icon="📐">
+      <AccordionSection title={t('section_portioning')} icon="📐">
         <PortioningSection
           hideHeader
           hideTotals
@@ -177,17 +179,17 @@ export function RecipeToolbar() {
       </AccordionSection>
 
       {/* 3. Composizione impasto */}
-      <AccordionSection title="Composizione Impasto" icon="🧪">
+      <AccordionSection title={t('section_composition')} icon="🧪">
         <DoughCompositionPanel />
       </AccordionSection>
 
       {/* 4. Totale impasto */}
-      <AccordionSection title="Totale Impasto" icon="📊">
+      <AccordionSection title={t('section_dough_total')} icon="📊">
         <DoughTotalsPanel />
       </AccordionSection>
 
       {/* 5. Ingredienti */}
-      <AccordionSection title="Ingredienti" icon="🧈">
+      <AccordionSection title={t('section_ingredients')} icon="🧈">
         {hasIngredients ? (
           <IngredientsOverview
             ingredientGroups={ingredientGroups}
@@ -196,7 +198,7 @@ export function RecipeToolbar() {
           />
         ) : (
           <div className="text-xs space-y-1">
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Stima (da composizione)</div>
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t('label_estimated_from_composition')}</div>
             {estimatedFlour > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Farina 00 forte</span><span className="font-bold">{estimatedFlour}g</span></div>}
             {estimatedLiquid > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Acqua</span><span className="font-bold">{estimatedLiquid}g</span></div>}
             {portioning.yeastPct > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Lievito birra fresco</span><span className="font-bold">{Math.round(estimatedFlour * portioning.yeastPct / 100 * 10) / 10}g</span></div>}
@@ -207,7 +209,7 @@ export function RecipeToolbar() {
       </AccordionSection>
 
       {/* 6. Tempi */}
-      <AccordionSection title="Tempi" icon="⏱️">
+      <AccordionSection title={t('section_times')} icon="⏱️">
         <TimeSummary timeSummary={timeSummary} hideHeader />
       </AccordionSection>
 
@@ -219,10 +221,10 @@ export function RecipeToolbar() {
             onClick={generateDough}
             className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-[#c4956a] text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity"
           >
-            🚀 Genera Impasto
+            {t('btn_generate_dough')}
           </button>
           <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-            Genera tutti i nodi dell'impasto basandosi sulle impostazioni sopra
+            {t('btn_generate_dough_help')}
           </p>
         </div>
       )}
