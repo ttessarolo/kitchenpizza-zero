@@ -1,15 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Recipe } from '~/components/recipe/Recipe'
-import { RECIPE_0, DEFAULT_RECIPE, RECIPE_2, RECIPE_3, RECIPE_4, RECIPE_5 } from '@/local_data'
-
-const RECIPES: Record<string, typeof DEFAULT_RECIPE> = {
-  '0': RECIPE_0,
-  '1': DEFAULT_RECIPE,
-  '2': RECIPE_2,
-  '3': RECIPE_3,
-  '4': RECIPE_4,
-  '5': RECIPE_5,
-}
+import { getRecipeById } from '@/local_data'
 
 export const Route = createFileRoute('/main/recipe/$id')({
   component: RecipePage,
@@ -17,7 +8,7 @@ export const Route = createFileRoute('/main/recipe/$id')({
 
 function RecipePage() {
   const { id } = Route.useParams()
-  const recipe = RECIPES[id] || DEFAULT_RECIPE
+  const recipe = getRecipeById(id)
 
   return <Recipe initialRecipe={recipe} />
 }

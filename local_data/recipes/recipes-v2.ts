@@ -6,15 +6,13 @@
 
 import { migrateRecipeV1toV2 } from '@commons/utils/recipe-migration'
 import { autoLayout } from '~/lib/auto-layout'
-import { DEFAULT_RECIPE } from './default-recipe'
-import { RECIPE_2 } from './recipe_2'
-import { RECIPE_3 } from './recipe_3'
+import { RECIPE_1, RECIPE_2, RECIPE_3 } from './index'
 
-function migrate(recipe: typeof DEFAULT_RECIPE) {
+function migrate(recipe: typeof RECIPE_1) {
   const v2 = migrateRecipeV1toV2(recipe)
   return { ...v2, graph: autoLayout(v2.graph) }
 }
 
-export const DEFAULT_RECIPE_V2 = migrate(DEFAULT_RECIPE)
+export const DEFAULT_RECIPE_V2 = migrate(RECIPE_1)
 export const RECIPE_2_V2 = migrate(RECIPE_2)
 export const RECIPE_3_V2 = migrate(RECIPE_3)

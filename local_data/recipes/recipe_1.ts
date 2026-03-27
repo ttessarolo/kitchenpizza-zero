@@ -1,6 +1,6 @@
 import type { Recipe } from '@commons/types/recipe'
 
-export const DEFAULT_RECIPE: Recipe = {
+export const RECIPE_1: Recipe = {
   meta: {
     name: "Shokupan 食パン",
     author: "Cucchiaio d'Argento",
@@ -290,7 +290,7 @@ export const DEFAULT_RECIPE: Recipe = {
 /** Total dough weight computed from the default recipe (sum of all flour, liquid, extra without unit, and yeast grams). */
 export const BASE_DOUGH_WEIGHT: number = (() => {
   let t = 0
-  for (const s of DEFAULT_RECIPE.steps) {
+  for (const s of RECIPE_1.steps) {
     for (const f of s.flours) t += f.g
     for (const l of s.liquids) t += l.g
     for (const e of s.extras) if (!e.unit) t += e.g
