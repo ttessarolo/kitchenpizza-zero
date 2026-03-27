@@ -27,6 +27,7 @@ function SinglePanel({
   isPeek: boolean
   onClose: () => void
 }) {
+  const t = useT()
   const graph = useRecipeFlowStore((s) => s.graph)
   const meta = useRecipeFlowStore((s) => s.meta)
   const portioning = useRecipeFlowStore((s) => s.portioning)
