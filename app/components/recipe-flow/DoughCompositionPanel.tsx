@@ -38,6 +38,7 @@ function SliderRow({
 // ── Tab content: reads/writes from a specific dough node ────────
 
 function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () => void }) {
+  const t = useT()
   const graph = useRecipeFlowStore((s) => s.graph)
   const meta = useRecipeFlowStore((s) => s.meta)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)
@@ -241,6 +242,7 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
 // ── Global settings (for empty graphs — pre-generation) ─────────
 
 function GlobalCompositionSettings() {
+  const t = useT()
   const portioning = useRecipeFlowStore((s) => s.portioning)
   const meta = useRecipeFlowStore((s) => s.meta)
   const setPortioning = useRecipeFlowStore((s) => s.setPortioning)
