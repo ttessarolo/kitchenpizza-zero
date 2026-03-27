@@ -1,0 +1,23 @@
+{
+  "app_title": "KitchenPizza",
+  "nav_home": "Home",
+  "nav_recipes": "Recipes",
+  "nav_admin": "Admin",
+  "nav_science": "Science",
+  "language_switch": "Language",
+  "language_en": "English",
+  "language_it": "Italiano",
+  "btn_save": "Save",
+  "btn_cancel": "Cancel",
+  "btn_edit": "Edit",
+  "btn_delete": "Delete",
+  "btn_confirm": "Confirm",
+  "btn_back": "Back",
+  "btn_add": "Add",
+  "btn_close": "Close",
+  "label_search": "Search",
+  "label_filter": "Filter",
+  "label_loading": "Loading...",
+  "label_empty": "No items",
+  "label_error": "An error occurred"
+}

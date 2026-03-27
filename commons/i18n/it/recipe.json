@@ -1,0 +1,22 @@
+{
+  "recipe_list_title": "Ricette",
+  "recipe_new": "Nuova ricetta (vuota)",
+  "recipe_new_desc": "Parti da zero con un canvas vuoto",
+  "section_dough": "Impasto",
+  "section_rise": "Lievitazione",
+  "section_bake": "Cottura",
+  "section_ingredients": "Ingredienti",
+  "section_portioning": "Porzionatura",
+  "section_schedule": "Programmazione",
+  "section_composition": "Composizione",
+  "label_flour": "Farina",
+  "label_water": "Acqua",
+  "label_yeast": "Lievito",
+  "label_salt": "Sale",
+  "label_sugar": "Zucchero",
+  "label_fat": "Grasso",
+  "label_hydration": "Idratazione",
+  "label_temperature": "Temperatura",
+  "label_duration": "Durata",
+  "label_method": "Metodo"
+}

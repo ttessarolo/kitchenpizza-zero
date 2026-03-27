@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { paraglide } from '@inlang/paraglide-js'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { sentryTanstackStart } from '@sentry/tanstackstart-react/vite'
 import react from '@vitejs/plugin-react'
@@ -10,6 +11,10 @@ export default defineConfig({
     allowedHosts: ['promoted-perfectly-vulture.ngrok-free.app'],
   },
   plugins: [
+    paraglide({
+      project: './project.inlang',
+      outdir: './app/paraglide',
+    }),
     tanstackStart({
       srcDirectory: 'app',
     }),

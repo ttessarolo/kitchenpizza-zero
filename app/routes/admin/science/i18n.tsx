@@ -6,7 +6,7 @@ import * as path from 'path'
 const loadI18n = createServerFn().handler(async () => {
   const provider = new FileScienceProvider(
     path.resolve(process.cwd(), 'science'),
-    path.resolve(process.cwd(), 'i18n'),
+    path.resolve(process.cwd(), 'commons/i18n'),
   )
   return {
     en: provider.getI18nKeys('en'),

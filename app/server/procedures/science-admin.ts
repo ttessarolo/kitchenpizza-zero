@@ -10,7 +10,7 @@ import * as path from 'path'
 
 // Singleton provider (reused across requests)
 const scienceDir = path.resolve(process.cwd(), 'science')
-const i18nDir = path.resolve(process.cwd(), 'i18n')
+const i18nDir = path.resolve(process.cwd(), 'commons/i18n')
 const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 // ── List all science blocks ────────────────────────────────────

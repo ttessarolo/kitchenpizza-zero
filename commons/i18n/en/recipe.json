@@ -1,0 +1,22 @@
+{
+  "recipe_list_title": "Recipes",
+  "recipe_new": "New recipe (empty)",
+  "recipe_new_desc": "Start from scratch with an empty canvas",
+  "section_dough": "Dough",
+  "section_rise": "Rise",
+  "section_bake": "Bake",
+  "section_ingredients": "Ingredients",
+  "section_portioning": "Portioning",
+  "section_schedule": "Schedule",
+  "section_composition": "Composition",
+  "label_flour": "Flour",
+  "label_water": "Water",
+  "label_yeast": "Yeast",
+  "label_salt": "Salt",
+  "label_sugar": "Sugar",
+  "label_fat": "Fat",
+  "label_hydration": "Hydration",
+  "label_temperature": "Temperature",
+  "label_duration": "Duration",
+  "label_method": "Method"
+}

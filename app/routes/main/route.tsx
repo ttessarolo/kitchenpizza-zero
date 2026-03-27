@@ -1,6 +1,7 @@
 import { Outlet, createFileRoute, isRedirect, redirect } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { auth } from '@clerk/tanstack-react-start/server'
+import { Header } from '~/components/layout/Header'
 
 const getAuthState = createServerFn().handler(async () => {
   const { userId } = await auth()
@@ -26,6 +27,7 @@ export const Route = createFileRoute('/main')({
 function MainLayout() {
   return (
     <div className="min-h-screen">
+      <Header />
       <Outlet />
     </div>
   )

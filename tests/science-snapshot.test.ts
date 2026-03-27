@@ -30,7 +30,7 @@ let provider: ScienceProvider
 beforeAll(() => {
   provider = new FileScienceProvider(
     path.resolve(process.cwd(), 'science'),
-    path.resolve(process.cwd(), 'i18n'),
+    path.resolve(process.cwd(), 'commons/i18n'),
   )
 })
 

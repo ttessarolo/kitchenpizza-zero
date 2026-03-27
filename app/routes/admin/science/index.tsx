@@ -6,7 +6,7 @@ import * as path from 'path'
 const loadBlocks = createServerFn().handler(async () => {
   const provider = new FileScienceProvider(
     path.resolve(process.cwd(), 'science'),
-    path.resolve(process.cwd(), 'i18n'),
+    path.resolve(process.cwd(), 'commons/i18n'),
   )
   const blocks = provider.listAll()
   const i18nIt = provider.getI18nKeys('it')
