@@ -461,7 +461,37 @@ Every formula in a Manager MUST reference its scientific source:
 
 ## BreadScience JSON — Externalized Scientific Logic
 
-All scientific formulas, rules, thresholds, and catalogs are stored as JSON in `/science/`. Managers read this data via a `ScienceProvider` interface. Text messages are in `/i18n/` (EN base + IT current).
+### Philosophy
+
+**Zero hardcoded science in code.** All baking knowledge — formulas, thresholds, factor chains, classification rules, advisory conditions, catalog data — lives in declarative JSON files under `/science/`. The TypeScript Managers are pure execution engines: they receive logic from a `ScienceProvider`, evaluate it via `expr-eval`, and return results. This separation enables:
+
+- **Non-developers can edit baking science** (via admin panel or JSON files) without touching code
+- **Multiple formula variants** coexist (e.g., Casucci Formula L vs Q10 model for yeast) — the user or system chooses
+- **i18n is decoupled** — `/science/` contains only logic keys (`messageKey`), human text lives in `/i18n/`
+- **Future DB migration** — swap `FileScienceProvider` for `DbScienceProvider` without changing any Manager
+- **Auditable** — every formula cites its scientific source (`ref: "[C] Cap. 44"`)
+
+### How it works
+
+```
+/science/*.json                 /i18n/{locale}/science.json
+     │ (logic)                       │ (text)
+     ▼                               ▼
+ScienceProvider ──────────────► Manager.*Science()
+     │                               │
+     ▼                               ▼
+FormulaEngine (expr-eval)       RuleEngine (conditions)
+     │                               │
+     ▼                               ▼
+{ result: 0.172 }               { messageKey, messageVars, actions }
+                                     │
+                                     ▼
+                                Client: t(messageKey, vars) → localized text
+```
+
+**Dual API**: Each Manager exposes both the original hardcoded function (e.g., `calcYeastPct()`) and a Science-aware version (e.g., `calcYeastPctScience(provider, ...)`). Snapshot tests guarantee identical results. The hardcoded versions remain for backward compatibility and as a fallback.
+
+All scientific formulas, rules, thresholds, and catalogs are stored as JSON in `/science/`. Text messages are in `/i18n/` (EN base + IT current).
 
 ### Structure
 
@@ -499,6 +529,25 @@ All scientific formulas, rules, thresholds, and catalogs are stored as JSON in `
 - **ScienceProvider** is abstract — `FileScienceProvider` (today), `DbScienceProvider` (future)
 - **Admin panel** at `/admin/science` — list, view, edit blocks and i18n keys (auth + admin role)
 
+### Rule engine — advisory & warnings
+
+The rule engine (`commons/utils/science/rule-engine.ts`) evaluates declarative rules against a context object. It is an evolution of the original `advisory-manager.ts` with these improvements:
+
+- **Returns `messageKey` + `messageVars`** — never resolved text. The client resolves via i18n.
+- **`selectionMode: "choose_one"`** — actions as alternative strategies (radio select), not just independent buttons.
+- **`variants`** on formulas — alternative scientific approaches with `applicability` ranges for auto-suggestion.
+- **`_meta`** on every block — section, displayName, description, tags for the admin panel.
+
+### Admin panel — `/admin/science`
+
+Protected route (auth + admin role via Clerk `sessionClaims`). Three pages:
+
+- **Dashboard** (`/admin/science`) — lists all science blocks grouped by `_meta.section`, with type badges and tags
+- **Rule detail** (`/admin/science/rules/$id`) — shows full block structure: expression, variants, constants, conditions, actions, factors, raw JSON
+- **i18n editor** (`/admin/science/i18n`) — side-by-side EN/IT key viewer
+
+Admin oRPC procedures: `science.listBlocks`, `science.getBlock`, `science.updateBlock`, `science.listI18n`, `science.updateI18n` — all behind `authProcedure`.
+
 ### Adding new science
 
 1. Create JSON file in appropriate `/science/` subdirectory
@@ -507,6 +556,7 @@ All scientific formulas, rules, thresholds, and catalogs are stored as JSON in `
 4. Add `_meta` with section, displayName, description, tags
 5. Add `*Science()` function to the relevant Manager
 6. Write snapshot test comparing Science vs hardcoded results
+7. The new block will automatically appear in the admin panel dashboard
 
 ---
 
