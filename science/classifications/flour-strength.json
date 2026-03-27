@@ -1,0 +1,19 @@
+{
+  "type": "classification",
+  "id": "flour_strength",
+  "_meta": {
+    "section": "flour",
+    "displayName": "meta.classification.flour_strength.name",
+    "description": "meta.classification.flour_strength.desc",
+    "tags": ["flour", "W", "strength", "classification"],
+    "lastModified": "2026-03-27",
+    "author": "system"
+  },
+  "input": "W",
+  "classes": [
+    { "lt": 180, "label": "weak" },
+    { "lt": 260, "label": "medium" },
+    { "lte": 350, "label": "strong" },
+    { "default": true, "label": "very_strong" }
+  ]
+}

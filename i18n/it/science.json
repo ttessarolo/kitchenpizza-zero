@@ -1,0 +1,51 @@
+{
+  "meta.formula.yeast_pct.name": "Percentuale lievito (Formula L)",
+  "meta.formula.yeast_pct.desc": "Calcola la % di lievito fresco in base alla durata di lievitazione, temperatura e idratazione di riferimento. Basata sulla Formula L di Casucci.",
+  "meta.formula.dough_temp.name": "Temperatura finale impasto (FDT)",
+  "meta.formula.dough_temp.desc": "Media pesata delle temperature degli ingredienti con 15% di incorporazione d'aria e fattore di frizione.",
+  "meta.formula.suggested_salt.name": "Sale suggerito",
+  "meta.formula.suggested_salt.desc": "Suggerisce i grammi di sale in base al peso della farina e all'idratazione (range 2.0-3.0%).",
+
+  "meta.factor_chain.rise_duration.name": "Durata lievitazione",
+  "meta.factor_chain.rise_duration.desc": "Calcola il tempo di lievitazione da W farina, % lievito, metodo, temperatura e inibitori (sale, zucchero, grasso).",
+
+  "meta.piecewise.max_rise_hours.name": "Ore max lievitazione per W",
+  "meta.piecewise.max_rise_hours.desc": "Ore massime di lievitazione a temperatura ambiente in base al W della farina prima della degradazione del glutine.",
+
+  "meta.classification.flour_strength.name": "Classificazione forza farina",
+  "meta.classification.flour_strength.desc": "Classifica la farina per W: debole (<180), media (180-260), forte (260-350), molto forte (>350).",
+
+  "variant.yeast.formula_l": "Formula L (Casucci)",
+  "variant.yeast.formula_l.desc": "Formula italiana classica ottimizzata per pizza napoletana (4-24h, 20-28°C).",
+  "variant.yeast.q10": "Modello esponenziale Q10",
+  "variant.yeast.q10.desc": "Modello esponenziale basato sulla temperatura, migliore per lievitazioni lunghe al freddo (24-98h, 2-12°C).",
+
+  "warning.yeast_too_low": "Lievito troppo basso ({{yeastPct}}%). Rischio di non lievitazione. Min consigliato: 0.03%.",
+  "warning.yeast_too_high": "Lievito molto alto ({{yeastPct}}%). Rischio di sapore sgradevole e over-proofing rapido. Max consigliato: 3.5%.",
+  "warning.salt_low": "Sale basso ({{saltPct}}%) per {{recipeType}}. Range consigliato: {{saltMin}}–{{saltMax}}%. Impasto potrebbe risultare debole.",
+  "warning.salt_high": "Sale alto ({{saltPct}}%) per {{recipeType}}. Range consigliato: {{saltMin}}–{{saltMax}}%. Inibisce il lievito e risultato troppo salato.",
+  "warning.salt_extreme": "Sale molto alto ({{saltPct}}%). Oltre il 3% il lievito viene fortemente inibito.",
+  "warning.fat_high": "Grassi alti ({{fatPct}}%) per {{recipeType}}. Range consigliato: {{fatMin}}–{{fatMax}}%.",
+  "warning.fat_extreme": "Grassi oltre il 12% rallentano fortemente il lievito. Richiede tecnica speciale (aggiunta in più fasi).",
+  "warning.hyd_extreme": "Idratazione molto alta ({{hydration}}%). Richiede farine molto forti (W > 350) e tecnica avanzata.",
+  "warning.hyd_low": "Idratazione bassa ({{hydration}}%). L'impasto sarà molto rigido.",
+  "warning.hours_extreme": "Durata impasto molto lunga ({{doughHours}}h). Necessita tecnica del freddo e farine forti.",
+
+  "advisory.steam_too_long": "Vapore al {{steamPct}}% per {{baseDur}} min. Oltre 30 min il vapore può rendere la crosta gommosa.",
+  "advisory.pentola_no_lid": "Cottura in pentola senza coperchio: l'oven-spring sarà ridotto (30-50%). Il pane sviluppa volume e crosta migliore partendo con il coperchio chiuso nei primi 20-25 minuti.",
+  "advisory.pentola_two_phase": "Cottura in pentola: ~25 min coperto (oven-spring) + ~15 min scoperto (doratura). Togli il coperchio quando il pane ha smesso di crescere.",
+  "advisory.temp_low": "Temperatura ({{temp}}°C) sotto il minimo consigliato ({{tempMin}}°C) per {{recipeType}}.",
+  "advisory.temp_high": "Temperatura ({{temp}}°C) sopra il massimo consigliato ({{tempMax}}°C) per {{recipeType}}.",
+
+  "action.split_steam_phases": "Dividi in fase coperta + scoperta",
+  "action.split_steam_phases.desc": "Riduce la fase vapore a 25 min e aggiunge una fase di doratura da 12 min senza vapore.",
+  "action.reduce_steam_pct": "Riduci % vapore",
+  "action.reduce_steam_pct.desc": "Abbassa il vapore al 50% per ridurre l'umidità senza toglierlo completamente.",
+  "action.lower_temp_keep_steam": "Abbassa temperatura",
+  "action.lower_temp_keep_steam.desc": "Riduci a 210°C mantenendo il vapore. La crosta si sviluppa più lentamente.",
+  "action.add_pentola_uncovered": "Aggiungi fase scoperta",
+  "action.add_pentola_uncovered.desc": "Aggiunge una fase di doratura con coperchio tolto (15 min, modo statico).",
+
+  "node.dry_browning": "Doratura (senza vapore)",
+  "node.pentola_uncovered": "Doratura (senza coperchio)"
+}

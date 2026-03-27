@@ -1,0 +1,51 @@
+{
+  "meta.formula.yeast_pct.name": "Yeast percentage (Formula L)",
+  "meta.formula.yeast_pct.desc": "Calculates fresh yeast % based on rise duration, temperature, and reference hydration. Based on Casucci Formula L.",
+  "meta.formula.dough_temp.name": "Final Dough Temperature (FDT)",
+  "meta.formula.dough_temp.desc": "Weighted average of ingredient temperatures with 15% air incorporation and friction factor.",
+  "meta.formula.suggested_salt.name": "Suggested salt",
+  "meta.formula.suggested_salt.desc": "Suggests salt grams based on flour weight and hydration (2.0-3.0% range).",
+
+  "meta.factor_chain.rise_duration.name": "Rise duration",
+  "meta.factor_chain.rise_duration.desc": "Calculates rise time from flour W, yeast %, method, temperature, and inhibitors (salt, sugar, fat).",
+
+  "meta.piecewise.max_rise_hours.name": "Max rise hours by flour W",
+  "meta.piecewise.max_rise_hours.desc": "Maximum rise hours at room temperature based on flour W strength before gluten degradation.",
+
+  "meta.classification.flour_strength.name": "Flour strength classification",
+  "meta.classification.flour_strength.desc": "Classifies flour by W: weak (<180), medium (180-260), strong (260-350), very strong (>350).",
+
+  "variant.yeast.formula_l": "Formula L (Casucci)",
+  "variant.yeast.formula_l.desc": "Classic Italian formula optimized for pizza napoletana (4-24h, 20-28°C).",
+  "variant.yeast.q10": "Q10 exponential model",
+  "variant.yeast.q10.desc": "Temperature-based exponential model, better for long cold fermentation (24-98h, 2-12°C).",
+
+  "warning.yeast_too_low": "Yeast too low ({{yeastPct}}%). Risk of no rise. Minimum recommended: 0.03%.",
+  "warning.yeast_too_high": "Yeast very high ({{yeastPct}}%). Risk of off-flavor and rapid over-proofing. Max recommended: 3.5%.",
+  "warning.salt_low": "Salt low ({{saltPct}}%) for {{recipeType}}. Recommended range: {{saltMin}}–{{saltMax}}%. Dough may be weak.",
+  "warning.salt_high": "Salt high ({{saltPct}}%) for {{recipeType}}. Recommended range: {{saltMin}}–{{saltMax}}%. Inhibits yeast and too salty.",
+  "warning.salt_extreme": "Salt very high ({{saltPct}}%). Above 3% yeast is strongly inhibited.",
+  "warning.fat_high": "Fat high ({{fatPct}}%) for {{recipeType}}. Recommended range: {{fatMin}}–{{fatMax}}%.",
+  "warning.fat_extreme": "Fat above 12% strongly slows yeast. Requires special technique (add in phases).",
+  "warning.hyd_extreme": "Very high hydration ({{hydration}}%). Requires very strong flour (W > 350) and advanced technique.",
+  "warning.hyd_low": "Low hydration ({{hydration}}%). Dough will be very stiff.",
+  "warning.hours_extreme": "Very long dough duration ({{doughHours}}h). Requires cold technique and strong flours.",
+
+  "advisory.steam_too_long": "Steam at {{steamPct}}% for {{baseDur}} min. Over 30 min steam can make the crust rubbery.",
+  "advisory.pentola_no_lid": "Dutch oven without lid: oven-spring will be reduced (30-50%). Bread develops better volume and crust starting with lid closed for the first 20-25 minutes.",
+  "advisory.pentola_two_phase": "Dutch oven baking: ~25 min covered (oven-spring) + ~15 min uncovered (browning). Remove lid when bread stops rising.",
+  "advisory.temp_low": "Temperature ({{temp}}°C) below recommended minimum ({{tempMin}}°C) for {{recipeType}}.",
+  "advisory.temp_high": "Temperature ({{temp}}°C) above recommended maximum ({{tempMax}}°C) for {{recipeType}}.",
+
+  "action.split_steam_phases": "Split into covered + uncovered phases",
+  "action.split_steam_phases.desc": "Reduces steam phase to 25 min and adds a 12 min browning phase without steam.",
+  "action.reduce_steam_pct": "Reduce steam %",
+  "action.reduce_steam_pct.desc": "Lowers steam to 50% to reduce humidity without removing it completely.",
+  "action.lower_temp_keep_steam": "Lower temperature",
+  "action.lower_temp_keep_steam.desc": "Reduce to 210°C keeping steam. Crust develops more slowly.",
+  "action.add_pentola_uncovered": "Add uncovered phase",
+  "action.add_pentola_uncovered.desc": "Adds a browning phase with lid off (15 min, static mode).",
+
+  "node.dry_browning": "Browning (no steam)",
+  "node.pentola_uncovered": "Browning (lid off)"
+}

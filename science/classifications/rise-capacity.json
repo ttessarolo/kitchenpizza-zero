@@ -1,0 +1,23 @@
+{
+  "type": "piecewise",
+  "id": "max_rise_hours_for_W",
+  "ref": "[C] Cap. 44",
+  "_meta": {
+    "section": "rise",
+    "displayName": "meta.piecewise.max_rise_hours.name",
+    "description": "meta.piecewise.max_rise_hours.desc",
+    "tags": ["rise", "flour", "W", "duration", "casucci"],
+    "lastModified": "2026-03-27",
+    "author": "system"
+  },
+  "input": "W",
+  "segments": [
+    { "gt": 380, "value": 20 },
+    { "gt": 320, "value": 14 },
+    { "gt": 290, "value": 10 },
+    { "gt": 220, "value": 6 },
+    { "gt": 180, "value": 2 }
+  ],
+  "default": 1,
+  "output": { "name": "maxHours", "unit": "h" }
+}
