@@ -176,3 +176,30 @@ export function getRiseWarnings(ctx: {
 
   return warnings
 }
+
+// ── Science-aware API ──────────────────────────────────────────
+
+import type { ScienceProvider } from './science/science-provider'
+import { evaluateFactorChain } from './science/formula-engine'
+import { evaluatePiecewise } from './science/formula-engine'
+
+/**
+ * Calculate rise duration using the Science provider (reads factor chain from JSON).
+ */
+export function calcRiseDurationScience(
+  provider: ScienceProvider,
+  inputs: Record<string, number>,
+  catalogs?: Record<string, Record<string, unknown>[]>,
+): number {
+  return evaluateFactorChain(provider.getFactorChain('rise_duration'), inputs, catalogs)
+}
+
+/**
+ * Get max rise hours for W using the Science provider (reads piecewise from JSON).
+ */
+export function maxRiseHoursForWScience(
+  provider: ScienceProvider,
+  W: number,
+): number {
+  return evaluatePiecewise(provider.getPiecewise('max_rise_hours_for_W'), { W }) as number
+}

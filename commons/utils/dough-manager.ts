@@ -284,3 +284,45 @@ export function getDoughWarnings(profile: DoughProfileInput): DoughWarning[] {
 
 // maxRiseHoursForW → canonical source is rise-manager.ts, re-exported for backward compat
 export { maxRiseHoursForW } from './rise-manager'
+
+// ── Science-aware API ──────────────────────────────────────────
+// These functions use the ScienceProvider when available.
+// They produce the same results as the hardcoded functions above
+// but read their logic from /science/ JSON files.
+
+import type { ScienceProvider } from './science/science-provider'
+import { evaluateFormula } from './science/formula-engine'
+import { evaluateRules, type RuleResult } from './science/rule-engine'
+
+/**
+ * Calculate yeast % using the Science provider (reads formula from JSON).
+ * If a variantKey is specified, uses that formula variant.
+ */
+export function calcYeastPctScience(
+  provider: ScienceProvider,
+  hours: number,
+  tempC = 24,
+  variantKey?: string,
+): number {
+  if (hours <= 0 || tempC <= 0) return 0
+  return evaluateFormula(provider.getFormula('yeast_pct'), { hours, tempC }, variantKey)
+}
+
+/**
+ * Get dough warnings using the Science provider (reads rules from JSON).
+ * Returns RuleResult[] with messageKey (not resolved text).
+ */
+export function getDoughWarningsScience(
+  provider: ScienceProvider,
+  profile: DoughProfileInput,
+): RuleResult[] {
+  const defaults = getDoughDefaults(profile.recipeType, profile.recipeSubtype)
+  const ctx: Record<string, unknown> = {
+    ...profile,
+    _saltMin: defaults.saltPctRange[0],
+    _saltMax: defaults.saltPctRange[1],
+    _fatMin: defaults.fatPctRange[0],
+    _fatMax: defaults.fatPctRange[1],
+  }
+  return evaluateRules(provider.getRules('composition'), ctx)
+}

@@ -147,3 +147,27 @@ export function suggestForW(
     .filter((f) => Math.abs(f.W - targetW) <= tolerance && f.W > 0)
     .sort((a, b) => Math.abs(a.W - targetW) - Math.abs(b.W - targetW))
 }
+
+// ── Science-aware API ──────────────────────────────────────────
+
+import type { ScienceProvider } from './science/science-provider'
+import { evaluateClassification } from './science/formula-engine'
+
+/**
+ * Classify flour strength using the Science provider (reads classification from JSON).
+ */
+export function classifyStrengthScience(
+  provider: ScienceProvider,
+  W: number,
+): string {
+  return evaluateClassification(provider.getClassification('flour_strength'), { W })
+}
+
+/**
+ * Get flour catalog from Science provider.
+ */
+export function getFlourCatalogScience(
+  provider: ScienceProvider,
+): FlourCatalogEntry[] {
+  return provider.getCatalog('flours') as unknown as FlourCatalogEntry[]
+}

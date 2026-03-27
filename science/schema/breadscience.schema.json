@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kitchenpizza.app/schemas/breadscience.json",
+  "title": "BreadScience JSON",
+  "description": "Schema for scientific formulas, rules, catalogs, classifications, and defaults used by recipe managers.",
+
+  "oneOf": [
+    { "$ref": "#/$defs/formula" },
+    { "$ref": "#/$defs/factor_chain" },
+    { "$ref": "#/$defs/piecewise" },
+    { "$ref": "#/$defs/classification" },
+    { "$ref": "#/$defs/rule" },
+    { "$ref": "#/$defs/catalog" },
+    { "$ref": "#/$defs/defaults" },
+    {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/formula" },
+          { "$ref": "#/$defs/factor_chain" },
+          { "$ref": "#/$defs/piecewise" },
+          { "$ref": "#/$defs/classification" },
+          { "$ref": "#/$defs/rule" },
+          { "$ref": "#/$defs/catalog" },
+          { "$ref": "#/$defs/defaults" }
+        ]
+      }
+    }
+  ],
+
+  "$defs": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "section": { "type": "string" },
+        "displayName": { "type": "string", "description": "i18n key" },
+        "description": { "type": "string", "description": "i18n key" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "lastModified": { "type": "string", "format": "date" },
+        "author": { "type": "string" }
+      },
+      "required": ["section", "displayName", "description", "tags"]
+    },
+
+    "output_spec": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "unit": { "type": "string" },
+        "round": { "type": "integer", "minimum": 0 },
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      },
+      "required": ["name"]
+    },
+
+    "variant": {
+      "type": "object",
+      "properties": {
+        "key": { "type": "string" },
+        "nameKey": { "type": "string" },
+        "descriptionKey": { "type": "string" },
+        "expression": { "type": "string" },
+        "constants": { "type": "object", "additionalProperties": { "type": "number" } },
+        "applicability": { "type": "object" },
+        "default": { "type": "boolean" }
+      },
+      "required": ["key", "nameKey", "expression"]
+    },
+
+    "formula": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "formula" },
+        "id": { "type": "string" },
+        "ref": { "type": "string" },
+        "_meta": { "$ref": "#/$defs/meta" },
+        "expression": { "type": "string" },
+        "constants": { "type": "object", "additionalProperties": { "type": "number" } },
+        "variants": { "type": "array", "items": { "$ref": "#/$defs/variant" } },
+        "inputs": { "type": "array", "items": { "type": "string" } },
+        "output": { "$ref": "#/$defs/output_spec" },
+        "validation": { "type": "object" }
+      },
+      "required": ["type", "id", "inputs", "output"]
+    },
+
+    "factor_def": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ref": { "type": "string" },
+        "expression": { "type": "string" },
+        "source": { "enum": ["lookup", "input"] },
+        "table": { "type": "string" },
+        "key": { "type": "string" },
+        "field": { "type": "string" }
+      },
+      "required": ["id"]
+    },
+
+    "factor_chain": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "factor_chain" },
+        "id": { "type": "string" },
+        "ref": { "type": "string" },
+        "_meta": { "$ref": "#/$defs/meta" },
+        "base": { "type": "object", "properties": { "value": { "type": "number" }, "unit": { "type": "string" } }, "required": ["value"] },
+        "factors": { "type": "array", "items": { "$ref": "#/$defs/factor_def" } },
+        "output": { "$ref": "#/$defs/output_spec" }
+      },
+      "required": ["type", "id", "base", "factors", "output"]
+    },
+
+    "piecewise": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "piecewise" },
+        "id": { "type": "string" },
+        "ref": { "type": "string" },
+        "_meta": { "$ref": "#/$defs/meta" },
+        "input": { "type": "string" },
+        "segments": { "type": "array", "items": { "type": "object" } },
+        "default": {},
+        "output": { "$ref": "#/$defs/output_spec" }
+      },
+      "required": ["type", "id", "input", "segments", "default"]
+    },
+
+    "classification": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "classification" },
+        "id": { "type": "string" },
+        "_meta": { "$ref": "#/$defs/meta" },
+        "input": { "type": "string" },
+        "classes": { "type": "array", "items": { "type": "object", "properties": { "label": { "type": "string" } }, "required": ["label"] } }
+      },
+      "required": ["type", "id", "input", "classes"]
+    },
+
+    "condition": {
+      "type": "object",
+      "properties": {
+        "field": { "type": "string" },
+        "op": { "enum": ["eq", "neq", "gt", "lt", "gte", "lte", "in", "exists"] },
+        "value": {}
+      },
+      "required": ["field", "op", "value"]
+    },
+
+    "mutation": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["updateNode", "addNodeAfter", "removeNode", "updatePortioning"] },
+        "target": { "type": "object" },
+        "patch": { "type": "object" },
+        "nodeType": { "type": "string" },
+        "subtype": { "type": "string" },
+        "data": { "type": "object" }
+      },
+      "required": ["type"]
+    },
+
+    "action": {
+      "type": "object",
+      "properties": {
+        "key": { "type": "string" },
+        "labelKey": { "type": "string", "description": "i18n key — MUST be a key, never raw text" },
+        "descriptionKey": { "type": "string" },
+        "default": { "type": "boolean" },
+        "mutations": { "type": "array", "items": { "$ref": "#/$defs/mutation" } }
+      },
+      "required": ["labelKey", "mutations"]
+    },
+
+    "rule": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "rule" },
+        "id": { "type": "string" },
+        "ref": { "type": "string" },
+        "_meta": { "$ref": "#/$defs/meta" },
+        "category": { "type": "string" },
+        "severity": { "enum": ["info", "warning", "error"] },
+        "messageKey": { "type": "string", "description": "i18n key — MUST be a key, never raw text" },
+        "messageVars": { "type": "array", "items": { "type": "string" } },
+        "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
+        "excludeIf": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
+        "suppressedBy": { "type": "array", "items": { "type": "string" } },
+        "selectionMode": { "enum": ["choose_one", "all"] },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/action" } }
+      },
+      "required": ["type", "id", "category", "severity", "messageKey", "conditions"]
+    },
+
+    "catalog": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "catalog" },
+        "id": { "type": "string" },
+        "_meta": { "$ref": "#/$defs/meta" },
+        "entries": { "type": "array" }
+      },
+      "required": ["type", "id", "entries"]
+    },
+
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "defaults" },
+        "id": { "type": "string" },
+        "_meta": { "$ref": "#/$defs/meta" },
+        "entries": { "type": "array" },
+        "fallback": { "type": "object" }
+      },
+      "required": ["type", "id", "entries"]
+    }
+  }
+}

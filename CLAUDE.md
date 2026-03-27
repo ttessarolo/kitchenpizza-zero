@@ -459,6 +459,57 @@ Every formula in a Manager MUST reference its scientific source:
 
 ---
 
+## BreadScience JSON — Externalized Scientific Logic
+
+All scientific formulas, rules, thresholds, and catalogs are stored as JSON in `/science/`. Managers read this data via a `ScienceProvider` interface. Text messages are in `/i18n/` (EN base + IT current).
+
+### Structure
+
+```
+/science/
+├── schema/breadscience.schema.json   ← JSON Schema validation
+├── formulas/                         ← formula, factor_chain blocks
+├── rules/                            ← rule blocks (messageKey, no text)
+├── catalogs/                         ← catalog blocks (flours, fats, etc.)
+├── defaults/                         ← defaults blocks (per type/subtype)
+└── classifications/                  ← piecewise, classification blocks
+
+/i18n/
+├── en/science.json                   ← English (base)
+└── it/science.json                   ← Italian (current)
+```
+
+### Block types
+
+| Type | Purpose | Example |
+|------|---------|---------|
+| `formula` | Math expression (expr-eval) | `K / (REF_HYD * tempC^2 * hours)` |
+| `factor_chain` | Multiplicative: base × f1 × f2 × ... | Rise duration (11 factors) |
+| `piecewise` | Step function | W > 380 → 20h |
+| `classification` | Categorization | W → weak/medium/strong |
+| `rule` | Advisory/warning with conditions + actions | Steam too long → split phases |
+| `catalog` | Data table | 28 flour types |
+| `defaults` | Per-type/subtype config | Pizza napoletana salt 2.3% |
+
+### Key principles
+
+- **No text in `/science/`** — only `messageKey`, `labelKey`, `titleKey` pointing to `/i18n/`
+- **Formulas can have `variants`** — alternative scientific approaches (e.g., Formula L vs Q10)
+- **Rules can have `selectionMode: "choose_one"`** — alternative strategies for the user
+- **ScienceProvider** is abstract — `FileScienceProvider` (today), `DbScienceProvider` (future)
+- **Admin panel** at `/admin/science` — list, view, edit blocks and i18n keys (auth + admin role)
+
+### Adding new science
+
+1. Create JSON file in appropriate `/science/` subdirectory
+2. Follow `breadscience.schema.json` format
+3. Add i18n keys to `/i18n/en/science.json` and `/i18n/it/science.json`
+4. Add `_meta` with section, displayName, description, tags
+5. Add `*Science()` function to the relevant Manager
+6. Write snapshot test comparing Science vs hardcoded results
+
+---
+
 ## Configuration Files
 
 ### Path Aliases
