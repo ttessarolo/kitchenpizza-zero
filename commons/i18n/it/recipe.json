@@ -101,5 +101,59 @@
   "tray_dimensions": "Teglia {{l}}×{{w}}×{{h}}",
   "tray_dimensions_material": "Dimensioni e materiale ▾",
 
-  "close_toolbar": "Chiudi toolbar"
+  "close_toolbar": "Chiudi toolbar",
+
+  "btn_add_node": "+ Aggiungi nodo",
+  "btn_reorder": "⟳ Riordina",
+  "btn_reorder_title": "Riordina layout",
+  "btn_create": "Crea",
+  "btn_add_wait_condition": "+ Aggiungi condizione di attesa",
+
+  "toast_node_added": "Nodo aggiunto",
+
+  "label_rest": "Riposo",
+  "label_ferment_duration": "Durata ferm.",
+  "label_oven": "Forno",
+  "label_water_level": "Livello acqua",
+  "label_no_wait_condition": "Nessuna condizione di attesa",
+
+  "dialog_delete_step_title": "Eliminare step?",
+  "dialog_delete_step_message": "Vuoi eliminare \"{{title}}\"? I passi successivi verranno ricollegati ai predecessori.",
+
+  "join_braid": "Intreccio",
+  "join_layer": "Sovrapposizione",
+  "join_fold": "Piega",
+  "join_enclose": "Avvolgimento",
+  "join_mix": "Rimescolamento",
+  "join_side_by_side": "Affiancamento",
+  "join_generic": "Generico",
+
+  "step_pre_dough": "Pre-Impasto",
+  "step_pre_ferment": "Pre-Fermento",
+  "step_dough": "Impasto",
+  "step_rest": "Riposo",
+  "step_rise": "Lievitazione",
+  "step_shape": "Formatura",
+  "step_pre_bake": "Pre-Cottura",
+  "step_bake": "Cottura",
+  "step_post_bake": "Post-Cottura",
+  "step_prep": "Preparazione",
+  "step_split": "Divisione",
+  "step_join": "Unione",
+  "step_done": "Pronto!",
+
+  "subtype_autolisi": "Autolisi",
+  "subtype_tangzhong": "Tangzhong",
+  "subtype_biga": "Biga",
+  "subtype_poolish": "Poolish",
+  "subtype_sponge": "Sponge",
+  "subtype_idrobiga": "Idrobiga",
+  "subtype_sourdough": "Lievito Madre",
+  "subtype_old_dough": "Pasta di Riporto",
+
+  "recipe_type_pane": "Pane",
+  "recipe_type_pizza": "Pizza",
+  "recipe_type_focaccia": "Focaccia",
+  "recipe_type_dolce": "Dolce lievitato",
+  "recipe_type_altro": "Altro"
 }

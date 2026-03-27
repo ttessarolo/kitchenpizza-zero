@@ -2,19 +2,11 @@ import { memo } from 'react'
 import { Handle, Position, useEdges, type NodeProps } from '@xyflow/react'
 import { COLOR_MAP } from '@/local_data'
 import { fmtDuration } from '@commons/utils/format'
+import { useT } from '~/hooks/useTranslation'
 import type { BaseNodeData } from './BaseNode'
 
-const JOIN_METHODS: Record<string, string> = {
-  braid: 'Intreccio',
-  layer: 'Sovrapposizione',
-  fold: 'Piega',
-  enclose: 'Avvolgimento',
-  mix: 'Rimescolamento',
-  side_by_side: 'Affiancamento',
-  generic: 'Generico',
-}
-
 function JoinNodeInner({ id, data }: NodeProps<BaseNodeData>) {
+  const t = useT()
   const { nodeData, duration } = data
   const cm = COLOR_MAP.join
   const edges = useEdges()
@@ -48,7 +40,7 @@ function JoinNodeInner({ id, data }: NodeProps<BaseNodeData>) {
               {nodeData.title || 'Mix'}
             </div>
             <div className="text-sm opacity-70" style={{ color: cm.tx }}>
-              {nodeData.joinMethod ? JOIN_METHODS[nodeData.joinMethod] || nodeData.joinMethod : cm.lb}
+              {nodeData.joinMethod ? t(`join_${nodeData.joinMethod}`) : cm.lb}
               {' · '}{fmtDuration(duration)}
             </div>
           </div>

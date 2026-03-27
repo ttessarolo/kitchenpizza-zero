@@ -101,5 +101,59 @@
   "tray_dimensions": "Tray {{l}}×{{w}}×{{h}}",
   "tray_dimensions_material": "Dimensions and material ▾",
 
-  "close_toolbar": "Close toolbar"
+  "close_toolbar": "Close toolbar",
+
+  "btn_add_node": "+ Add node",
+  "btn_reorder": "⟳ Reorder",
+  "btn_reorder_title": "Reorder layout",
+  "btn_create": "Create",
+  "btn_add_wait_condition": "+ Add wait condition",
+
+  "toast_node_added": "Node added",
+
+  "label_rest": "Rest",
+  "label_ferment_duration": "Ferment duration",
+  "label_oven": "Oven",
+  "label_water_level": "Water level",
+  "label_no_wait_condition": "No wait condition",
+
+  "dialog_delete_step_title": "Delete step?",
+  "dialog_delete_step_message": "Do you want to delete \"{{title}}\"? Subsequent steps will be reconnected to predecessors.",
+
+  "join_braid": "Braid",
+  "join_layer": "Layering",
+  "join_fold": "Fold",
+  "join_enclose": "Enclose",
+  "join_mix": "Mix",
+  "join_side_by_side": "Side by side",
+  "join_generic": "Generic",
+
+  "step_pre_dough": "Pre-dough",
+  "step_pre_ferment": "Pre-ferment",
+  "step_dough": "Dough",
+  "step_rest": "Rest",
+  "step_rise": "Rise",
+  "step_shape": "Shaping",
+  "step_pre_bake": "Pre-bake",
+  "step_bake": "Bake",
+  "step_post_bake": "Post-bake",
+  "step_prep": "Prep",
+  "step_split": "Split",
+  "step_join": "Join",
+  "step_done": "Done",
+
+  "subtype_autolisi": "Autolyse",
+  "subtype_tangzhong": "Tangzhong",
+  "subtype_biga": "Biga",
+  "subtype_poolish": "Poolish",
+  "subtype_sponge": "Sponge",
+  "subtype_idrobiga": "Idrobiga",
+  "subtype_sourdough": "Sourdough",
+  "subtype_old_dough": "Old dough",
+
+  "recipe_type_pane": "Bread",
+  "recipe_type_pizza": "Pizza",
+  "recipe_type_focaccia": "Focaccia",
+  "recipe_type_dolce": "Sweet bread",
+  "recipe_type_altro": "Other"
 }

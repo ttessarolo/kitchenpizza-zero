@@ -1,15 +1,7 @@
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
 
-const JOIN_METHODS = [
-  { key: 'braid', label: 'Intreccio' },
-  { key: 'layer', label: 'Sovrapposizione' },
-  { key: 'fold', label: 'Piega' },
-  { key: 'enclose', label: 'Avvolgimento' },
-  { key: 'mix', label: 'Rimescolamento' },
-  { key: 'side_by_side', label: 'Affiancamento' },
-  { key: 'generic', label: 'Generico' },
-]
+const JOIN_METHOD_KEYS = ['braid', 'layer', 'fold', 'enclose', 'mix', 'side_by_side', 'generic'] as const
 
 interface JoinConfigPanelProps {
   nodeId: string
@@ -38,8 +30,8 @@ export function JoinConfigPanel({ nodeId }: JoinConfigPanelProps) {
           onChange={(e) => updateNodeData(nodeId, { joinMethod: e.target.value as any })}
           className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none"
         >
-          {JOIN_METHODS.map((m) => (
-            <option key={m.key} value={m.key}>{m.label}</option>
+          {JOIN_METHOD_KEYS.map((k) => (
+            <option key={k} value={k}>{t(`join_${k}`)}</option>
           ))}
         </select>
       </div>

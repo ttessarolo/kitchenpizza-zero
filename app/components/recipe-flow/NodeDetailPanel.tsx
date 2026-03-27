@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { nodeToStep, stepToNodeData, graphToRecipeV1 } from '@commons/utils/graph-adapter'
 import { celsiusToFahrenheit } from '@commons/utils/format'
@@ -182,7 +183,7 @@ function SinglePanel({
             type="button"
             onClick={() => removeNode(nodeId)}
             className="w-7 h-7 rounded-md flex items-center justify-center text-xs bg-red-50 text-red-600 hover:bg-red-100"
-            title="Elimina"
+            title={t('btn_delete')}
           >
             ✕
           </button>
@@ -220,6 +221,7 @@ function SinglePanel({
 // ── Main panel container ────────────────────────────────────────
 
 export function NodeDetailPanel() {
+  const t = useT()
   const expandedNodeId = useRecipeFlowStore((s) => s.expandedNodeId)
   const peekNodeIds = useRecipeFlowStore((s) => s.peekNodeIds)
   const expandNode = useRecipeFlowStore((s) => s.expandNode)
