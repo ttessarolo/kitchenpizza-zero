@@ -1,20 +1,18 @@
 import { defineConfig } from 'vite'
-import { paraglide } from '@inlang/paraglide-js'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { sentryTanstackStart } from '@sentry/tanstackstart-react/vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import netlifyPlugin from '@netlify/vite-plugin-tanstack-start'
 
+// Note: Paraglide JS Vite plugin removed — using custom useT() hook with Zustand instead.
+// @inlang/paraglide-js remains installed for potential future type-safe m.key() usage.
+
 export default defineConfig({
   server: {
     allowedHosts: ['promoted-perfectly-vulture.ngrok-free.app'],
   },
   plugins: [
-    paraglide({
-      project: './project.inlang',
-      outdir: './app/paraglide',
-    }),
     tanstackStart({
       srcDirectory: 'app',
     }),
