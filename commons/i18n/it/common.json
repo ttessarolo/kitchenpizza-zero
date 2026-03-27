@@ -19,5 +19,14 @@
   "label_filter": "Filtra",
   "label_loading": "Caricamento...",
   "label_empty": "Nessun elemento",
-  "label_error": "Si è verificato un errore"
+  "label_error": "Si è verificato un errore",
+  "admin_section_dough": "Impasto",
+  "admin_section_flour": "Farine",
+  "admin_section_rise": "Lievitazione",
+  "admin_section_bake": "Cottura",
+  "admin_section_pre_bake": "Pre-cottura",
+  "admin_section_advisory": "Advisory",
+  "admin_section_composition": "Composizione",
+  "admin_section_portioning": "Porzionatura",
+  "admin_section_other": "Altro"
 }

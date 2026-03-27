@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '~/hooks/useTranslation'
 import type { RecipeStep, TemperatureUnit, FlourCatalogEntry, CookingConfig, FatIngredient, SteamerConfig, FryConfig, AirFryerConfig, GrillConfig, PanConfig } from '@commons/types/recipe'
 import { getDefaultConfig as getBakeDefaultConfig, getWarnings as getBakeWarnings } from '@commons/utils/bake-manager'
 import type { ActionableWarning } from '@commons/types/recipe-graph'
@@ -29,6 +30,7 @@ interface StepBodyProps {
 }
 
 export function StepBody({ step: s }: StepBodyProps) {
+  const t = useT()
   const {
     recipe,
     editMode,
@@ -408,7 +410,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           {/* Flours */}
           {s.flours.length > 0 && (
             <IngredientBox
-              title="Farine"
+              title={t('label_flours')}
               items={s.flours}
               onUpdate={(id, f, v) =>
                 uS(s.id, (st) => ({
@@ -467,7 +469,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           {/* Liquids */}
           {s.liquids.length > 0 && (
             <IngredientBox
-              title="Liquidi"
+              title={t('label_liquids')}
               items={s.liquids}
               onUpdate={(id, f, v) =>
                 uS(s.id, (st) => ({
@@ -536,7 +538,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           {/* Extras */}
           {s.extras.length > 0 && (
             <IngredientBox
-              title="Extra"
+              title={t('label_extras')}
               items={s.extras}
               onUpdate={(id, f, v) =>
                 uS(s.id, (st) => ({
@@ -648,7 +650,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           {/* Yeasts */}
           {(s.yeasts || []).length > 0 && (
             <IngredientBox
-              title="Lieviti"
+              title={t('label_yeasts')}
               items={s.yeasts}
               onUpdate={(id, f, v) =>
                 uS(s.id, (st) => ({
@@ -707,7 +709,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           {/* Salts */}
           {(s.salts || []).length > 0 && (
             <IngredientBox
-              title="Sali"
+              title={t('label_salts')}
               items={s.salts}
               onUpdate={(id, f, v) =>
                 uS(s.id, (st) => ({
@@ -749,7 +751,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           {/* Sugars */}
           {(s.sugars || []).length > 0 && (
             <IngredientBox
-              title="Zuccheri"
+              title={t('label_sugars')}
               items={s.sugars}
               onUpdate={(id, f, v) =>
                 uS(s.id, (st) => ({
@@ -791,7 +793,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           {/* Fats */}
           {(s.fats || []).length > 0 && (
             <IngredientBox
-              title="Grassi"
+              title={t('label_fats')}
               items={s.fats || []}
               onUpdate={(id, f, v) =>
                 uS(s.id, (st) => ({

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { calcYeastPct, getDoughWarnings, type DoughWarning as RecipeWarning } from '@commons/utils/dough-manager'
 import { rnd } from '@commons/utils/format'
+import { useT } from '~/hooks/useTranslation'
 import { YEAST_TYPES } from '@/local_data'
 import { WarningCard } from './WarningCard'
 import type { NodeData } from '@commons/types/recipe-graph'
@@ -216,14 +217,14 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
           setYeastPct(Math.round(newYeastPct * 100) / 100)
         }} />
 
-      <SliderRow icon="🍞" label="Lievito" value={yeastPct} min={0} max={3.5} step={0.01} unit="%"
+      <SliderRow icon="🍞" label={t('label_yeast')} value={yeastPct} min={0} max={3.5} step={0.01} unit="%"
         suggestion={`${Math.round(yeastFreshEquivG * 10) / 10}g birra fresco · ~${doughHours}h di lievitazione`}
         onChange={setYeastPct} />
 
-      <SliderRow icon="🧂" label="Sale" value={saltPct} min={0} max={4} step={0.1} unit="%"
+      <SliderRow icon="🧂" label={t('label_salt')} value={saltPct} min={0} max={4} step={0.1} unit="%"
         onChange={setSaltPct} />
 
-      <SliderRow icon="🫒" label="Grassi" value={fatPct} min={0} max={25} step={0.5} unit="%"
+      <SliderRow icon="🫒" label={t('label_fats')} value={fatPct} min={0} max={25} step={0.5} unit="%"
         onChange={setFatPct} />
 
       {warnings.length > 0 && (
@@ -283,17 +284,17 @@ function GlobalCompositionSettings() {
         </div>
       </div>
 
-      <SliderRow icon="⏱" label="Durata impasto" value={doughHours} min={1} max={98} step={1} unit="ore"
+      <SliderRow icon="⏱" label={t('label_dough_duration')} value={doughHours} min={1} max={98} step={1} unit="ore"
         onChange={(v) => {
           const newYeast = calcYeastPct(v, targetHyd || 60)
           update({ doughHours: v, yeastPct: Math.round(newYeast * 1000) / 1000 })
         }} />
-      <SliderRow icon="🍞" label="Lievito" value={Math.round(yeastPct * 100) / 100} min={0} max={3.5} step={0.01} unit="%"
+      <SliderRow icon="🍞" label={t('label_yeast')} value={Math.round(yeastPct * 100) / 100} min={0} max={3.5} step={0.01} unit="%"
         suggestion={`Suggerito: ${rnd(suggestedYeast)}% per ${doughHours}h`}
         onChange={(v) => update({ yeastPct: v })} />
-      <SliderRow icon="🧂" label="Sale" value={Math.round(saltPct * 10) / 10} min={0} max={4} step={0.1} unit="%"
+      <SliderRow icon="🧂" label={t('label_salt')} value={Math.round(saltPct * 10) / 10} min={0} max={4} step={0.1} unit="%"
         onChange={(v) => update({ saltPct: v })} />
-      <SliderRow icon="🫒" label="Grassi" value={Math.round(fatPct * 10) / 10} min={0} max={25} step={0.5} unit="%"
+      <SliderRow icon="🫒" label={t('label_fats')} value={Math.round(fatPct * 10) / 10} min={0} max={25} step={0.5} unit="%"
         onChange={(v) => update({ fatPct: v })} />
 
       {warnings.length > 0 && (
@@ -310,6 +311,7 @@ function GlobalCompositionSettings() {
 // ── Main panel: multi-tab or global ─────────────────────────────
 
 export function DoughCompositionPanel() {
+  const t = useT()
   const graph = useRecipeFlowStore((s) => s.graph)
   const addRootNode = useRecipeFlowStore((s) => s.addRootNode)
   const removeNode = useRecipeFlowStore((s) => s.removeNode)
@@ -350,7 +352,7 @@ export function DoughCompositionPanel() {
                 type="button"
                 onClick={() => setConfirmRemoveId(d.id)}
                 className="text-[9px] text-red-400 hover:text-red-600 px-0.5"
-                title="Rimuovi impasto"
+                title={t('btn_remove_dough')}
               >
                 ×
               </button>
@@ -362,7 +364,7 @@ export function DoughCompositionPanel() {
             type="button"
             onClick={() => addRootNode('dough')}
             className="text-[11px] px-2 py-1.5 text-primary hover:bg-primary/5 rounded shrink-0"
-            title="Aggiungi impasto"
+            title={t('btn_add_dough')}
           >
             +
           </button>
@@ -376,14 +378,14 @@ export function DoughCompositionPanel() {
       {confirmRemoveId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-white rounded-xl shadow-xl p-5 max-w-sm mx-4">
-            <div className="text-base font-bold text-foreground mb-2">Rimuovere questo impasto?</div>
+            <div className="text-base font-bold text-foreground mb-2">{t('dialog_remove_dough_title')}</div>
             <p className="text-sm text-muted-foreground mb-4">
-              L'impasto e tutti i nodi collegati (lievitazione, formatura, etc.) verranno eliminati dal grafo.
+              {t('dialog_remove_dough_message')}
             </p>
             <div className="flex gap-2 justify-end">
               <button type="button" onClick={() => setConfirmRemoveId(null)}
                 className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-[#faf8f5]">
-                Annulla
+                {t('btn_cancel')}
               </button>
               <button type="button" onClick={() => {
                 removeNode(confirmRemoveId)
@@ -391,7 +393,7 @@ export function DoughCompositionPanel() {
                 if (activeTabId === confirmRemoveId) setActiveTabId(null)
               }}
                 className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">
-                Elimina
+                {t('btn_delete')}
               </button>
             </div>
           </div>

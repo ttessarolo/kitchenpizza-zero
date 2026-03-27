@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect } from 'react'
+import { useT } from '~/hooks/useTranslation'
 import {
   ReactFlow,
   Background,
@@ -25,6 +26,7 @@ const edgeTypes: EdgeTypes = {
 }
 
 export function RecipeFlowCanvas() {
+  const t = useT()
   const flowNodes = useRecipeFlowStore((s) => s.flowNodes)
   const flowEdges = useRecipeFlowStore((s) => s.flowEdges)
   const onNodesChange = useRecipeFlowStore((s) => s.onNodesChange)
@@ -114,9 +116,9 @@ export function RecipeFlowCanvas() {
             type="button"
             onClick={() => setConfirmUndo(true)}
             className="h-8 px-3 rounded-lg bg-white border border-border shadow-sm text-xs font-medium text-[#8a7a66] hover:bg-[#faf8f5] flex items-center gap-1"
-            title="Annulla ultima azione (⌘Z)"
+            title={t('btn_undo_title')}
           >
-            ↩ Annulla
+            {t('btn_undo')}
           </button>
         )}
         {hasNodes && (
@@ -125,7 +127,7 @@ export function RecipeFlowCanvas() {
             onClick={() => setConfirmReset(true)}
             className="h-8 px-3 rounded-lg bg-white border border-border shadow-sm text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-1"
           >
-            ⟳ Ricomincia
+            {t('btn_restart')}
           </button>
         )}
       </div>
@@ -134,9 +136,9 @@ export function RecipeFlowCanvas() {
       {confirmUndo && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-white rounded-xl shadow-xl p-5 max-w-sm mx-4">
-            <div className="text-base font-bold text-foreground mb-2">Annullare l'ultima azione?</div>
+            <div className="text-base font-bold text-foreground mb-2">{t('dialog_undo_title')}</div>
             <p className="text-sm text-muted-foreground mb-4">
-              Il grafo verrà ripristinato allo stato precedente all'ultima modifica.
+              {t('dialog_undo_message')}
             </p>
             <div className="flex gap-2 justify-end">
               <button
@@ -144,7 +146,7 @@ export function RecipeFlowCanvas() {
                 onClick={() => setConfirmUndo(false)}
                 className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-[#faf8f5]"
               >
-                No, tieni
+                {t('dialog_undo_keep')}
               </button>
               <button
                 type="button"
@@ -154,7 +156,7 @@ export function RecipeFlowCanvas() {
                 }}
                 className="text-sm font-bold px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
               >
-                Sì, annulla
+                {t('dialog_undo_confirm')}
               </button>
             </div>
           </div>
@@ -165,9 +167,9 @@ export function RecipeFlowCanvas() {
       {confirmReset && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-white rounded-xl shadow-xl p-5 max-w-sm mx-4">
-            <div className="text-base font-bold text-foreground mb-2">Ricomincia da capo?</div>
+            <div className="text-base font-bold text-foreground mb-2">{t('dialog_restart_title')}</div>
             <p className="text-sm text-muted-foreground mb-4">
-              Tutti i nodi della ricetta verranno eliminati. Le impostazioni generali verranno ripristinate ai valori di default del tipo selezionato. Questa azione non può essere annullata.
+              {t('dialog_restart_message')}
             </p>
             <div className="flex gap-2 justify-end">
               <button
@@ -175,7 +177,7 @@ export function RecipeFlowCanvas() {
                 onClick={() => setConfirmReset(false)}
                 className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-[#faf8f5]"
               >
-                Annulla
+                {t('btn_cancel')}
               </button>
               <button
                 type="button"
@@ -185,7 +187,7 @@ export function RecipeFlowCanvas() {
                 }}
                 className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
               >
-                Elimina tutto
+                {t('dialog_delete_all')}
               </button>
             </div>
           </div>

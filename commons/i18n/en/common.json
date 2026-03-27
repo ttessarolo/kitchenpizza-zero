@@ -19,5 +19,14 @@
   "label_filter": "Filter",
   "label_loading": "Loading...",
   "label_empty": "No items",
-  "label_error": "An error occurred"
+  "label_error": "An error occurred",
+  "admin_section_dough": "Dough",
+  "admin_section_flour": "Flour",
+  "admin_section_rise": "Rise",
+  "admin_section_bake": "Bake",
+  "admin_section_pre_bake": "Pre-bake",
+  "admin_section_advisory": "Advisory",
+  "admin_section_composition": "Composition",
+  "admin_section_portioning": "Portioning",
+  "admin_section_other": "Other"
 }

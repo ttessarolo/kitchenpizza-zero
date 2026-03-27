@@ -2,6 +2,7 @@ import { Card } from '~/components/ui/card'
 import { SectionHeader } from './shared/SectionHeader'
 import { TRAY_PRESETS, TRAY_MATERIALS } from '@/local_data'
 import { rnd, thicknessLabel } from '@commons/utils/format'
+import { useT } from '~/hooks/useTranslation'
 import type { Portioning } from '@commons/types/recipe'
 
 interface PortioningSectionProps {
@@ -77,15 +78,16 @@ export function PortioningSection({
   hideHeader,
   hideTotals,
 }: PortioningSectionProps) {
+  const t = useT()
   return (
     <section className={hideHeader ? '' : 'mt-3.5'}>
-      {!hideHeader && <SectionHeader emoji="📐" title="Porzionatura" />}
+      {!hideHeader && <SectionHeader emoji="📐" title={t('section_portioning')} />}
       <Card className="p-3">
         {/* Mode toggle */}
         <div className="flex rounded-[7px] overflow-hidden border-[1.5px] border-border mb-2.5">
           {([
-            { k: 'tray' as const, l: '🍳 Teglia' },
-            { k: 'ball' as const, l: '🫓 Panetti' },
+            { k: 'tray' as const, l: t('tab_tray') },
+            { k: 'ball' as const, l: t('tab_balls') },
           ]).map((tab) => (
             <button
               key={tab.k}
@@ -113,7 +115,7 @@ export function PortioningSection({
             {/* Tray preset */}
             <div>
               <label className="text-xs text-muted-foreground font-semibold uppercase tracking-[1px]">
-                Teglia
+                {t('section_portioning')}
               </label>
               <select
                 value={isCustom ? '__custom' : (po.tray.preset || '')}
@@ -152,7 +154,7 @@ export function PortioningSection({
             {/* Collapsible dimensions + material */}
             <details className="group">
               <summary className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-foreground">
-                Dimensioni e materiale ▾
+                {t('tray_dimensions_material')}
               </summary>
               <div className="mt-1.5 flex flex-col gap-2">
                 {/* Dimensions */}
@@ -178,7 +180,7 @@ export function PortioningSection({
                 {/* Material */}
                 <div>
                   <label className="text-xs text-muted-foreground font-semibold uppercase tracking-[1px]">
-                    Materiale
+                    {t('label_material')}
                   </label>
                   <select
                     value={po.tray.material}
@@ -212,7 +214,7 @@ export function PortioningSection({
                       }
                       className="accent-primary"
                     />
-                    Foro di sfiato
+                    {t('label_vent_hole')}
                   </label>
                 )}
               </div>
@@ -225,17 +227,17 @@ export function PortioningSection({
                 onClick={() => {
                   // TODO: save to user preferences — implement when persistence layer is ready
                   // Should persist { key, label, l, w, h, material, griglia } to user's custom tray list
-                  alert('Salvataggio teglia personalizzata — funzionalità in arrivo!')
+                  alert(t('btn_save_tray_soon'))
                 }}
                 className="text-[11px] font-medium text-primary border border-dashed border-primary rounded-lg py-1.5 hover:bg-primary/5"
               >
-                💾 Salva Teglia {po.tray.l}×{po.tray.w}×{po.tray.h}
+                {t('btn_save_tray')} {po.tray.l}×{po.tray.w}×{po.tray.h}
               </button>
             )}
 
             {/* Tray count */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">N° teglie</span>
+              <span className="text-xs text-muted-foreground">{t('label_tray_count')}</span>
               <PlusMinusButton
                 onClick={() =>
                   onPortioningChange({
@@ -262,7 +264,7 @@ export function PortioningSection({
             {/* Thickness slider */}
             <div className="bg-[#fef6ed] rounded-lg p-2.5">
               <div className="text-xs font-semibold text-[#8a6e40] uppercase tracking-[1px] mb-1">
-                Spessore impasto
+                {t('label_dough_thickness')}
               </div>
               <input
                 type="range"
@@ -288,7 +290,7 @@ export function PortioningSection({
         ) : (
           <div className="flex flex-col gap-2">
             <NumberInput
-              label="Peso singolo (g)"
+              label={t('label_single_weight_g')}
               value={po.ball.weight}
               onChange={(v) =>
                 onPortioningChange({
@@ -299,7 +301,7 @@ export function PortioningSection({
               step={10}
             />
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">N° panetti</span>
+              <span className="text-xs text-muted-foreground">{t('label_ball_count')}</span>
               <PlusMinusButton
                 onClick={() =>
                   onPortioningChange({
@@ -328,7 +330,7 @@ export function PortioningSection({
         {/* Dough summary (hidden when managed by separate panel) */}
         {!hideTotals && <div className="mt-2.5 p-2.5 bg-gradient-to-br from-[#f9f3ec] to-[#f5ede3] rounded-[7px]">
           <div className="flex justify-between items-center text-xs">
-            <span className="text-muted-foreground">Totale impasto</span>
+            <span className="text-muted-foreground">{t('label_total_dough')}</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -342,7 +344,7 @@ export function PortioningSection({
             </div>
           </div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-            <span>Idratazione:</span>
+            <span>{t('label_hydration')}:</span>
             <input
               type="number"
               value={currentHydration}
@@ -354,11 +356,11 @@ export function PortioningSection({
           </div>
           <div className="flex justify-between text-xs mt-1.5">
             <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">Farine</span>
+              <span className="text-muted-foreground">{t('label_flours')}</span>
               <span className="font-bold text-foreground">{rnd(totalFlour)}g</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">Liquidi</span>
+              <span className="text-muted-foreground">{t('label_liquids')}</span>
               <span className="font-bold text-foreground">{rnd(totalLiquid)}g</span>
             </div>
           </div>
