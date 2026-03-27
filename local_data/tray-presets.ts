@@ -3,7 +3,7 @@ import type { TrayPreset, TrayMaterial } from '@commons/types/recipe'
 export const TRAY_PRESETS = [
   {
     key: "terrina_29",
-    label: "Terrina 29×8.5×9",
+    labelKey: "tray_terrina_29",
     l: 29,
     w: 8.5,
     h: 9,
@@ -12,7 +12,7 @@ export const TRAY_PRESETS = [
   },
   {
     key: "plumcake_25",
-    label: "Plumcake 25×11×7",
+    labelKey: "tray_plumcake_25",
     l: 25,
     w: 11,
     h: 7,
@@ -21,7 +21,7 @@ export const TRAY_PRESETS = [
   },
   {
     key: "plumcake_30",
-    label: "Plumcake 30×11×7",
+    labelKey: "tray_plumcake_30",
     l: 30,
     w: 11,
     h: 7,
@@ -30,7 +30,7 @@ export const TRAY_PRESETS = [
   },
   {
     key: "teglia_40x30",
-    label: "Teglia 40×30×2",
+    labelKey: "tray_teglia_40x30",
     l: 40,
     w: 30,
     h: 2,
@@ -39,7 +39,7 @@ export const TRAY_PRESETS = [
   },
   {
     key: "teglia_30x30",
-    label: "Teglia 30×30×6",
+    labelKey: "tray_teglia_30x30",
     l: 30,
     w: 30,
     h: 6,
@@ -48,7 +48,7 @@ export const TRAY_PRESETS = [
   },
   {
     key: "teglia_60x40",
-    label: "Teglia 60×40×2",
+    labelKey: "tray_teglia_60x40",
     l: 60,
     w: 40,
     h: 2,
@@ -57,7 +57,7 @@ export const TRAY_PRESETS = [
   },
   {
     key: "tonda_28",
-    label: "Tonda Ø28×3",
+    labelKey: "tray_tonda_28",
     l: 28,
     w: 28,
     h: 3,
@@ -66,7 +66,7 @@ export const TRAY_PRESETS = [
   },
   {
     key: "tonda_32",
-    label: "Tonda Ø32×3",
+    labelKey: "tray_tonda_32",
     l: 32,
     w: 32,
     h: 3,
@@ -75,7 +75,7 @@ export const TRAY_PRESETS = [
   },
   {
     key: "ferro_blue",
-    label: "Ferro blu 40×30×2.5",
+    labelKey: "tray_ferro_blue",
     l: 40,
     w: 30,
     h: 2.5,
@@ -85,11 +85,11 @@ export const TRAY_PRESETS = [
 ] as const satisfies ReadonlyArray<TrayPreset>
 
 export const TRAY_MATERIALS = [
-  { key: "ci_lid", label: "Ghisa con coperchio", bMin: 35, bMax: 40, defTemp: 170, hasVent: true },
-  { key: "ci_no", label: "Ghisa", bMin: 30, bMax: 35, defTemp: 170, hasVent: false },
-  { key: "alu", label: "Alluminio", bMin: 30, bMax: 40, defTemp: 180, hasVent: false },
-  { key: "glass", label: "Vetro / Pirex", bMin: 35, bMax: 45, defTemp: 175, hasVent: false },
-  { key: "steel", label: "Acciaio", bMin: 30, bMax: 40, defTemp: 180, hasVent: false },
-  { key: "copper", label: "Rame", bMin: 28, bMax: 35, defTemp: 175, hasVent: false },
-  { key: "stone", label: "Pietra refrattaria", bMin: 25, bMax: 35, defTemp: 250, hasVent: false },
+  { key: "ci_lid", labelKey: "tray_mat_ci_lid", bMin: 35, bMax: 40, defTemp: 170, hasVent: true },
+  { key: "ci_no", labelKey: "tray_mat_ci_no", bMin: 30, bMax: 35, defTemp: 170, hasVent: false },
+  { key: "alu", labelKey: "tray_mat_alu", bMin: 30, bMax: 40, defTemp: 180, hasVent: false },
+  { key: "glass", labelKey: "tray_mat_glass", bMin: 35, bMax: 45, defTemp: 175, hasVent: false },
+  { key: "steel", labelKey: "tray_mat_steel", bMin: 30, bMax: 40, defTemp: 180, hasVent: false },
+  { key: "copper", labelKey: "tray_mat_copper", bMin: 28, bMax: 35, defTemp: 175, hasVent: false },
+  { key: "stone", labelKey: "tray_mat_stone", bMin: 25, bMax: 35, defTemp: 250, hasVent: false },
 ] as const satisfies ReadonlyArray<TrayMaterial>

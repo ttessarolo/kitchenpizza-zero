@@ -140,7 +140,7 @@ export function PortioningSection({
               >
                 {TRAY_PRESETS.map((p) => (
                   <option key={p.key} value={p.key}>
-                    {p.label}
+                    {t(p.labelKey)}
                   </option>
                 ))}
                 {isCustom && (
@@ -194,7 +194,7 @@ export function PortioningSection({
                   >
                     {TRAY_MATERIALS.map((m) => (
                       <option key={m.key} value={m.key}>
-                        {m.label}
+                        {t(m.labelKey)}
                       </option>
                     ))}
                   </select>

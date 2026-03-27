@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { fmtTime, fmtDuration } from '@commons/utils/format'
 import { STEP_TYPES, COLOR_MAP } from '@/local_data'
+import { useT } from '~/hooks/useTranslation'
 import type { ScheduledStep } from '@commons/types/recipe'
 import { StepBody } from './StepBody'
 import { useRecipe } from './RecipeContext'
@@ -26,6 +27,7 @@ export function StepCard({
   onToggle,
   dragHandleProps,
 }: StepCardProps) {
+  const t = useT()
   const { deleteStep, duplicateStepAction } = useRecipe()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const cm = COLOR_MAP[s.type] || COLOR_MAP.dough
@@ -80,7 +82,7 @@ export function StepCard({
               {STEP_TYPES.find((t) => t.key === s.type)?.icon} {s.title}
             </div>
             <div className="text-xs text-[#b8a08a] mt-px">
-              {cm.lb}{s.subtype ? ` · ${STEP_TYPES.find((t) => t.key === s.type)?.subtypes?.find((st) => st.key === s.subtype)?.label || s.subtype}` : ''} · {fmtDuration(s.dur)}
+              {t(cm.lbKey)}{s.subtype ? ` · ${t(STEP_TYPES.find((st) => st.key === s.type)?.subtypes?.find((sub) => sub.key === s.subtype)?.labelKey || s.subtype)}` : ''} · {fmtDuration(s.dur)}
             </div>
           </div>
 

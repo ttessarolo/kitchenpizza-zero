@@ -2,9 +2,9 @@ import { z } from 'zod'
 
 const flourEntrySchema = z.object({
   key: z.string(),
-  group: z.string(),
-  label: z.string(),
-  sub: z.string(),
+  groupKey: z.string(),
+  labelKey: z.string(),
+  subKey: z.string(),
   protein: z.number(),
   W: z.number(),
   PL: z.number(),

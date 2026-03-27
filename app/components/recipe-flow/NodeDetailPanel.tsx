@@ -173,10 +173,10 @@ function SinglePanel({
         <span className="text-lg">{typeEntry?.icon || '📋'}</span>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold" style={{ color: cm.tx }}>
-            {node.data.title || typeEntry?.label || node.type}
+            {node.data.title || t(typeEntry?.labelKey || node.type)}
           </div>
           <div className="text-[10px] opacity-70" style={{ color: cm.tx }}>
-            {cm.lb} · {fmtDuration(getNodeDuration(node, meta.type, meta.subtype, portioning.thickness))}
+            {t(cm.lbKey)} · {fmtDuration(getNodeDuration(node, meta.type, meta.subtype, portioning.thickness))}
           </div>
         </div>
         {!isPeek && (
@@ -222,7 +222,6 @@ function SinglePanel({
 // ── Main panel container ────────────────────────────────────────
 
 export function NodeDetailPanel() {
-  const t = useT()
   const expandedNodeId = useRecipeFlowStore((s) => s.expandedNodeId)
   const peekNodeIds = useRecipeFlowStore((s) => s.peekNodeIds)
   const expandNode = useRecipeFlowStore((s) => s.expandNode)

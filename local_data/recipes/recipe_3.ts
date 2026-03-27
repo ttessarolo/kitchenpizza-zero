@@ -22,6 +22,7 @@ export const RECIPE_3: Recipe = {
     author: "KitchenPizza",
     type: "pizza",
     subtype: "teglia_romana",
+    locale: "it",
   },
   portioning: {
     mode: "tray",

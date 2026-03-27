@@ -1,7 +1,7 @@
 import type { KneadMethod } from '@commons/types/recipe'
 
 export const KNEAD_METHODS = [
-  { key: "hand", label: "A mano", ff: 3 },
-  { key: "stand", label: "Planetaria", ff: 12 },
-  { key: "spiral", label: "Spirale", ff: 8 },
+  { key: "hand", labelKey: "knead_hand", ff: 3 },
+  { key: "stand", labelKey: "knead_stand", ff: 12 },
+  { key: "spiral", labelKey: "knead_spiral", ff: 8 },
 ] as const satisfies ReadonlyArray<KneadMethod>

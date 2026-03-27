@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { FLOUR_CATALOG, FLOUR_GROUPS } from '@/local_data'
 import { getFlour, estimateW } from '@commons/utils/flour-manager'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
+import { useT } from '~/hooks/useTranslation'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ interface FlourPickerProps {
 }
 
 export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlour }: FlourPickerProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
@@ -36,13 +38,13 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
 
   const filtered = search.trim()
     ? allFlours.filter((f) =>
-        (f.label + ' ' + f.sub + ' ' + f.group)
+        (t(f.labelKey) + ' ' + t(f.subKey) + ' ' + t(f.groupKey))
           .toLowerCase()
           .includes(search.toLowerCase()),
       )
     : allFlours
 
-  const allGroups = [...FLOUR_GROUPS, ...(customFlours.length > 0 ? ['Personalizzate'] : [])]
+  const allGroups = [...FLOUR_GROUPS, ...(customFlours.length > 0 ? ['flour_group_custom'] : [])]
 
   return (
     <div ref={ref} className="relative">
@@ -52,8 +54,8 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
         className="w-full text-left flex items-center text-xs font-medium text-foreground bg-background border-[1.5px] border-border rounded-lg py-1.5 pl-2 pr-7 cursor-pointer outline-none min-h-8"
       >
         <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-          {cur.label}{' '}
-          <span className="text-xs text-[#a08060]">{cur.sub}</span>
+          {t(cur.labelKey)}{' '}
+          <span className="text-xs text-[#a08060]">{t(cur.subKey)}</span>
         </span>
       </button>
 
@@ -70,12 +72,12 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
           </div>
           <div className="overflow-y-auto max-h-[220px]">
             {allGroups.map((g) => {
-              const items = filtered.filter((f) => g === 'Personalizzate' ? customFlours.some((cf) => cf.key === f.key) : f.group === g)
+              const items = filtered.filter((f) => g === 'flour_group_custom' ? customFlours.some((cf) => cf.key === f.key) : f.groupKey === g)
               if (!items.length) return null
               return (
                 <div key={g}>
                   <div className="text-[11px] font-bold text-[#b8845a] uppercase tracking-[1.5px] px-3 pt-2 pb-0.5 sticky top-0 bg-white">
-                    {g}
+                    {t(g)}
                   </div>
                   {items.map((f) => (
                     <button
@@ -90,8 +92,8 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
                         f.key === value ? 'bg-[#fef6ed]' : 'bg-transparent hover:bg-[#faf6f1]'
                       }`}
                     >
-                      {f.label}{' '}
-                      <span className="text-xs text-[#a08060]">{f.sub}</span>
+                      {t(f.labelKey)}{' '}
+                      <span className="text-xs text-[#a08060]">{t(f.subKey)}</span>
                     </button>
                   ))}
                 </div>
@@ -161,8 +163,9 @@ function CreateFlourDialog({
   onOpenChange: (open: boolean) => void
   onSave: (flour: FlourCatalogEntry) => void
 }) {
+  const t = useT()
   const [label, setLabel] = useState('')
-  const [group, setGroup] = useState('Grano Tenero')
+  const [group, setGroup] = useState('flour_group_grano_tenero')
   const [protein, setProtein] = useState(12)
   const [W, setW] = useState<number | null>(null)
   const [PL, setPL] = useState(0.55)
@@ -181,9 +184,9 @@ function CreateFlourDialog({
     const key = `custom_${Date.now().toString(36)}`
     onSave({
       key,
-      group,
-      label: label.trim(),
-      sub: `W ${computedW} (custom)`,
+      groupKey: group,
+      labelKey: label.trim(),
+      subKey: `W ${computedW} (custom)`,
       protein,
       W: computedW,
       PL,
@@ -215,7 +218,7 @@ function CreateFlourDialog({
           <div>
             <label className="font-semibold text-muted-foreground">Gruppo</label>
             <select value={group} onChange={(e) => setGroup(e.target.value)} className="w-full mt-0.5 border border-border rounded px-2 py-1 outline-none min-h-8">
-              {FLOUR_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+              {FLOUR_GROUPS.map((g) => <option key={g} value={g}>{t(g)}</option>)}
             </select>
           </div>
           {/* W + Protein (linked) */}

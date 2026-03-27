@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { STEP_TYPES, COLOR_MAP } from '@/local_data'
 import { fmtDuration } from '@commons/utils/format'
+import { useT } from '~/hooks/useTranslation'
 import type { NodeData, NodeTypeKey } from '@commons/types/recipe-graph'
 
 export interface FlowSummary {
@@ -47,6 +48,7 @@ function getPreview(type: NodeTypeKey, d: NodeData): string | null {
 }
 
 function BaseNodeInner({ id, data }: NodeProps<BaseNodeData>) {
+  const t = useT()
   const { nodeData, nodeType, nodeSubtype, duration, isSelected, isPeek, isError } = data
   const inFlow = data.inFlow ?? []
   const outFlow = data.outFlow ?? []
@@ -89,11 +91,11 @@ function BaseNodeInner({ id, data }: NodeProps<BaseNodeData>) {
           <span className="text-2xl shrink-0">{typeEntry?.icon || '📋'}</span>
           <div className="flex-1 min-w-0">
             <div className="text-lg font-bold truncate leading-tight" style={{ color: cm.tx }}>
-              {nodeData.title || typeEntry?.label || nodeType}
+              {nodeData.title || t(typeEntry?.labelKey || nodeType)}
             </div>
             <div className="text-sm opacity-70 truncate" style={{ color: cm.tx }}>
-              {cm.lb}
-              {subtypeEntry ? ` · ${subtypeEntry.label}` : ''}
+              {t(cm.lbKey)}
+              {subtypeEntry ? ` · ${t(subtypeEntry.labelKey)}` : ''}
               {' · '}
               {fmtDuration(duration)}
             </div>

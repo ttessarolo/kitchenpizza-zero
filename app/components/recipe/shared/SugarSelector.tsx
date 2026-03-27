@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SUGAR_TYPES } from '@/local_data'
+import { useT } from '~/hooks/useTranslation'
 
 interface SugarSelectorProps {
   value: string
@@ -7,6 +8,7 @@ interface SugarSelectorProps {
 }
 
 export function SugarSelector({ value, onChange }: SugarSelectorProps) {
+  const t = useT()
   const [custom, setCustom] = useState(false)
 
   if (custom || !SUGAR_TYPES.some((s) => s.key === value)) {
@@ -29,7 +31,7 @@ export function SugarSelector({ value, onChange }: SugarSelectorProps) {
     >
       {SUGAR_TYPES.map((s) => (
         <option key={s.key} value={s.key}>
-          {s.label}
+          {t(s.labelKey)}
         </option>
       ))}
       <option value="__custom__">Altro...</option>

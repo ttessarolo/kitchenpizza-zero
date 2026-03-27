@@ -74,7 +74,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
       position: { x: 0, y: 0 },
       lane: 'main',
       data: {
-        title: pfSubtype?.label || 'Pre-fermento',
+        title: pfSubtype?.labelKey || 'Pre-fermento',
         desc: '',
         group,
         baseDur: 15,
@@ -107,7 +107,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
       position: { x: 0, y: 0 },
       lane: 'main',
       data: {
-        title: `Maturazione ${pfSubtype?.label || 'Pre-fermento'}`,
+        title: `Maturazione ${pfSubtype?.labelKey || 'Pre-fermento'}`,
         desc: '',
         group,
         baseDur: pfDefaults.fermentDur || 720,
@@ -141,7 +141,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
       position: { x: 0, y: 0 },
       lane: 'main',
       data: {
-        title: piSubtype?.label || 'Pre-impasto',
+        title: piSubtype?.labelKey || 'Pre-impasto',
         desc: '',
         group,
         baseDur: piSubtype?.defaults?.baseDur || 30,

@@ -128,7 +128,7 @@ function getDoughFlourProps(doughNode: RecipeNode): BlendedFlourProps {
       fermentSpeed: 1, fallingNumber: 340,
     }
   }
-  return blendFlourProperties(doughNode.data.flours, FLOUR_CATALOG)
+  return blendFlourProperties(doughNode.data.flours, [...FLOUR_CATALOG])
 }
 
 // ── Helper: get yeast percentage and speed factor ───────────────
@@ -256,7 +256,7 @@ export function reconcileGraph(
             props.yPct,
             props.ySF,
             tf,
-            RISE_METHODS,
+            [...RISE_METHODS],
             props.saltPct,
             props.sugarPct,
             props.fatPct,

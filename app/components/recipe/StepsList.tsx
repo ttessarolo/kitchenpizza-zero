@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { STEP_TYPES } from '@/local_data'
+import { useT } from '~/hooks/useTranslation'
 import { useRecipe } from './RecipeContext'
 import { StepCard } from './StepCard'
 import {
@@ -70,6 +71,7 @@ function SortableStepCard({
 
 // ── Main component ───────────────────────────────────────────────
 export function StepsList() {
+  const t = useT()
   const {
     schedule,
     openSteps,
@@ -144,18 +146,18 @@ export function StepsList() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-1.5 my-2">
-            {STEP_TYPES.filter((t) => t.key !== 'done').map((t) => (
+            {STEP_TYPES.filter((st) => st.key !== 'done').map((st) => (
               <button
-                key={t.key}
+                key={st.key}
                 type="button"
-                onClick={() => setNewStepType(t.key)}
+                onClick={() => setNewStepType(st.key)}
                 className={`px-2.5 py-2 text-xs rounded-lg border cursor-pointer text-left ${
-                  newStepType === t.key
+                  newStepType === st.key
                     ? 'border-primary bg-primary/10 font-semibold'
                     : 'border-border bg-white'
                 }`}
               >
-                {t.icon} {t.label}
+                {st.icon} {t(st.labelKey)}
               </button>
             ))}
           </div>

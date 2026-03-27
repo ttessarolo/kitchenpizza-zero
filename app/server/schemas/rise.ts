@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 const riseMethodSchema = z.object({
   key: z.string(),
-  label: z.string(),
+  labelKey: z.string(),
   tf: z.number(),
 })
 

@@ -40,7 +40,7 @@ function JoinNodeInner({ id, data }: NodeProps<BaseNodeData>) {
               {nodeData.title || 'Mix'}
             </div>
             <div className="text-sm opacity-70" style={{ color: cm.tx }}>
-              {nodeData.joinMethod ? t(`join_${nodeData.joinMethod}`) : cm.lb}
+              {nodeData.joinMethod ? t(`join_${nodeData.joinMethod}`) : t(cm.lbKey)}
               {' · '}{fmtDuration(duration)}
             </div>
           </div>

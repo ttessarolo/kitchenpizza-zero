@@ -98,7 +98,7 @@ export interface RecipeCalculator {
   endTime: Date | null
   timeSummary: TimeSummary
   nextUndoneStep: string | undefined
-  currentSubtypes: { key: string; label: string; defaults: { mode: PortioningMode; hyd: number; thickness: number; ballG: number } }[]
+  currentSubtypes: { key: string; labelKey: string; defaults: { mode: PortioningMode; hyd: number; thickness: number; ballG: number } }[]
 
   // Actions — state setters
   setRecipe: React.Dispatch<React.SetStateAction<Recipe>>

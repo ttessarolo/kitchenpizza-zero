@@ -50,7 +50,7 @@ export function NodeContextToolbar() {
                   className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#faf8f5] flex items-center gap-2"
                 >
                   <span>{st.icon}</span>
-                  <span>{t(`step_${st.key}`) !== `step_${st.key}` ? t(`step_${st.key}`) : st.label}</span>
+                  <span>{t(st.labelKey)}</span>
                 </button>
                 {st.subtypes && st.subtypes.length > 0 && (
                   <div className="pl-7">
@@ -70,7 +70,7 @@ export function NodeContextToolbar() {
                         }}
                         className="w-full text-left px-2 py-1 text-[11px] text-muted-foreground hover:bg-[#faf8f5]"
                       >
-                        {t(`subtype_${s.key}`) !== `subtype_${s.key}` ? t(`subtype_${s.key}`) : s.label}
+                        {t(s.labelKey)}
                       </button>
                     ))}
                   </div>

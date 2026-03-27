@@ -34,9 +34,9 @@ export function RecipeTypeSelector({
               }}
               className="w-full text-xs font-medium text-foreground bg-background border-[1.5px] border-border rounded-lg py-1.5 pl-2 pr-7 cursor-pointer outline-none appearance-none min-h-11"
             >
-              {RECIPE_TYPES.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.icon} {t.label}
+              {RECIPE_TYPES.map((rt) => (
+                <option key={rt.key} value={rt.key}>
+                  {rt.icon} {t(rt.labelKey)}
                 </option>
               ))}
             </select>

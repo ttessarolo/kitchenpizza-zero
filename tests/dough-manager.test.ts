@@ -57,14 +57,14 @@ describe('DoughManager — rnd', () => {
 
 describe('DoughManager — blendFlourProperties', () => {
   it('returns defaults for empty flour array', () => {
-    const result = blendFlourProperties([], FLOUR_CATALOG)
+    const result = blendFlourProperties([], [...FLOUR_CATALOG])
     expect(result.W).toBe(280)
     expect(result.protein).toBe(12)
   })
 
   it('returns exact values for single flour', () => {
     const flour = FLOUR_CATALOG.find((f) => f.key === 'gt_00_for')!
-    const result = blendFlourProperties([makeFlour('gt_00_for', 500)], FLOUR_CATALOG)
+    const result = blendFlourProperties([makeFlour('gt_00_for', 500)], [...FLOUR_CATALOG])
     expect(result.W).toBe(flour.W)
     expect(result.protein).toBeCloseTo(flour.protein, 0)
   })
@@ -75,7 +75,7 @@ describe('DoughManager — blendFlourProperties', () => {
     const f2 = FLOUR_CATALOG.find((f) => f.key === 'gt_00_deb')!
     const result = blendFlourProperties(
       [makeFlour('gt_00_for', 500), makeFlour('gt_00_deb', 500)],
-      FLOUR_CATALOG,
+      [...FLOUR_CATALOG],
     )
     const expectedW = Math.round((f1.W + f2.W) / 2)
     expect(result.W).toBe(expectedW)
@@ -86,7 +86,7 @@ describe('DoughManager — blendFlourProperties', () => {
     const f1 = FLOUR_CATALOG.find((f) => f.key === 'gt_00_for')!
     const result = blendFlourProperties(
       [makeFlour('gt_00_for', 800), makeFlour('gt_00_deb', 200)],
-      FLOUR_CATALOG,
+      [...FLOUR_CATALOG],
     )
     // W should be closer to f1.W than the average
     expect(Math.abs(result.W - f1.W)).toBeLessThan(50)

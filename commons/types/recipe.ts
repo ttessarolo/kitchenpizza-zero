@@ -2,7 +2,7 @@
 
 export interface RecipeTypeEntry {
   key: string
-  label: string
+  labelKey: string
   icon: string
 }
 
@@ -15,13 +15,13 @@ export interface RecipeSubtypeDefaults {
 
 export interface RecipeSubtypeEntry {
   key: string
-  label: string
+  labelKey: string
   defaults: RecipeSubtypeDefaults
 }
 
 export interface TrayPreset {
   key: string
-  label: string
+  labelKey: string
   l: number
   w: number
   h: number
@@ -31,7 +31,7 @@ export interface TrayPreset {
 
 export interface TrayMaterial {
   key: string
-  label: string
+  labelKey: string
   bMin: number
   bMax: number
   defTemp: number
@@ -40,9 +40,9 @@ export interface TrayMaterial {
 
 export interface FlourCatalogEntry {
   key: string
-  group: string
-  label: string
-  sub: string
+  groupKey: string
+  labelKey: string
+  subKey: string
   protein: number
   W: number
   PL: number
@@ -56,13 +56,13 @@ export interface FlourCatalogEntry {
 
 export interface RiseMethod {
   key: string
-  label: string
+  labelKey: string
   tf: number
 }
 
 export interface YeastType {
   key: string
-  label: string
+  labelKey: string
   toFresh: number
   speedF: number
   hasFW: boolean
@@ -70,17 +70,17 @@ export interface YeastType {
 
 export interface OvenTypeEntry {
   key: string
-  label: string
+  labelKey: string
 }
 
 export interface OvenModeEntry {
   key: string
-  label: string
+  labelKey: string
 }
 
 export interface KneadMethod {
   key: string
-  label: string
+  labelKey: string
   ff: number
 }
 
@@ -109,20 +109,20 @@ export interface StepSubtypeDefaults {
   roomTempDur?: number
   roomTempRange?: [number, number]
   roomTemp?: number
-  phaseDescriptions?: string[]
+  phaseDescriptionKeys?: string[]
   starterForms?: string[]
   maxAgeDays?: number
 }
 
 export interface StepSubtypeEntry {
   key: string
-  label: string
+  labelKey: string
   defaults: StepSubtypeDefaults
 }
 
 export interface StepTypeEntry {
   key: string
-  label: string
+  labelKey: string
   icon: string
   subtypes?: StepSubtypeEntry[]
 }
@@ -130,7 +130,7 @@ export interface StepTypeEntry {
 export interface ColorMapEntry {
   bg: string
   tx: string
-  lb: string
+  lbKey: string
 }
 
 // ── Domain model types ───────────────────────────────────────────
@@ -173,6 +173,8 @@ export interface RecipeMeta {
   author: string
   type: string
   subtype: string
+  /** Language of the user-written text (name, step titles, descriptions). */
+  locale: string
 }
 
 export interface FlourIngredient {

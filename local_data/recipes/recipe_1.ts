@@ -6,6 +6,7 @@ export const RECIPE_1: Recipe = {
     author: "Cucchiaio d'Argento",
     type: "pane",
     subtype: "shokupan",
+    locale: "it",
   },
   portioning: {
     mode: "tray",

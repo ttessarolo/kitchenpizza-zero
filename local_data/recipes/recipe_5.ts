@@ -15,6 +15,7 @@ export const RECIPE_5: Recipe = {
     author: "KitchenPizza",
     type: "pane",
     subtype: "pane_comune",
+    locale: "it",
   },
   portioning: {
     mode: "ball",

@@ -102,9 +102,9 @@ export function StepBody({ step: s }: StepBodyProps) {
           label="Tipo"
           value={s.type}
           onChange={(v) => uSF(s.id, 'type', v)}
-          options={STEP_TYPES.map((t) => ({
-            k: t.key,
-            l: t.icon + ' ' + t.label,
+          options={STEP_TYPES.map((st) => ({
+            k: st.key,
+            l: st.icon + ' ' + t(st.labelKey),
           }))}
         />
         {subtypes.length > 0 && (
@@ -152,7 +152,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                 return updated
               })
             }}
-            options={subtypes.map((st) => ({ k: st.key, l: st.label }))}
+            options={subtypes.map((st) => ({ k: st.key, l: t(st.labelKey) }))}
           />
         )}
         <GroupSelect
@@ -282,7 +282,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                     <div className="text-xs text-muted-foreground mb-0.5">Lievito</div>
                     <select value={cfg.yeastType || 'fresh'} onChange={(e) => updateCfg('yeastType', e.target.value)} className="w-full text-xs font-medium bg-background border border-border rounded-lg py-1 pl-2 pr-6 cursor-pointer outline-none min-h-7">
                       {YEAST_TYPES.filter((y) => !y.key.startsWith('madre')).map((y) => (
-                        <option key={y.key} value={y.key}>{y.label}</option>
+                        <option key={y.key} value={y.key}>{t(y.labelKey)}</option>
                       ))}
                     </select>
                   </div>
@@ -685,7 +685,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                     >
                       {YEAST_TYPES.map((y) => (
                         <option key={y.key} value={y.key}>
-                          {y.label}
+                          {t(y.labelKey)}
                         </option>
                       ))}
                     </select>
@@ -847,7 +847,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           >
             {KNEAD_METHODS.map((m) => (
               <option key={m.key} value={m.key}>
-                {m.label} (+{m.ff}°C)
+                {t(m.labelKey)} (+{m.ff}°C)
               </option>
             ))}
           </select>
@@ -960,7 +960,7 @@ export function StepBody({ step: s }: StepBodyProps) {
             >
               {RISE_METHODS.map((m) => (
                 <option key={m.key} value={m.key}>
-                  {m.label}
+                  {t(m.labelKey)}
                 </option>
               ))}
             </select>
@@ -1271,6 +1271,7 @@ interface OvenEditorProps {
 }
 
 function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd, recipeType, recipeSubtype, nodeId, method }: OvenEditorProps) {
+  const t = useT()
   const ms = MODE_MAP[cfg.ovenType] || ['static']
   const pp = 100 - cfg.cieloPct
 
@@ -1293,7 +1294,7 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
           >
             {OVEN_TYPES.map((o) => (
               <option key={o.key} value={o.key}>
-                {o.label}
+                {t(o.labelKey)}
               </option>
             ))}
           </select>
@@ -1306,7 +1307,7 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
               const m = OVEN_MODES.find((x) => x.key === k)
               return m ? (
                 <option key={k} value={k}>
-                  {m.label}
+                  {t(m.labelKey)}
                 </option>
               ) : null
             })}
@@ -1685,6 +1686,7 @@ function CookingFatsEditor({
   cookingFats: FatIngredient[]
   onChange: (fats: FatIngredient[]) => void
 }) {
+  const t = useT()
   const addFat = () => {
     const defaultType = fryableFats[0]?.key ?? 'olio_arachidi'
     onChange([...cookingFats, { id: Date.now(), type: defaultType, g: 500 }])
@@ -1709,7 +1711,7 @@ function CookingFatsEditor({
             className={editorSelect + ' flex-1'}
           >
             {fryableFats.map((ft) => (
-              <option key={ft.key} value={ft.key}>{ft.label}</option>
+              <option key={ft.key} value={ft.key}>{t(ft.labelKey)}</option>
             ))}
           </select>
           <input

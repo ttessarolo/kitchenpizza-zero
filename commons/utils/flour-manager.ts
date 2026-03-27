@@ -33,14 +33,14 @@ export function getFlour(key: string, catalog: FlourCatalogEntry[] = FLOUR_CATAL
 
 /** Get all flours belonging to a group ("Grano Tenero", "Grano Duro", "Speciali"). */
 export function getFloursByGroup(group: string, catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[]): FlourCatalogEntry[] {
-  return catalog.filter((f) => f.group === group)
+  return catalog.filter((f) => f.groupKey === group)
 }
 
 /** Search flours by query string (matches label, sub, group). Case-insensitive. */
 export function searchFlours(query: string, catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[]): FlourCatalogEntry[] {
   const q = query.toLowerCase()
   return catalog.filter((f) =>
-    (f.label + ' ' + f.sub + ' ' + f.group).toLowerCase().includes(q),
+    (f.labelKey + ' ' + f.subKey + ' ' + f.groupKey).toLowerCase().includes(q),
   )
 }
 

@@ -1,18 +1,18 @@
 export const LIQUID_PRESETS = [
-  "Latte freddo",
-  "Acqua",
-  "Latte intero",
-  "Latte di cocco",
-  "Latte di soia",
-  "Panna",
-  "Birra",
-  "Altro...",
+  "liquid_latte_freddo",
+  "liquid_acqua",
+  "liquid_latte_intero",
+  "liquid_latte_cocco",
+  "liquid_latte_soia",
+  "liquid_panna",
+  "liquid_birra",
+  "liquid_altro",
 ] as const
 
 export const EXTRA_PRESETS = [
-  "Uova intere",
-  "Tuorlo d'uovo",
-  "Semi",
-  "Cacao",
-  "Inserisci nuovo...",
+  "extra_uova_intere",
+  "extra_tuorlo",
+  "extra_semi",
+  "extra_cacao",
+  "extra_nuovo",
 ] as const

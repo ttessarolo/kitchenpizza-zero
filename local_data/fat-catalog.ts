@@ -1,6 +1,6 @@
 export interface FatType {
   key: string
-  label: string
+  labelKey: string
   fermentEffect: number
   waterContent: number
   isLiquid: boolean
@@ -12,22 +12,22 @@ export interface FatType {
 
 export const FAT_TYPES: FatType[] = [
   // ── Oli da impasto ─────────────────────────────────────────────
-  { key: 'olio_evo', label: 'Olio Extra Vergine', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: false, smokePoint: 190 },
-  { key: 'olio_semi', label: 'Olio di Semi (generico)', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 230 },
+  { key: 'olio_evo', labelKey: 'fat_olio_evo', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: false, smokePoint: 190 },
+  { key: 'olio_semi', labelKey: 'fat_olio_semi', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 230 },
 
   // ── Oli per frittura ───────────────────────────────────────────
-  { key: 'olio_arachidi', label: 'Olio di Arachidi', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 230 },
-  { key: 'olio_girasole', label: 'Olio di Girasole', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 230 },
-  { key: 'olio_mais', label: 'Olio di Mais', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 230 },
-  { key: 'olio_canola', label: 'Olio di Canola', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 205 },
-  { key: 'olio_cartamo', label: 'Olio di Cartamo', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 265 },
-  { key: 'olio_cotone', label: 'Olio di Semi di Cotone', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 215 },
-  { key: 'olio_avocado', label: 'Olio di Avocado', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 270 },
+  { key: 'olio_arachidi', labelKey: 'fat_olio_arachidi', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 230 },
+  { key: 'olio_girasole', labelKey: 'fat_olio_girasole', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 230 },
+  { key: 'olio_mais', labelKey: 'fat_olio_mais', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 230 },
+  { key: 'olio_canola', labelKey: 'fat_olio_canola', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 205 },
+  { key: 'olio_cartamo', labelKey: 'fat_olio_cartamo', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 265 },
+  { key: 'olio_cotone', labelKey: 'fat_olio_cotone', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 215 },
+  { key: 'olio_avocado', labelKey: 'fat_olio_avocado', fermentEffect: 1.05, waterContent: 0, isLiquid: true, fryable: true, smokePoint: 270 },
 
   // ── Grassi solidi ──────────────────────────────────────────────
-  { key: 'burro', label: 'Burro', fermentEffect: 1.08, waterContent: 15, isLiquid: false, fryable: false, smokePoint: 150 },
-  { key: 'burro_chiarificato', label: 'Burro Chiarificato (Ghee)', fermentEffect: 1.06, waterContent: 0, isLiquid: false, fryable: true, smokePoint: 250 },
-  { key: 'strutto', label: 'Strutto', fermentEffect: 1.06, waterContent: 0, isLiquid: false, fryable: true, smokePoint: 190 },
-  { key: 'margarina', label: 'Margarina', fermentEffect: 1.07, waterContent: 16, isLiquid: false, fryable: false, smokePoint: 150 },
-  { key: 'lecitina', label: 'Lecitina di Girasole', fermentEffect: 1.0, waterContent: 0, isLiquid: false, fryable: false },
+  { key: 'burro', labelKey: 'fat_burro', fermentEffect: 1.08, waterContent: 15, isLiquid: false, fryable: false, smokePoint: 150 },
+  { key: 'burro_chiarificato', labelKey: 'fat_burro_chiarificato', fermentEffect: 1.06, waterContent: 0, isLiquid: false, fryable: true, smokePoint: 250 },
+  { key: 'strutto', labelKey: 'fat_strutto', fermentEffect: 1.06, waterContent: 0, isLiquid: false, fryable: true, smokePoint: 190 },
+  { key: 'margarina', labelKey: 'fat_margarina', fermentEffect: 1.07, waterContent: 16, isLiquid: false, fryable: false, smokePoint: 150 },
+  { key: 'lecitina', labelKey: 'fat_lecitina', fermentEffect: 1.0, waterContent: 0, isLiquid: false, fryable: false },
 ]

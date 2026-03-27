@@ -22,14 +22,14 @@ const makeFlour = (type: string, g: number): FlourIngredient => ({ id: 0, type, 
 
 describe('FlourManager — catalog integrity', () => {
   it('has all three groups', () => {
-    expect(FLOUR_GROUPS).toContain('Grano Tenero')
-    expect(FLOUR_GROUPS).toContain('Grano Duro')
-    expect(FLOUR_GROUPS).toContain('Speciali')
+    expect(FLOUR_GROUPS).toContain('flour_group_grano_tenero')
+    expect(FLOUR_GROUPS).toContain('flour_group_grano_duro')
+    expect(FLOUR_GROUPS).toContain('flour_group_speciali')
   })
 
   it('every flour belongs to a valid group', () => {
     for (const f of FLOUR_CATALOG) {
-      expect(FLOUR_GROUPS).toContain(f.group)
+      expect(FLOUR_GROUPS).toContain(f.groupKey)
     }
   })
 
@@ -56,7 +56,7 @@ describe('FlourManager — getFlour', () => {
   it('finds flour by key', () => {
     const f = getFlour('gt_00_for')
     expect(f.key).toBe('gt_00_for')
-    expect(f.label).toBe('00 forte')
+    expect(f.labelKey).toBe('flour_gt_00_for')
   })
 
   it('returns fallback for unknown key', () => {
@@ -68,15 +68,15 @@ describe('FlourManager — getFlour', () => {
 
 describe('FlourManager — getFloursByGroup', () => {
   it('returns only Grano Tenero flours', () => {
-    const gt = getFloursByGroup('Grano Tenero')
+    const gt = getFloursByGroup('flour_group_grano_tenero')
     expect(gt.length).toBeGreaterThan(0)
-    expect(gt.every((f) => f.group === 'Grano Tenero')).toBe(true)
+    expect(gt.every((f) => f.groupKey === 'flour_group_grano_tenero')).toBe(true)
   })
 
   it('returns only Grano Duro flours', () => {
-    const gd = getFloursByGroup('Grano Duro')
+    const gd = getFloursByGroup('flour_group_grano_duro')
     expect(gd.length).toBe(3)
-    expect(gd.every((f) => f.group === 'Grano Duro')).toBe(true)
+    expect(gd.every((f) => f.groupKey === 'flour_group_grano_duro')).toBe(true)
   })
 
   it('returns empty for unknown group', () => {
@@ -85,19 +85,19 @@ describe('FlourManager — getFloursByGroup', () => {
 })
 
 describe('FlourManager — searchFlours', () => {
-  it('finds by label', () => {
-    const results = searchFlours('manitoba')
+  it('finds by labelKey', () => {
+    const results = searchFlours('flour_gt_manit')
     expect(results.length).toBe(1)
     expect(results[0].key).toBe('gt_manit')
   })
 
-  it('finds by sub', () => {
-    const results = searchFlours('senza glutine')
-    expect(results.length).toBeGreaterThanOrEqual(3) // saraceno, riso, teff
+  it('finds by subKey', () => {
+    const results = searchFlours('flour_sp_sarac_sub')
+    expect(results.length).toBeGreaterThanOrEqual(1)
   })
 
   it('case insensitive', () => {
-    expect(searchFlours('MANITOBA').length).toBe(1)
+    expect(searchFlours('FLOUR_GT_MANIT').length).toBe(1)
   })
 
   it('returns empty for no match', () => {

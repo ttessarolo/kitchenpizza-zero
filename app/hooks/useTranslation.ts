@@ -19,14 +19,16 @@ import recipeEn from '@commons/i18n/en/recipe.json'
 import recipeIt from '@commons/i18n/it/recipe.json'
 import scienceEn from '@commons/i18n/en/science.json'
 import scienceIt from '@commons/i18n/it/science.json'
+import catalogEn from '@commons/i18n/en/catalog.json'
+import catalogIt from '@commons/i18n/it/catalog.json'
 
 export type SupportedLocale = 'en' | 'it'
 
 type Dict = Record<string, string>
 
 const messages: Record<SupportedLocale, Dict> = {
-  en: { ...commonEn, ...recipeEn, ...scienceEn } as Dict,
-  it: { ...commonIt, ...recipeIt, ...scienceIt } as Dict,
+  en: { ...commonEn, ...recipeEn, ...scienceEn, ...catalogEn } as Dict,
+  it: { ...commonIt, ...recipeIt, ...scienceIt, ...catalogIt } as Dict,
 }
 
 // ── Dedicated locale store (no persist/immer middleware, no SSR issues) ──

@@ -5,6 +5,7 @@ import { rnd } from '@commons/utils/format'
 import { getFlour } from '@commons/utils/flour-manager'
 import { FLOUR_CATALOG, YEAST_TYPES } from '@/local_data'
 import { FAT_TYPES } from '@/local_data/fat-catalog'
+import { useT } from '~/hooks/useTranslation'
 import type { GroupedIngredients } from '~/hooks/useRecipeCalculator'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
 
@@ -19,6 +20,7 @@ export function IngredientsOverview({
   groupedIngredients,
   hideHeader,
 }: IngredientsOverviewProps) {
+  const t = useT()
   return (
     <section className={hideHeader ? '' : 'mt-3.5'}>
       {!hideHeader && <SectionHeader emoji="🧈" title="Ingredienti" />}
@@ -37,7 +39,7 @@ export function IngredientsOverview({
             {grp.flours.map((f) => (
               <IngredientRow
                 key={'f' + f.type}
-                name={getFlour(f.type, FLOUR_CATALOG as unknown as FlourCatalogEntry[]).label}
+                name={t(getFlour(f.type, FLOUR_CATALOG as unknown as FlourCatalogEntry[]).labelKey)}
                 amount={rnd(f.g)}
                 unit="g"
               />
@@ -48,7 +50,7 @@ export function IngredientsOverview({
             {grp.yeasts.map((y) => (
               <IngredientRow
                 key={'y' + y.type}
-                name={YEAST_TYPES.find((t) => t.key === y.type)?.label || 'Lievito'}
+                name={t(YEAST_TYPES.find((yt) => yt.key === y.type)?.labelKey || 'yeast_fresh')}
                 amount={rnd(y.g)}
                 unit="g"
               />
@@ -70,7 +72,7 @@ export function IngredientsOverview({
             {(grp.fats ?? []).map((f) => (
               <IngredientRow
                 key={'fat' + f.type}
-                name={FAT_TYPES.find((ft) => ft.key === f.type)?.label ?? f.type}
+                name={t(FAT_TYPES.find((ft) => ft.key === f.type)?.labelKey ?? f.type)}
                 amount={rnd(f.g)}
                 unit="g"
               />

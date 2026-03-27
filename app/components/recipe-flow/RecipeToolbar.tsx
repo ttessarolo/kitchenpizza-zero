@@ -56,7 +56,7 @@ export function RecipeToolbar() {
 
   const currentSubtypes = (RECIPE_SUBTYPES[meta.type] || []).map((s) => ({
     key: s.key,
-    label: s.label,
+    label: t(s.labelKey),
     defaults: s.defaults,
   }))
 

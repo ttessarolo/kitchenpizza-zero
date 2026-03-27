@@ -10,6 +10,7 @@ export const RECIPE_0: Recipe = {
     author: "",
     type: "pizza",
     subtype: "teglia_romana",
+    locale: "it",
   },
   portioning: {
     mode: "tray",

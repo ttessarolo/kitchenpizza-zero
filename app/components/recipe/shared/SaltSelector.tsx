@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SALT_TYPES } from '@/local_data'
+import { useT } from '~/hooks/useTranslation'
 
 interface SaltSelectorProps {
   value: string
@@ -7,6 +8,7 @@ interface SaltSelectorProps {
 }
 
 export function SaltSelector({ value, onChange }: SaltSelectorProps) {
+  const t = useT()
   const [custom, setCustom] = useState(false)
 
   if (custom || !SALT_TYPES.some((s) => s.key === value)) {
@@ -29,7 +31,7 @@ export function SaltSelector({ value, onChange }: SaltSelectorProps) {
     >
       {SALT_TYPES.map((s) => (
         <option key={s.key} value={s.key}>
-          {s.label}
+          {t(s.labelKey)}
         </option>
       ))}
       <option value="__custom__">Altro...</option>

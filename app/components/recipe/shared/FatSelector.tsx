@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FAT_TYPES } from '@/local_data'
+import { useT } from '~/hooks/useTranslation'
 
 interface FatSelectorProps {
   value: string
@@ -7,6 +8,7 @@ interface FatSelectorProps {
 }
 
 export function FatSelector({ value, onChange }: FatSelectorProps) {
+  const t = useT()
   const [custom, setCustom] = useState(false)
 
   if (custom || !FAT_TYPES.some((s) => s.key === value)) {
@@ -29,7 +31,7 @@ export function FatSelector({ value, onChange }: FatSelectorProps) {
     >
       {FAT_TYPES.map((s) => (
         <option key={s.key} value={s.key}>
-          {s.label}
+          {t(s.labelKey)}
         </option>
       ))}
       <option value="__custom__">Altro...</option>
