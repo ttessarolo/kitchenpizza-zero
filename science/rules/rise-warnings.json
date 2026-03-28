@@ -1,0 +1,27 @@
+[
+  {
+    "type": "rule",
+    "id": "rise_too_long_for_w",
+    "_meta": { "section": "rise", "displayName": "meta.rule.rise_too_long_for_w.name", "description": "meta.rule.rise_too_long_for_w.desc", "tags": ["rise", "flour", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "flour",
+    "severity": "warning",
+    "messageKey": "warning.rise_too_long_for_w",
+    "messageVars": ["flourW", "maxH", "hours"],
+    "conditions": [
+      { "field": "riseMethod", "op": "eq", "value": "room" },
+      { "field": "hours", "op": "gt", "value": "_maxHoursForW" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "rise_too_short",
+    "_meta": { "section": "rise", "displayName": "meta.rule.rise_too_short.name", "description": "meta.rule.rise_too_short.desc", "tags": ["rise", "duration"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "general",
+    "severity": "info",
+    "messageKey": "warning.rise_too_short",
+    "messageVars": ["durationMin"],
+    "conditions": [
+      { "field": "durationMin", "op": "lt", "value": 15 }
+    ]
+  }
+]

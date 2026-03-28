@@ -104,6 +104,7 @@ export interface SplitOutput {
 // ── Node Data ───────────────────────────────────────────────────
 
 export interface NodeData {
+  [key: string]: unknown
   // ── Common ──
   title: string
   desc: string
@@ -176,6 +177,7 @@ export interface RecipeNode {
 // They do NOT affect ingredient flow (that's handled by split outputs).
 
 export interface RecipeEdgeData {
+  [key: string]: unknown
   /**
    * Schedule condition: TIME completion ratio (0–1).
    * The target node can start when the source node has completed
@@ -249,6 +251,47 @@ export interface ScheduledNode extends RecipeNode {
   end: Date
 }
 
+// ── Advisory Context (for rule evaluation) ──────────────────────
+
+export interface AdvisoryContext {
+  nodeId?: string
+  nodeType: string
+  nodeSubtype: string | null
+  nodeData: NodeData
+  ovenCfg?: OvenConfig | null
+  recipeType: string
+  recipeSubtype: string | null
+  baseDur: number
+  totalFlour: number
+  yeastPct: number
+  saltPct: number
+  fatPct: number
+  hydration: number
+  flourW: number
+  // Cooking config (all bake sub-types)
+  cookingCfg?: import('./recipe').CookingConfig | null
+  preBakeCfg?: import('./recipe').PreBakeConfig | null
+  _cookingMethod?: string
+  // Baking profile computed values (injected by caller)
+  _tempMin?: number
+  _tempMax?: number
+  _suggestedTemp?: number
+  _cieloMin?: number
+  _cieloMax?: number
+  _recommendedModes?: string[]
+  _isPrecottura?: boolean
+  // Frying-specific
+  _oilTemp?: number
+  _oilTempMin?: number
+  _oilTempMax?: number
+  _maxDoughWeight?: number
+  // Grilling-specific
+  _directTemp?: number
+  _directTempMin?: number
+  _directTempMax?: number
+  [key: string]: unknown
+}
+
 // ── Actionable Warnings ─────────────────────────────────────────
 
 /** Relative reference to a node in the graph — resolved at execution time */
@@ -268,7 +311,8 @@ export type GraphMutation =
 
 /** An action the user can accept to resolve a warning */
 export interface WarningAction {
-  label: string
+  labelKey: string
+  descriptionKey?: string
   mutations: GraphMutation[]
 }
 
@@ -278,6 +322,9 @@ export interface ActionableWarning {
   sourceNodeId?: string
   category: 'yeast' | 'salt' | 'fat' | 'hydration' | 'temp' | 'baking' | 'flour' | 'steam' | 'general' | 'frying' | 'grilling' | 'pre_bake'
   severity: 'info' | 'warning' | 'error'
-  message: string
+  messageKey: string
+  messageVars?: Record<string, unknown>
+  /** Evaluation context for action mutations to resolve computed values */
+  _ctx?: Record<string, unknown>
   actions?: WarningAction[]
 }

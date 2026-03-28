@@ -264,8 +264,8 @@ export function removeNodeFromGraph(nodeId: string, graph: RecipeGraph): RecipeG
         source: inE.source,
         target: outE.target,
         data: {
-          waitRatio: inE.data.scheduleTimeRatio,
-          portion: inE.data.portion * childGrams,
+          scheduleTimeRatio: inE.data.scheduleTimeRatio,
+          scheduleQtyRatio: (inE.data.scheduleQtyRatio ?? 1) * childGrams,
         },
       })
     }

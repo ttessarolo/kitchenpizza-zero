@@ -1,8 +1,15 @@
 import { describe, it, expect } from 'vitest'
+import { resolve } from 'path'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
 import { makeNode, makeEdge, makeGraph } from './synthetic_data/helpers'
 import type { RecipeGraph } from '@commons/types/recipe-graph'
 import type { Portioning, RecipeMeta } from '@commons/types/recipe'
+
+const provider = new FileScienceProvider(
+  resolve(process.cwd(), 'science'),
+  resolve(process.cwd(), 'commons/i18n'),
+)
 
 const defaultPortioning: Portioning = {
   mode: 'ball', tray: { preset: 't', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
@@ -10,7 +17,7 @@ const defaultPortioning: Portioning = {
   doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3,
   preImpasto: null, preFermento: null,
 }
-const defaultMeta: RecipeMeta = { name: 'Test', author: '', type: 'pane', subtype: 'pane_comune' }
+const defaultMeta: RecipeMeta = { name: 'Test', author: '', type: 'pane', subtype: 'pane_comune', locale: 'it' }
 
 function makeSimpleGraph(flourG: number, waterG: number, yeastG: number, saltG = 0, fatG = 0): RecipeGraph {
   return makeGraph(
@@ -61,7 +68,7 @@ describe('reconcileGraph — yeast → rise duration', () => {
   it('recalculates rise duration when yeast is present', () => {
     // 500g flour, 1% yeast = 5g → should produce a specific rise duration
     const graph = makeSimpleGraph(500, 300, 5)
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, provider)
 
     const rise = result.graph.nodes.find((n) => n.id === 'rise')!
     // With 1% yeast, room temp, W280 flour → should be different from the initial 120 min
@@ -73,8 +80,8 @@ describe('reconcileGraph — yeast → rise duration', () => {
     const graphLow = makeSimpleGraph(500, 300, 1)   // 0.2% yeast
     const graphHigh = makeSimpleGraph(500, 300, 10)  // 2% yeast
 
-    const resultLow = reconcileGraph(graphLow, defaultPortioning, defaultMeta)
-    const resultHigh = reconcileGraph(graphHigh, defaultPortioning, defaultMeta)
+    const resultLow = reconcileGraph(graphLow, defaultPortioning, defaultMeta, provider)
+    const resultHigh = reconcileGraph(graphHigh, defaultPortioning, defaultMeta, provider)
 
     const riseLow = resultLow.graph.nodes.find((n) => n.id === 'rise')!
     const riseHigh = resultHigh.graph.nodes.find((n) => n.id === 'rise')!
@@ -92,7 +99,7 @@ describe('reconcileGraph — userOverrideDuration', () => {
     riseNode.data.baseDur = 999
     riseNode.data.userOverrideDuration = true
 
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, provider)
     const rise = result.graph.nodes.find((n) => n.id === 'rise')!
     expect(rise.data.baseDur).toBe(999) // NOT recalculated
   })
@@ -103,7 +110,7 @@ describe('reconcileGraph — userOverrideDuration', () => {
     riseNode.data.baseDur = 999
     riseNode.data.userOverrideDuration = false
 
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, provider)
     const rise = result.graph.nodes.find((n) => n.id === 'rise')!
     expect(rise.data.baseDur).not.toBe(999) // WAS recalculated
   })
@@ -114,8 +121,8 @@ describe('reconcileGraph — salt/fat factors', () => {
     const graphNormal = makeSimpleGraph(500, 300, 5, 12)  // 2.4% salt
     const graphHighSalt = makeSimpleGraph(500, 300, 5, 20) // 4% salt
 
-    const resultNormal = reconcileGraph(graphNormal, defaultPortioning, defaultMeta)
-    const resultHigh = reconcileGraph(graphHighSalt, defaultPortioning, defaultMeta)
+    const resultNormal = reconcileGraph(graphNormal, defaultPortioning, defaultMeta, provider)
+    const resultHigh = reconcileGraph(graphHighSalt, defaultPortioning, defaultMeta, provider)
 
     const riseNormal = resultNormal.graph.nodes.find((n) => n.id === 'rise')!
     const riseHigh = resultHigh.graph.nodes.find((n) => n.id === 'rise')!
@@ -127,8 +134,8 @@ describe('reconcileGraph — salt/fat factors', () => {
     const graphNoFat = makeSimpleGraph(500, 300, 5, 12, 0)
     const graphHighFat = makeSimpleGraph(500, 300, 5, 12, 75) // 15% fat
 
-    const resultNoFat = reconcileGraph(graphNoFat, defaultPortioning, defaultMeta)
-    const resultHigh = reconcileGraph(graphHighFat, defaultPortioning, defaultMeta)
+    const resultNoFat = reconcileGraph(graphNoFat, defaultPortioning, defaultMeta, provider)
+    const resultHigh = reconcileGraph(graphHighFat, defaultPortioning, defaultMeta, provider)
 
     const riseNoFat = resultNoFat.graph.nodes.find((n) => n.id === 'rise')!
     const riseHigh = resultHigh.graph.nodes.find((n) => n.id === 'rise')!
@@ -143,8 +150,8 @@ describe('reconcileGraph — fridge rise factor', () => {
     const graphFridge = makeSimpleGraph(500, 300, 5)
     graphFridge.nodes.find((n) => n.id === 'rise')!.data.riseMethod = 'fridge'
 
-    const resultRoom = reconcileGraph(graphRoom, defaultPortioning, defaultMeta)
-    const resultFridge = reconcileGraph(graphFridge, defaultPortioning, defaultMeta)
+    const resultRoom = reconcileGraph(graphRoom, defaultPortioning, defaultMeta, provider)
+    const resultFridge = reconcileGraph(graphFridge, defaultPortioning, defaultMeta, provider)
 
     const riseRoom = resultRoom.graph.nodes.find((n) => n.id === 'rise')!
     const riseFridge = resultFridge.graph.nodes.find((n) => n.id === 'rise')!
@@ -171,7 +178,7 @@ describe('reconcileGraph — split validation', () => {
       })],
       [],
     )
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, provider)
     expect(result.warnings.some((w) => w.id.includes('split_sum'))).toBe(true)
   })
 })
@@ -181,7 +188,7 @@ describe('reconcileGraph — portioning preserved', () => {
     const graph = makeSimpleGraph(400, 240, 2, 8, 16) // total ~666g
     const po = { ...defaultPortioning, mode: 'ball' as const, ball: { weight: 250, count: 4 } }
 
-    const result = reconcileGraph(graph, po, defaultMeta)
+    const result = reconcileGraph(graph, po, defaultMeta, provider)
 
     // Portioning is the user's source of truth — reconciler preserves it
     expect(result.portioning.ball.weight).toBe(250) // unchanged
@@ -190,7 +197,7 @@ describe('reconcileGraph — portioning preserved', () => {
 
 describe('reconcileGraph — warnings', () => {
   it('empty graph produces no warnings', () => {
-    const result = reconcileGraph(makeGraph([], []), defaultPortioning, defaultMeta)
+    const result = reconcileGraph(makeGraph([], []), defaultPortioning, defaultMeta, provider)
     expect(result.warnings).toHaveLength(0)
   })
 
@@ -203,7 +210,7 @@ describe('reconcileGraph — warnings', () => {
       [],
     )
     // Hydration: (250+170)/(300+200) = 420/500 = 84% > 78%
-    const result = reconcileGraph(graph, { ...defaultPortioning, targetHyd: 84 }, defaultMeta)
+    const result = reconcileGraph(graph, { ...defaultPortioning, targetHyd: 84 }, defaultMeta, provider)
     expect(result.warnings.some((w) => w.id === 'autolisi_preferment_hyd')).toBe(true)
   })
 })

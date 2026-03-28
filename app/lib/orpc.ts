@@ -3,7 +3,6 @@ import { RPCLink } from '@orpc/client/fetch'
 import { createRouterClient } from '@orpc/server'
 import { createIsomorphicFn } from '@tanstack/react-start'
 import { createORPCReactQueryUtils } from '@orpc/react-query'
-import type { AppRouter } from '~/server/router'
 
 const client = createIsomorphicFn()
   .server(async () => {
@@ -13,7 +12,8 @@ const client = createIsomorphicFn()
     })
   })
   .client(() => {
-    return createORPCClient<AppRouter>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return createORPCClient<any>(
       new RPCLink({
         url: '/api/rpc',
       }),

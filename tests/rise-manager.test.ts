@@ -10,7 +10,13 @@ import {
   RISE_METHODS,
   YEAST_TYPES,
 } from '@commons/utils/rise-manager'
-import type { BlendedFlourProps, RiseMethod } from '@commons/types/recipe'
+import type { BlendedFlourProps } from '@commons/types/recipe'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { resolve } from 'path'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 const standardBP: BlendedFlourProps = {
   protein: 12, W: 280, PL: 0.55, absorption: 58, ash: 0.55,
@@ -53,50 +59,78 @@ describe('RiseManager — config data', () => {
 // calcRiseDuration
 // ═══════════════════════════════════════════════════════════════
 
+/** Build the inputs Record for calcRiseDuration from legacy-style args */
+function makeRiseInputs(
+  method: string,
+  bp: BlendedFlourProps,
+  yeastPct: number,
+  yeastSpeedFactor: number,
+  temperatureFactor: number,
+  saltPct = 2.3,
+  sugarPct = 0,
+  fatPct = 0,
+): Record<string, number | string> {
+  return {
+    method,
+    yeastPct,
+    W: bp.W,
+    starchDamage: bp.starchDamage,
+    fallingNumber: bp.fallingNumber,
+    fiber: bp.fiber,
+    yeastSpeedFactor,
+    temperatureFactor,
+    saltPct,
+    sugarPct,
+    fatPct,
+  }
+}
+
+const riseCatalogs = {
+  rise_methods: RISE_METHODS.map((m) => ({ key: m.key, tf: m.tf })),
+}
+
 describe('RiseManager — calcRiseDuration', () => {
   it('produces reasonable duration for standard conditions', () => {
-    const dur = calcRiseDuration(60, 'room', standardBP, 0.22, 1, 1)
-    // W280, 0.22% yeast, room temp — formula gives ~212 min (~3.5h)
+    const dur = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 0.22, 1, 1), riseCatalogs)
+    // W280, 0.22% yeast, room temp — reasonable range
     expect(dur).toBeGreaterThan(100)
     expect(dur).toBeLessThan(600)
   })
 
   it('higher W flour → shorter rise (stronger gluten = faster development)', () => {
-    // The formula uses 280/W factor: higher W → smaller factor → shorter duration
-    const durW150 = calcRiseDuration(60, 'room', weakBP, 0.22, 1, 1)
-    const durW280 = calcRiseDuration(60, 'room', standardBP, 0.22, 1, 1)
-    const durW380 = calcRiseDuration(60, 'room', strongBP, 0.22, 1, 1)
+    const durW150 = calcRiseDuration(provider, makeRiseInputs('room', weakBP, 0.22, 1, 1), riseCatalogs)
+    const durW280 = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 0.22, 1, 1), riseCatalogs)
+    const durW380 = calcRiseDuration(provider, makeRiseInputs('room', strongBP, 0.22, 1, 1), riseCatalogs)
     expect(durW380).toBeLessThan(durW280)
     expect(durW280).toBeLessThan(durW150)
   })
 
   it('more yeast → shorter rise', () => {
-    const durLow = calcRiseDuration(60, 'room', standardBP, 0.1, 1, 1)
-    const durHigh = calcRiseDuration(60, 'room', standardBP, 1.0, 1, 1)
+    const durLow = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 0.1, 1, 1), riseCatalogs)
+    const durHigh = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 1.0, 1, 1), riseCatalogs)
     expect(durHigh).toBeLessThan(durLow)
   })
 
   it('fridge method → longer rise', () => {
-    const durRoom = calcRiseDuration(60, 'room', standardBP, 0.22, 1, 1)
-    const durFridge = calcRiseDuration(60, 'fridge', standardBP, 0.22, 1, 1)
+    const durRoom = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 0.22, 1, 1), riseCatalogs)
+    const durFridge = calcRiseDuration(provider, makeRiseInputs('fridge', standardBP, 0.22, 1, 1), riseCatalogs)
     expect(durFridge).toBeGreaterThan(durRoom)
   })
 
   it('madre lievito (low speed factor) → longer rise', () => {
-    const durFresh = calcRiseDuration(60, 'room', standardBP, 0.22, 1, 1)
-    const durMadre = calcRiseDuration(60, 'room', standardBP, 0.22, 0.3, 1)
+    const durFresh = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 0.22, 1, 1), riseCatalogs)
+    const durMadre = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 0.22, 0.3, 1), riseCatalogs)
     expect(durMadre).toBeGreaterThan(durFresh)
   })
 
   it('high salt → slightly longer rise', () => {
-    const durNormal = calcRiseDuration(60, 'room', standardBP, 0.22, 1, 1, undefined, 2.5)
-    const durSalty = calcRiseDuration(60, 'room', standardBP, 0.22, 1, 1, undefined, 3.5)
+    const durNormal = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 0.22, 1, 1, 2.5), riseCatalogs)
+    const durSalty = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 0.22, 1, 1, 3.5), riseCatalogs)
     expect(durSalty).toBeGreaterThan(durNormal)
   })
 
   it('enforces minimum yeast of 0.5 in calculation', () => {
-    // Very low yeast shouldn't produce Infinity
-    const dur = calcRiseDuration(60, 'room', standardBP, 0.001, 1, 1)
+    const dur = calcRiseDuration(provider, makeRiseInputs('room', standardBP, 0.001, 1, 1), riseCatalogs)
     expect(Number.isFinite(dur)).toBe(true)
     expect(dur).toBeGreaterThan(0)
   })
@@ -161,12 +195,12 @@ describe('RiseManager — lookups', () => {
 
 describe('RiseManager — maxRiseHoursForW', () => {
   it('matches Casucci Cap. 44 table', () => {
-    expect(maxRiseHoursForW(400)).toBe(20)
-    expect(maxRiseHoursForW(330)).toBe(14)
-    expect(maxRiseHoursForW(295)).toBe(10)
-    expect(maxRiseHoursForW(250)).toBe(6)
-    expect(maxRiseHoursForW(190)).toBe(2)
-    expect(maxRiseHoursForW(100)).toBe(1)
+    expect(maxRiseHoursForW(provider, 400)).toBe(20)
+    expect(maxRiseHoursForW(provider, 330)).toBe(14)
+    expect(maxRiseHoursForW(provider, 295)).toBe(10)
+    expect(maxRiseHoursForW(provider, 250)).toBe(6)
+    expect(maxRiseHoursForW(provider, 190)).toBe(2)
+    expect(maxRiseHoursForW(provider, 100)).toBe(1)
   })
 })
 
@@ -176,22 +210,22 @@ describe('RiseManager — maxRiseHoursForW', () => {
 
 describe('RiseManager — getRiseWarnings', () => {
   it('warns when rise is too long for flour W at room temp', () => {
-    const w = getRiseWarnings({ durationMin: 480, flourW: 200, yeastPct: 0.1, method: 'room' })
+    const w = getRiseWarnings(provider, { riseMethod: 'room', hours: 8, durationMin: 480, flourW: 200 })
     expect(w.find((w) => w.id === 'rise_too_long_for_w')).toBeDefined()
   })
 
   it('does NOT warn for fridge (method compensates)', () => {
-    const w = getRiseWarnings({ durationMin: 480, flourW: 200, yeastPct: 0.1, method: 'fridge' })
+    const w = getRiseWarnings(provider, { riseMethod: 'fridge', hours: 8, durationMin: 480, flourW: 200 })
     expect(w.find((w) => w.id === 'rise_too_long_for_w')).toBeUndefined()
   })
 
   it('warns for very short rise (<15 min)', () => {
-    const w = getRiseWarnings({ durationMin: 10, flourW: 280, yeastPct: 2, method: 'room' })
+    const w = getRiseWarnings(provider, { riseMethod: 'room', hours: 0.17, durationMin: 10, flourW: 280 })
     expect(w.find((w) => w.id === 'rise_too_short')).toBeDefined()
   })
 
   it('no warnings for normal conditions', () => {
-    const w = getRiseWarnings({ durationMin: 120, flourW: 280, yeastPct: 0.22, method: 'room' })
+    const w = getRiseWarnings(provider, { riseMethod: 'room', hours: 2, durationMin: 120, flourW: 280 })
     expect(w).toHaveLength(0)
   })
 })

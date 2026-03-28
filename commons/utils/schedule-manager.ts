@@ -7,7 +7,7 @@
  * - Total duration and time summary
  */
 
-import type { RecipeGraph, RecipeNode, LaneDefinition } from '@commons/types/recipe-graph'
+import type { RecipeGraph, RecipeNode } from '@commons/types/recipe-graph'
 import { topologicalSortGraph } from './graph-manager'
 
 // Re-export lane derivation (originally in lane-derivation.ts)

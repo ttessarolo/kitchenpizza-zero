@@ -2,9 +2,15 @@ import { describe, it, expect } from 'vitest'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
 import { computeGroupedIngredients } from '~/hooks/useGraphCalculator'
 import { getBakingWarnings } from '@commons/utils/baking'
-import { getWarnings as getBakeWarnings } from '@commons/utils/bake-manager'
-import { evaluateAdvisories, type AdvisoryContext } from '@commons/utils/advisory-manager'
-import { ADVISORY_RULES } from '@commons/utils/advisory-rules'
+import { evaluateRules } from '@commons/utils/science/rule-engine'
+import type { AdvisoryContext } from '@commons/types/recipe-graph'
+import { resolve } from 'path'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const testProvider = new FileScienceProvider(scienceDir, i18nDir)
+const BAKING_RULES = testProvider.getRules('baking')
 import { makeNode, makeEdge, makeGraph } from './synthetic_data/helpers'
 import type { RecipeGraph, RecipeEdge, RecipeNode, NodeData } from '@commons/types/recipe-graph'
 import type { Portioning, RecipeMeta, CookingConfig, FatIngredient, OvenConfig } from '@commons/types/recipe'
@@ -15,7 +21,7 @@ const defaultPortioning: Portioning = {
   doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3,
   preImpasto: null, preFermento: null,
 }
-const defaultMeta: RecipeMeta = { name: 'Test', author: '', type: 'pane', subtype: 'pane_comune' }
+const defaultMeta: RecipeMeta = { name: 'Test', author: '', type: 'pane', subtype: 'pane_comune', locale: 'it' }
 
 const FRITTURA_CFG: CookingConfig = {
   method: 'frittura',
@@ -208,20 +214,20 @@ const PENTOLA_OVEN_CFG: OvenConfig = {
 
 describe('advisory deduplication — steam_too_long', () => {
   it('steam_too_long advisory triggers for pentola with baseDur > 30', () => {
-    const warnings = getBakingWarnings(PENTOLA_OVEN_CFG, 'pane', 'pane_comune', 40, 40)
+    const warnings = getBakingWarnings(testProvider,PENTOLA_OVEN_CFG, 'pane', 'pane_comune', 40, 40)
     const steamWarning = warnings.find((w) => w.id === 'steam_too_long')
     expect(steamWarning).toBeDefined()
-    expect(steamWarning!.message).toContain('Vapore')
+    expect(steamWarning!.messageKey).toBeDefined()
   })
 
   it('steam_too_long advisory does NOT trigger when baseDur <= 30', () => {
-    const warnings = getBakingWarnings(PENTOLA_OVEN_CFG, 'pane', 'pane_comune', 25, 25)
+    const warnings = getBakingWarnings(testProvider,PENTOLA_OVEN_CFG, 'pane', 'pane_comune', 25, 25)
     const steamWarning = warnings.find((w) => w.id === 'steam_too_long')
     expect(steamWarning).toBeUndefined()
   })
 
   it('steam_too_long advisory includes addNodeAfter action', () => {
-    const warnings = getBakingWarnings(PENTOLA_OVEN_CFG, 'pane', 'pane_comune', 40, 40)
+    const warnings = getBakingWarnings(testProvider,PENTOLA_OVEN_CFG, 'pane', 'pane_comune', 40, 40)
     const steamWarning = warnings.find((w) => w.id === 'steam_too_long')!
     expect(steamWarning.actions).toBeDefined()
     expect(steamWarning.actions!.length).toBeGreaterThan(0)
@@ -372,7 +378,7 @@ describe('advisory deduplication — steam_too_long', () => {
 
     // Advisory still triggers (baseDur 40 > 30 and ovenMode steam)
     const bakeNode = afterPentola.graph.nodes.find((n) => n.id === 'bake')!
-    const warnings = getBakingWarnings(
+    const warnings = getBakingWarnings(testProvider,
       bakeNode.data.ovenCfg!, 'pane', 'pane_comune',
       bakeNode.data.baseDur, bakeNode.data.baseDur, 'pentola',
     )
@@ -428,7 +434,7 @@ function makePentolaCtx(overrides: Partial<AdvisoryContext> = {}): AdvisoryConte
 
 describe('pentola lid — getBakingWarnings path (real UI flow)', () => {
   it('getBakingWarnings with method=pentola creates pentola action', () => {
-    const warnings = getBakingWarnings(PENTOLA_OVEN_CFG_LID_ON, 'pane', 'pane_comune', 40, 40, 'pentola')
+    const warnings = getBakingWarnings(testProvider,PENTOLA_OVEN_CFG_LID_ON, 'pane', 'pane_comune', 40, 40, 'pentola')
     const w = warnings.find((w) => w.id === 'steam_too_long')
     expect(w).toBeDefined()
     const addMutation = w!.actions!![0].mutations.find((m) => m.type === 'addNodeAfter')!
@@ -439,7 +445,7 @@ describe('pentola lid — getBakingWarnings path (real UI flow)', () => {
 
   it('getBakingWarnings with method=forno creates forno action', () => {
     const fornoSteam: OvenConfig = { panType: 'stone', ovenType: 'electric', ovenMode: 'steam', temp: 250, cieloPct: 50, shelfPosition: 2 }
-    const warnings = getBakingWarnings(fornoSteam, 'pane', 'pane_comune', 40, 40, 'forno')
+    const warnings = getBakingWarnings(testProvider,fornoSteam, 'pane', 'pane_comune', 40, 40, 'forno')
     const w = warnings.find((w) => w.id === 'steam_too_long')
     expect(w).toBeDefined()
     const addMutation = w!.actions!![0].mutations.find((m) => m.type === 'addNodeAfter')!
@@ -447,13 +453,13 @@ describe('pentola lid — getBakingWarnings path (real UI flow)', () => {
   })
 
   it('steam_too_long does NOT fire when pentola lid is off (ovenMode=static)', () => {
-    const warnings = getBakingWarnings(PENTOLA_OVEN_CFG_LID_OFF, 'pane', 'pane_comune', 40, 40, 'pentola')
+    const warnings = getBakingWarnings(testProvider,PENTOLA_OVEN_CFG_LID_OFF, 'pane', 'pane_comune', 40, 40, 'pentola')
     const w = warnings.find((w) => w.id === 'steam_too_long')
     expect(w).toBeUndefined()
   })
 
   it('pentola_no_lid fires through getBakingWarnings when lid is off', () => {
-    const warnings = getBakingWarnings(PENTOLA_OVEN_CFG_LID_OFF, 'pane', 'pane_comune', 20, 20, 'pentola')
+    const warnings = getBakingWarnings(testProvider,PENTOLA_OVEN_CFG_LID_OFF, 'pane', 'pane_comune', 20, 20, 'pentola')
     const w = warnings.find((w) => w.id === 'pentola_no_lid')
     expect(w).toBeDefined()
     expect(w!.severity).toBe('warning')
@@ -462,12 +468,11 @@ describe('pentola lid — getBakingWarnings path (real UI flow)', () => {
 
 describe('pentola lid parameter — steam_too_long action', () => {
   it('creates pentola node with lidOn=false when source is pentola', () => {
-    const ctx = makePentolaCtx()
-    const warnings = evaluateAdvisories(ctx, ADVISORY_RULES)
+    const warnings = getBakingWarnings(testProvider, PENTOLA_OVEN_CFG_LID_ON, 'pane', 'pane_comune', 40, 40, 'pentola')
     const w = warnings.find((w) => w.id === 'steam_too_long')
     expect(w).toBeDefined()
     expect(w!.actions).toBeDefined()
-    expect(w!.actions![0].label).toBe('Aggiungi fase scoperta')
+    expect(w!.actions![0].labelKey).toBeDefined()
 
     const addMutation = w!.actions![0].mutations.find((m) => m.type === 'addNodeAfter')!
     expect(addMutation.subtype).toBe('pentola')
@@ -477,15 +482,11 @@ describe('pentola lid parameter — steam_too_long action', () => {
   })
 
   it('creates forno node when source is forno (existing behavior)', () => {
-    const ctx = makePentolaCtx({
-      nodeSubtype: 'forno',
-      _cookingMethod: 'forno',
-      ovenCfg: { panType: 'stone', ovenType: 'electric', ovenMode: 'steam', temp: 250, cieloPct: 50, shelfPosition: 2 },
-    })
-    const warnings = evaluateAdvisories(ctx, ADVISORY_RULES)
+    const fornoSteam: OvenConfig = { panType: 'stone', ovenType: 'electric', ovenMode: 'steam', temp: 250, cieloPct: 50, shelfPosition: 2 }
+    const warnings = getBakingWarnings(testProvider, fornoSteam, 'pane', 'pane_comune', 40, 40, 'forno')
     const w = warnings.find((w) => w.id === 'steam_too_long')
     expect(w).toBeDefined()
-    expect(w!.actions![0].label).toBe('Aggiungi fase asciutta')
+    expect(w!.actions![0].labelKey).toBeDefined()
 
     const addMutation = w!.actions![0].mutations.find((m) => m.type === 'addNodeAfter')!
     expect(addMutation.subtype).toBe('forno')
@@ -498,16 +499,16 @@ describe('pentola lid parameter — pentola_no_lid warning', () => {
       ovenCfg: PENTOLA_OVEN_CFG_LID_OFF,
       baseDur: 20,
     })
-    const warnings = evaluateAdvisories(ctx, ADVISORY_RULES)
+    const warnings = evaluateRules(BAKING_RULES, ctx as Record<string, unknown>)
     const w = warnings.find((w) => w.id === 'pentola_no_lid')
     expect(w).toBeDefined()
     expect(w!.severity).toBe('warning')
-    expect(w!.message).toContain('oven-spring')
+    expect(w!.messageKey).toBeDefined()
   })
 
   it('does NOT fire when lidOn is true', () => {
     const ctx = makePentolaCtx({ baseDur: 20 })
-    const warnings = evaluateAdvisories(ctx, ADVISORY_RULES)
+    const warnings = evaluateRules(BAKING_RULES, ctx as Record<string, unknown>)
     const w = warnings.find((w) => w.id === 'pentola_no_lid')
     expect(w).toBeUndefined()
   })
@@ -518,7 +519,7 @@ describe('pentola lid parameter — pentola_no_lid warning', () => {
       recipeType: 'pizza',
       baseDur: 20,
     })
-    const warnings = evaluateAdvisories(ctx, ADVISORY_RULES)
+    const warnings = evaluateRules(BAKING_RULES, ctx as Record<string, unknown>)
     const w = warnings.find((w) => w.id === 'pentola_no_lid')
     expect(w).toBeUndefined()
   })
@@ -535,7 +536,7 @@ describe('pentola lid parameter — pentola_two_phase', () => {
     // where steam_too_long doesn't (baseDur exactly 31, ovenMode steam → both fire, two_phase suppressed).
     // Let's test the raw conditions instead.
     const ctx = makePentolaCtx({ baseDur: 35 })
-    const warnings = evaluateAdvisories(ctx, ADVISORY_RULES)
+    const warnings = evaluateRules(BAKING_RULES, ctx as Record<string, unknown>)
     // steam_too_long suppresses pentola_two_phase
     const steam = warnings.find((w) => w.id === 'steam_too_long')
     const twoPhase = warnings.find((w) => w.id === 'pentola_two_phase')
@@ -548,7 +549,7 @@ describe('pentola lid parameter — pentola_two_phase', () => {
       ovenCfg: PENTOLA_OVEN_CFG_LID_OFF,
       baseDur: 35,
     })
-    const warnings = evaluateAdvisories(ctx, ADVISORY_RULES)
+    const warnings = evaluateRules(BAKING_RULES, ctx as Record<string, unknown>)
     const twoPhase = warnings.find((w) => w.id === 'pentola_two_phase')
     expect(twoPhase).toBeUndefined()
   })

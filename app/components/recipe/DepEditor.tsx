@@ -3,6 +3,7 @@ import { fmtDuration, rnd } from '@commons/utils/format'
 import { getStepTotalWeight } from '@commons/utils/recipe'
 import { STEP_TYPES } from '@/local_data'
 import { Slider } from '~/components/ui/slider'
+import { useT } from '~/hooks/useTranslation'
 import { useRecipe } from './RecipeContext'
 
 interface DepEditorProps {
@@ -10,6 +11,7 @@ interface DepEditorProps {
 }
 
 export function DepEditor({ step: s }: DepEditorProps) {
+  const t = useT()
   const {
     recipe,
     editMode,
@@ -29,11 +31,11 @@ export function DepEditor({ step: s }: DepEditorProps) {
   return (
     <div className="mt-2">
       <div className="text-xs font-semibold text-muted-foreground uppercase tracking-[1px] mb-1">
-        Aspetta fino a quando hai: ({s.deps.length})
+        {t("dep_wait_until", { n: s.deps.length })}
       </div>
 
       {s.deps.length === 0 && (
-        <div className="text-xs text-muted-foreground italic">Nessuna condizione di attesa</div>
+        <div className="text-xs text-muted-foreground italic">{t("dep_none")}</div>
       )}
 
       {s.deps.map((dep) => {
@@ -67,11 +69,11 @@ export function DepEditor({ step: s }: DepEditorProps) {
             {/* Time slider */}
             <div className="mb-1.5">
               <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-0.5">
-                <span>⏱ Tempo completato</span>
+                <span>{"⏱ " + t("dep_time_completed")}</span>
                 <span>
                   <b>{Math.round(dep.wait * 100)}%</b>
                   {' · '}
-                  {fmtDuration(Math.round(parentDur * dep.wait))} su {fmtDuration(parentDur)}
+                  {t("dep_time_of", { done: fmtDuration(Math.round(parentDur * dep.wait)), total: fmtDuration(parentDur) })}
                 </span>
               </div>
               <Slider
@@ -88,13 +90,13 @@ export function DepEditor({ step: s }: DepEditorProps) {
             {/* Grams slider */}
             <div>
               <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-0.5">
-                <span>📦 Quantità prodotta</span>
+                <span>{"📦 " + t("dep_qty_produced")}</span>
                 <span>
                   <b>{Math.round(dep.grams * 100)}%</b>
                   {parentWeight > 0 && (
                     <>
                       {' · '}
-                      {rnd(parentWeight * dep.grams)}g su {rnd(parentWeight)}g
+                      {t("dep_qty_of", { done: rnd(parentWeight * dep.grams) + "g", total: rnd(parentWeight) + "g" })}
                     </>
                   )}
                 </span>
@@ -122,7 +124,7 @@ export function DepEditor({ step: s }: DepEditorProps) {
           }}
           className="w-full text-xs font-semibold text-primary bg-transparent border border-dashed border-primary rounded-[5px] px-2 py-1.5 cursor-pointer outline-none min-h-8 mt-1"
         >
-          <option value="">+ Aggiungi condizione di attesa</option>
+          <option value="">{t("dep_add")}</option>
           {availableParents.map((p) => (
             <option key={p.id} value={p.id}>
               {STEP_TYPES.find((t) => t.key === p.type)?.icon} {p.title}

@@ -3,7 +3,7 @@ import { z } from 'zod'
 // ── Minimal graph schemas for oRPC validation ───────────────────
 // These are intentionally loose — the reconciler handles detailed validation.
 
-const nodeDataSchema = z.record(z.unknown())
+const nodeDataSchema = z.record(z.string(), z.unknown())
 
 const recipeNodeSchema = z.object({
   id: z.string(),
@@ -74,13 +74,33 @@ const recipeMetaSchema = z.object({
   author: z.string(),
   type: z.string(),
   subtype: z.string(),
+  locale: z.string().default('it'),
+})
+
+const mutationSchema = z.object({
+  type: z.string(),
+  target: z.record(z.string(), z.unknown()).optional(),
+  patch: z.record(z.string(), z.unknown()).optional(),
+  nodeType: z.string().optional(),
+  subtype: z.string().optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
+}).passthrough()
+
+const warningActionSchema = z.object({
+  labelKey: z.string(),
+  descriptionKey: z.string().optional(),
+  mutations: z.array(mutationSchema),
 })
 
 const warningSchema = z.object({
   id: z.string(),
+  sourceNodeId: z.string().optional(),
   category: z.string(),
   severity: z.enum(['info', 'warning', 'error']),
-  message: z.string(),
+  messageKey: z.string(),
+  messageVars: z.record(z.string(), z.unknown()).optional(),
+  _ctx: z.record(z.string(), z.unknown()).optional(),
+  actions: z.array(warningActionSchema).optional(),
 })
 
 // ── Public schemas ──────────────────────────────────────────────

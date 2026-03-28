@@ -18,6 +18,9 @@
 
 import type { RecipeStep, Recipe, PreFermentConfig } from '@commons/types/recipe'
 import { rnd } from './format'
+import type { ScienceProvider } from './science/science-provider'
+import { evaluateRules } from './science/rule-engine'
+import type { RuleResult } from './science/rule-engine'
 
 // ── Ingredient calculation ─────────────────────────────────────
 
@@ -46,29 +49,29 @@ export function computePreFermentAmounts(totalDough: number, cfg: PreFermentConf
 
 // ── Validation ─────────────────────────────────────────────────
 
-/** Validate pre-ferment config against available dough resources. */
+/**
+ * Validate pre-ferment config against available dough resources.
+ * Returns RuleResult[] from Science rules (empty if valid).
+ */
 export function validatePreFerment(
+  provider: ScienceProvider,
   cfg: PreFermentConfig,
   totalFlour: number,
   totalLiquid: number,
   totalDough: number,
-): string[] {
-  const errors: string[] = []
+): RuleResult[] {
   const { pfFlour, pfWater } = computePreFermentAmounts(totalDough, cfg)
 
-  if (cfg.preFermentPct <= 0 || cfg.preFermentPct > 100) {
-    errors.push('La percentuale di prefermento deve essere tra 1% e 100%')
+  const ctx: Record<string, unknown> = {
+    preFermentPct: cfg.preFermentPct,
+    hydrationPct: cfg.hydrationPct,
+    pfFlour,
+    pfWater,
+    _totalFlourAllowance: totalFlour * 1.01,
+    _totalLiquidAllowance: totalLiquid * 1.01,
   }
-  if (cfg.hydrationPct < 40 || cfg.hydrationPct > 130) {
-    errors.push("L'idratazione del prefermento deve essere tra 40% e 130%")
-  }
-  if (pfFlour > totalFlour * 1.01) {
-    errors.push("Il prefermento richiede più farina di quella disponibile nella ricetta")
-  }
-  if (pfWater > totalLiquid * 1.01) {
-    errors.push("Il prefermento richiede più liquidi di quelli disponibili nella ricetta")
-  }
-  return errors
+
+  return evaluateRules(provider.getRules('pre_ferment'), ctx)
 }
 
 // ── Step recalculation ─────────────────────────────────────────

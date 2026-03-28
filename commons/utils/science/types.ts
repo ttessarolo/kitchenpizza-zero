@@ -1,5 +1,5 @@
 /**
- * BreadScience JSON format — TypeScript type definitions.
+ * CookingScienceBrain JSON format — TypeScript type definitions.
  *
  * Defines the 8 block types that express all scientific logic as data:
  * formula, factor_chain, piecewise, classification, rule, catalog, defaults.

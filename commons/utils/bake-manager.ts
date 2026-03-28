@@ -9,7 +9,7 @@
  * - Duration calculation
  * - Config validation
  * - Fry oil sync with fat ingredients
- * - Warnings via the advisory manager
+ * - Warnings via Science RuleEngine (ScienceProvider)
  */
 
 import type {
@@ -22,13 +22,13 @@ import type {
   GrillConfig,
   PanConfig,
 } from '@commons/types/recipe'
-import type { ActionableWarning, NodeData } from '@commons/types/recipe-graph'
-import type { AdvisoryContext } from './advisory-manager'
+import type { NodeData } from '@commons/types/recipe-graph'
 import type { BakingProfile } from '../../local_data/baking-profiles'
 import { BAKING_PROFILES } from '../../local_data/baking-profiles'
 import { FAT_TYPES } from '../../local_data/fat-catalog'
-import { evaluateAdvisories } from './advisory-manager'
-import { ADVISORY_RULES } from './advisory-rules'
+import type { ScienceProvider } from './science/science-provider'
+import { evaluateRules } from './science/rule-engine'
+import type { RuleResult } from './science/rule-engine'
 
 // ── Constants ────────────────────────────────────────────────────
 
@@ -365,30 +365,33 @@ export function syncCookingFats(
 // ── 6. getWarnings ───────────────────────────────────────────────
 
 /**
- * Build AdvisoryContext from the cooking config and evaluate advisory rules.
+ * Build context from the cooking config and evaluate Science rules.
  *
  * Supports all 7 cooking methods. For oven-based methods (forno/pentola),
  * the ovenCfg field is populated. For other methods, ovenCfg is null and
  * the cooking config is spread into the context for rule evaluation.
+ *
+ * Returns RuleResult[] with messageKey (never resolved text).
  */
 export function getWarnings(
+  provider: ScienceProvider,
   cookingCfg: CookingConfig,
   recipeType: string,
   recipeSubtype: string | null,
   baseDur: number,
   nodeData: NodeData,
-): ActionableWarning[] {
+): RuleResult[] {
   const profile = getBakingProfile(recipeType, recipeSubtype)
 
   // Extract ovenCfg for oven-based methods
   const isOvenBased = cookingCfg.method === 'forno' || cookingCfg.method === 'pentola'
   const ovenCfg = isOvenBased ? (cookingCfg.cfg as OvenConfig) : null
 
-  const ctx: AdvisoryContext = {
+  const ctx: Record<string, unknown> = {
     nodeType: 'bake',
     nodeSubtype: cookingCfg.method,
     nodeData,
-    ovenCfg,
+    ovenCfg: ovenCfg ? { ...ovenCfg, lidOn: ovenCfg.lidOn ?? true } : undefined,
     recipeType,
     recipeSubtype,
     baseDur,
@@ -411,7 +414,58 @@ export function getWarnings(
     // Cooking config for non-oven rule evaluation
     _cookingMethod: cookingCfg.method,
     _cookingCfg: cookingCfg.cfg,
+    // Frying-specific fields
+    ...(cookingCfg.method === 'frittura' && cookingCfg.cfg ? {
+      _oilTemp: (cookingCfg.cfg as any).oilTemp,
+      _oilTempMin: 170,
+      _oilTempMax: 195,
+      _maxDoughWeight: (cookingCfg.cfg as any).maxDoughWeight,
+    } : {}),
+    // Grilling-specific fields
+    ...(cookingCfg.method === 'griglia' && cookingCfg.cfg ? {
+      _directTemp: (cookingCfg.cfg as any).directTemp,
+    } : {}),
   }
 
-  return evaluateAdvisories(ctx, ADVISORY_RULES)
+  const results = evaluateRules(provider.getRules('baking'), ctx)
+
+  // Post-process steam_too_long: adapt mutation subtype/data based on cooking method.
+  // Deep clone to avoid mutating shared rule objects from the provider cache.
+  return results.map((r) => {
+    if (r.id !== 'steam_too_long' || !r.actions) return r
+
+    const isPentola = cookingCfg.method === 'pentola'
+    return {
+      ...r,
+      actions: r.actions.map((action) => ({
+        ...action,
+        labelKey: isPentola ? 'action.split_steam_phases_pentola' : action.labelKey,
+        mutations: action.mutations.map((m) => {
+          if (m.type !== 'addNodeAfter') return m
+          if (isPentola) {
+            return {
+              ...m,
+              subtype: 'pentola',
+              data: {
+                ...(m.data ?? {}),
+                baseDur: 12,
+                title: 'Doratura (senza coperchio)',
+                ovenCfg: { ...((ovenCfg ?? {}) as Record<string, unknown>), lidOn: false, ovenMode: 'static' },
+              },
+            }
+          }
+          // forno: enrich with oven config for dry phase
+          return {
+            ...m,
+            subtype: 'forno',
+            data: {
+              ...(m.data ?? {}),
+              title: 'Doratura (senza vapore)',
+              ovenCfg: { panType: 'stone', ovenType: 'electric', ovenMode: 'static', temp: 220, cieloPct: 50, shelfPosition: 2 },
+            },
+          }
+        }),
+      })),
+    }
+  })
 }

@@ -45,7 +45,6 @@ export function RecipeToolbar() {
   const graph = useRecipeFlowStore((s) => s.graph)
   const ingredientGroups = useRecipeFlowStore((s) => s.ingredientGroups)
   const setMeta = useRecipeFlowStore((s) => s.setMeta)
-  const setPortioning = useRecipeFlowStore((s) => s.setPortioning)
   const scaleAllNodes = useRecipeFlowStore((s) => s.scaleAllNodes)
   const setGlobalHydration = useRecipeFlowStore((s) => s.setGlobalHydration)
   const handlePortioningChangeWithScale = useRecipeFlowStore((s) => s.handlePortioningChangeWithScale)
@@ -89,7 +88,7 @@ export function RecipeToolbar() {
         type="button"
         onClick={() => setCollapsed(false)}
         className="absolute top-2 right-2 z-10 w-8 h-8 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-[#8a7a66] hover:bg-[#faf8f5]"
-        title="Apri toolbar"
+        title={t("label_open_toolbar")}
       >
         ◀
       </button>
@@ -199,11 +198,11 @@ export function RecipeToolbar() {
         ) : (
           <div className="text-xs space-y-1">
             <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t('label_estimated_from_composition')}</div>
-            {estimatedFlour > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Farina 00 forte</span><span className="font-bold">{estimatedFlour}g</span></div>}
-            {estimatedLiquid > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Acqua</span><span className="font-bold">{estimatedLiquid}g</span></div>}
-            {portioning.yeastPct > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Lievito birra fresco</span><span className="font-bold">{Math.round(estimatedFlour * portioning.yeastPct / 100 * 10) / 10}g</span></div>}
-            {portioning.saltPct > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Sale fino</span><span className="font-bold">{Math.round(estimatedFlour * portioning.saltPct / 100 * 10) / 10}g</span></div>}
-            {portioning.fatPct > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Olio EVO</span><span className="font-bold">{Math.round(estimatedFlour * portioning.fatPct / 100 * 10) / 10}g</span></div>}
+            {estimatedFlour > 0 && <div className="flex justify-between"><span className="text-muted-foreground">{t("default_flour_name")}</span><span className="font-bold">{estimatedFlour}g</span></div>}
+            {estimatedLiquid > 0 && <div className="flex justify-between"><span className="text-muted-foreground">{t("label_water")}</span><span className="font-bold">{estimatedLiquid}g</span></div>}
+            {portioning.yeastPct > 0 && <div className="flex justify-between"><span className="text-muted-foreground">{t("default_yeast_name")}</span><span className="font-bold">{Math.round(estimatedFlour * portioning.yeastPct / 100 * 10) / 10}g</span></div>}
+            {portioning.saltPct > 0 && <div className="flex justify-between"><span className="text-muted-foreground">{t("default_salt_name")}</span><span className="font-bold">{Math.round(estimatedFlour * portioning.saltPct / 100 * 10) / 10}g</span></div>}
+            {portioning.fatPct > 0 && <div className="flex justify-between"><span className="text-muted-foreground">{t("default_fat_name")}</span><span className="font-bold">{Math.round(estimatedFlour * portioning.fatPct / 100 * 10) / 10}g</span></div>}
           </div>
         )}
       </AccordionSection>

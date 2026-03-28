@@ -5,12 +5,10 @@ import {
   Background,
   Controls,
   MiniMap,
-  reconnectEdge,
   type EdgeTypes,
   type NodeMouseHandler,
   type EdgeMouseHandler,
   type OnReconnect,
-  type Edge,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 

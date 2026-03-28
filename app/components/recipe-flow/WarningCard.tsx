@@ -1,5 +1,6 @@
 import type { ActionableWarning } from '@commons/types/recipe-graph'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useT } from '~/hooks/useTranslation'
 
 const SEVERITY_STYLES = {
   error: {
@@ -32,6 +33,7 @@ interface WarningCardProps {
 }
 
 export function WarningCard({ warning, appliedAdvisoryIds, onDismiss }: WarningCardProps) {
+  const t = useT()
   const applyWarningAction = useRecipeFlowStore((s) => s.applyWarningAction)
   const style = SEVERITY_STYLES[warning.severity]
   const alreadyApplied = appliedAdvisoryIds?.has(warning.id) ?? false
@@ -41,7 +43,7 @@ export function WarningCard({ warning, appliedAdvisoryIds, onDismiss }: WarningC
       <div className="flex items-start gap-2">
         <span className="text-sm shrink-0 mt-0.5">{style.icon}</span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs leading-relaxed">{warning.message}</p>
+          <p className="text-xs leading-relaxed">{t(warning.messageKey, warning.messageVars)}</p>
 
           {/* Action buttons */}
           {warning.actions && warning.actions.length > 0 && (
@@ -51,7 +53,7 @@ export function WarningCard({ warning, appliedAdvisoryIds, onDismiss }: WarningC
                 if (hasAddNode && alreadyApplied) {
                   return (
                     <span key={i} className="mt-1.5 inline-block text-[10px] font-semibold text-muted-foreground px-2.5 py-1 rounded-lg bg-muted">
-                      ✓ Già aggiunto
+                      ✓ {t('warning_already_added')}
                     </span>
                   )
                 }
@@ -62,7 +64,7 @@ export function WarningCard({ warning, appliedAdvisoryIds, onDismiss }: WarningC
                     onClick={() => applyWarningAction(warning, i)}
                     className={`text-[10px] font-semibold text-white px-2.5 py-1 rounded-lg ${style.btnBg} transition-colors`}
                   >
-                    ✓ {action.label}
+                    ✓ {t(action.labelKey)}
                   </button>
                 )
               })}

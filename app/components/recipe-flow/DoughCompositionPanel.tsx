@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
-import { calcYeastPct, getDoughWarnings, type DoughWarning as RecipeWarning } from '@commons/utils/dough-manager'
+import { calcYeastPctClient } from '@commons/utils/dough-manager'
 import { rnd } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
 import { YEAST_TYPES } from '@/local_data'
 import { WarningCard } from './WarningCard'
-import type { NodeData } from '@commons/types/recipe-graph'
 
 // ── Shared slider component ────────────────────────────────────
 
@@ -37,10 +36,9 @@ function SliderRow({
 
 // ── Tab content: reads/writes from a specific dough node ────────
 
-function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () => void }) {
+function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) {
   const t = useT()
   const graph = useRecipeFlowStore((s) => s.graph)
-  const meta = useRecipeFlowStore((s) => s.meta)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)
   const updateNodeCosmetic = useRecipeFlowStore((s) => s.updateNodeCosmetic)
   const [doughHoursLocal, setDoughHoursLocal] = useState<number | null>(null)
@@ -90,8 +88,6 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
   // Hours: use local state for smooth slider, fallback to estimate from yeast
   const estFromYeast = yeastPct > 0 ? Math.max(1, Math.min(96, Math.round(100000 / (hyd * 576 * yeastPct)))) : 18
   const doughHours = doughHoursLocal ?? estFromYeast
-  const suggestedYeast = calcYeastPct(doughHours, hyd || 60)
-
   // pct is ALWAYS fresh-equivalent. Convert to the node's actual yeast type.
   function setYeastPct(pct: number) {
     if (totalFlour <= 0) return
@@ -117,15 +113,11 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
     updateNodeData(nodeId, { fats: [{ id: 0, type: fatType, g }] })
   }
 
-  const warnings = getDoughWarnings({
-    doughHours: doughHours,
-    yeastPct,
-    saltPct,
-    fatPct,
-    hydration: hyd,
-    recipeType: meta.type,
-    recipeSubtype: meta.subtype,
-  })
+  // Warnings come from the reconciler (store), filtered for composition category
+  const storeWarnings = useRecipeFlowStore((s) => s.warnings)
+  const warnings = storeWarnings.filter((w) =>
+    ['yeast', 'salt', 'fat', 'hydration', 'flour', 'general'].includes(w.category)
+  )
 
   // Scale ALL chain nodes proportionally when total flour changes
   function setFlourG(newTotal: number) {
@@ -164,7 +156,7 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
     }
 
     // Recalculate yeast from Formula L (hydration changed → yeast amount changes)
-    const newYeastPct = calcYeastPct(doughHours, newHyd) // fresh-equivalent %
+    const newYeastPct = calcYeastPctClient(doughHours, newHyd) // fresh-equivalent %
     if (newYeastPct > 0 && totalFlour > 0) {
       const freshG = rnd(totalFlour * newYeastPct / 100)
       const yeastType = (d.yeasts ?? [])[0]?.type || 'fresh'
@@ -182,7 +174,7 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
         <input
           type="text" value={d.title}
           onChange={(e) => updateNodeCosmetic(nodeId, { title: e.target.value })}
-          placeholder="Nome impasto"
+          placeholder={t("dough_name_placeholder")}
           className="w-full text-sm font-semibold border-b border-dashed border-border outline-none pb-1 bg-transparent"
         />
       </div>
@@ -190,13 +182,13 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
       {/* Flour quantity + Hydration — editable */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Farine (g)</label>
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("label_flours_g")}</label>
           <input type="number" value={Math.round(totalFlour * 10) / 10} min={10} step={1}
             onChange={(e) => setFlourG(+e.target.value || 10)}
             className="w-full text-xs font-bold bg-white border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none" />
         </div>
         <div>
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Idratazione (%)</label>
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("label_hydration_pct")}</label>
           <input type="number" value={hyd} min={30} max={100} step={1}
             onChange={(e) => setHydration(+e.target.value || 60)}
             className="w-full text-xs font-bold bg-white border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none" />
@@ -209,17 +201,17 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
       </div>
 
       {/* Duration — influences yeast calculation */}
-      <SliderRow icon="⏱" label="Durata lievitazione" value={doughHours} min={1} max={96} step={1} unit="ore"
+      <SliderRow icon="⏱" label={t("label_rise_duration")} value={doughHours} min={1} max={96} step={1} unit={t("label_hours")}
         onChange={(v) => {
           const hours = Math.round(v)
           setDoughHoursLocal(hours)
           // Inverse Formula L: change hours → recalculate yeast
-          const newYeastPct = calcYeastPct(hours, hyd || 60)
+          const newYeastPct = calcYeastPctClient(hours, hyd || 60)
           setYeastPct(Math.round(newYeastPct * 100) / 100)
         }} />
 
       <SliderRow icon="🍞" label={t('label_yeast')} value={yeastPct} min={0} max={3.5} step={0.01} unit="%"
-        suggestion={`${Math.round(yeastFreshEquivG * 10) / 10}g birra fresco · ~${doughHours}h di lievitazione`}
+        suggestion={`${Math.round(yeastFreshEquivG * 10) / 10}g ${t('default_yeast_name')} · ~${doughHours}h ${t('label_rise_duration').toLowerCase()}`}
         onChange={setYeastPct} />
 
       <SliderRow icon="🧂" label={t('label_salt')} value={saltPct} min={0} max={4} step={0.1} unit="%"
@@ -244,26 +236,26 @@ function DoughTabContent({ nodeId, onRemove }: { nodeId: string; onRemove?: () =
 function GlobalCompositionSettings() {
   const t = useT()
   const portioning = useRecipeFlowStore((s) => s.portioning)
-  const meta = useRecipeFlowStore((s) => s.meta)
   const setPortioning = useRecipeFlowStore((s) => s.setPortioning)
 
   const { doughHours, yeastPct, saltPct, fatPct, targetHyd, preImpasto, preFermento } = portioning
-  const suggestedYeast = calcYeastPct(doughHours, targetHyd || 60)
+  const suggestedYeast = calcYeastPctClient(doughHours, targetHyd || 60)
 
   function update(patch: Partial<typeof portioning>) {
     setPortioning((p) => ({ ...p, ...patch }))
   }
 
-  const warnings = getDoughWarnings({
-    doughHours, yeastPct, saltPct, fatPct,
-    hydration: targetHyd, recipeType: meta.type, recipeSubtype: meta.subtype,
-  })
+  // Warnings come from the reconciler (store), filtered for composition category
+  const storeWarnings = useRecipeFlowStore((s) => s.warnings)
+  const warnings = storeWarnings.filter((w) =>
+    ['yeast', 'salt', 'fat', 'hydration', 'flour', 'general'].includes(w.category)
+  )
 
   return (
     <div>
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pre-Impasto</label>
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("label_pre_dough")}</label>
           <select value={preImpasto || ''} onChange={(e) => update({ preImpasto: e.target.value || null })}
             className="w-full text-xs border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none">
             <option value="">No</option>
@@ -272,7 +264,7 @@ function GlobalCompositionSettings() {
           </select>
         </div>
         <div>
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pre-Fermento</label>
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("label_pre_ferment")}</label>
           <select value={preFermento || ''} onChange={(e) => update({ preFermento: e.target.value || null })}
             className="w-full text-xs border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none">
             <option value="">No</option>
@@ -286,13 +278,13 @@ function GlobalCompositionSettings() {
         </div>
       </div>
 
-      <SliderRow icon="⏱" label={t('label_dough_duration')} value={doughHours} min={1} max={98} step={1} unit="ore"
+      <SliderRow icon="⏱" label={t('label_dough_duration')} value={doughHours} min={1} max={98} step={1} unit={t("label_hours")}
         onChange={(v) => {
-          const newYeast = calcYeastPct(v, targetHyd || 60)
+          const newYeast = calcYeastPctClient(v, targetHyd || 60)
           update({ doughHours: v, yeastPct: Math.round(newYeast * 1000) / 1000 })
         }} />
       <SliderRow icon="🍞" label={t('label_yeast')} value={Math.round(yeastPct * 100) / 100} min={0} max={3.5} step={0.01} unit="%"
-        suggestion={`Suggerito: ${rnd(suggestedYeast)}% per ${doughHours}h`}
+        suggestion={t('suggestion_yeast', { pct: rnd(suggestedYeast), hours: doughHours })}
         onChange={(v) => update({ yeastPct: v })} />
       <SliderRow icon="🧂" label={t('label_salt')} value={Math.round(saltPct * 10) / 10} min={0} max={4} step={0.1} unit="%"
         onChange={(v) => update({ saltPct: v })} />
@@ -347,7 +339,7 @@ export function DoughCompositionPanel() {
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              {d.data.title || 'Impasto'}
+              {d.data.title || t("label_dough_default")}
             </button>
             {doughNodes.length > 1 && (
               <button

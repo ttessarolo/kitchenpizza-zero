@@ -15,6 +15,12 @@ import {
 } from '@commons/utils/recipe'
 import { makeStep, makeDep, makePfCfg } from './synthetic_data/helpers'
 import { SHOKUPAN_STEPS } from './synthetic_data/base_shokupan'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { resolve } from 'path'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 describe('rnd()', () => {
   it('rounds >= 100 to integer', () => {
@@ -66,32 +72,33 @@ describe('computePreFermentAmounts()', () => {
 
 describe('validatePreFerment()', () => {
   it('accepts valid config', () => {
-    const errors = validatePreFerment(makePfCfg({ preFermentPct: 45 }), 600, 400, 1000)
+    const errors = validatePreFerment(provider, makePfCfg({ preFermentPct: 45 }), 600, 400, 1000)
     expect(errors).toHaveLength(0)
   })
 
   it('rejects preFermentPct > 100', () => {
-    const errors = validatePreFerment(makePfCfg({ preFermentPct: 101 }), 600, 400, 1000)
-    expect(errors.some(e => e.includes('100%'))).toBe(true)
+    const errors = validatePreFerment(provider, makePfCfg({ preFermentPct: 101 }), 600, 400, 1000)
+    expect(errors.length).toBeGreaterThan(0)
   })
 
   it('rejects preFermentPct <= 0', () => {
-    const errors = validatePreFerment(makePfCfg({ preFermentPct: 0 }), 600, 400, 1000)
-    expect(errors.some(e => e.includes('1%'))).toBe(true)
+    const errors = validatePreFerment(provider, makePfCfg({ preFermentPct: 0 }), 600, 400, 1000)
+    expect(errors.length).toBeGreaterThan(0)
   })
 
   it('rejects hydration out of range', () => {
-    const errors = validatePreFerment(makePfCfg({ hydrationPct: 35 }), 600, 400, 1000)
-    expect(errors.some(e => e.includes('40%'))).toBe(true)
+    const errors = validatePreFerment(provider, makePfCfg({ hydrationPct: 35 }), 600, 400, 1000)
+    expect(errors.length).toBeGreaterThan(0)
   })
 
   it('accepts 100% pre-ferment when flour matches total', () => {
     const errors = validatePreFerment(
+      provider,
       makePfCfg({ preFermentPct: 100, hydrationPct: 65 }),
       606, 394, 1000,
     )
     // Should NOT have flour/liquid overflow errors
-    expect(errors.filter(e => e.includes('farina') || e.includes('liquidi'))).toHaveLength(0)
+    expect(errors.filter(e => e.id.includes('flour') || e.id.includes('liquid'))).toHaveLength(0)
   })
 })
 

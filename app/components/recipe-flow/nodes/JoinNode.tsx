@@ -1,11 +1,11 @@
 import { memo } from 'react'
-import { Handle, Position, useEdges, type NodeProps } from '@xyflow/react'
+import { Handle, Position, useEdges, type NodeProps, type Node } from '@xyflow/react'
 import { COLOR_MAP } from '@/local_data'
 import { fmtDuration } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
 import type { BaseNodeData } from './BaseNode'
 
-function JoinNodeInner({ id, data }: NodeProps<BaseNodeData>) {
+function JoinNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
   const t = useT()
   const { nodeData, duration } = data
   const cm = COLOR_MAP.join

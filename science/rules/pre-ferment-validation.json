@@ -1,0 +1,74 @@
+[
+  {
+    "type": "rule",
+    "id": "pre_ferment_pct_too_low",
+    "_meta": { "section": "pre_ferment", "displayName": "meta.rule.pre_ferment_pct_too_low.name", "description": "meta.rule.pre_ferment_pct_too_low.desc", "tags": ["pre-ferment", "validation", "error"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "general",
+    "severity": "error",
+    "messageKey": "validation.pre_ferment_pct_range",
+    "messageVars": ["preFermentPct"],
+    "conditions": [
+      { "field": "preFermentPct", "op": "lte", "value": 0 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pre_ferment_pct_too_high",
+    "_meta": { "section": "pre_ferment", "displayName": "meta.rule.pre_ferment_pct_too_high.name", "description": "meta.rule.pre_ferment_pct_too_high.desc", "tags": ["pre-ferment", "validation", "error"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "general",
+    "severity": "error",
+    "messageKey": "validation.pre_ferment_pct_range",
+    "messageVars": ["preFermentPct"],
+    "conditions": [
+      { "field": "preFermentPct", "op": "gt", "value": 100 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pre_ferment_hyd_too_low",
+    "_meta": { "section": "pre_ferment", "displayName": "meta.rule.pre_ferment_hyd_too_low.name", "description": "meta.rule.pre_ferment_hyd_too_low.desc", "tags": ["pre-ferment", "validation", "error"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "general",
+    "severity": "error",
+    "messageKey": "validation.pre_ferment_hyd_range",
+    "messageVars": ["hydrationPct"],
+    "conditions": [
+      { "field": "hydrationPct", "op": "lt", "value": 40 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pre_ferment_hyd_too_high",
+    "_meta": { "section": "pre_ferment", "displayName": "meta.rule.pre_ferment_hyd_too_high.name", "description": "meta.rule.pre_ferment_hyd_too_high.desc", "tags": ["pre-ferment", "validation", "error"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "general",
+    "severity": "error",
+    "messageKey": "validation.pre_ferment_hyd_range",
+    "messageVars": ["hydrationPct"],
+    "conditions": [
+      { "field": "hydrationPct", "op": "gt", "value": 130 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pre_ferment_flour_exceeds",
+    "_meta": { "section": "pre_ferment", "displayName": "meta.rule.pre_ferment_flour_exceeds.name", "description": "meta.rule.pre_ferment_flour_exceeds.desc", "tags": ["pre-ferment", "validation", "error"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "general",
+    "severity": "error",
+    "messageKey": "validation.pre_ferment_flour_exceeds",
+    "messageVars": ["pfFlour", "totalFlourAllowance"],
+    "conditions": [
+      { "field": "pfFlour", "op": "gt", "value": "_totalFlourAllowance" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pre_ferment_liquid_exceeds",
+    "_meta": { "section": "pre_ferment", "displayName": "meta.rule.pre_ferment_liquid_exceeds.name", "description": "meta.rule.pre_ferment_liquid_exceeds.desc", "tags": ["pre-ferment", "validation", "error"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "general",
+    "severity": "error",
+    "messageKey": "validation.pre_ferment_liquid_exceeds",
+    "messageVars": ["pfWater", "totalLiquidAllowance"],
+    "conditions": [
+      { "field": "pfWater", "op": "gt", "value": "_totalLiquidAllowance" }
+    ]
+  }
+]

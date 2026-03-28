@@ -5,13 +5,10 @@
  * RecipeV2 (graph: nodes[] + edges[]) instead of Recipe (steps[] + deps[]).
  */
 
-import { useMemo } from 'react'
 import type {
-  RecipeV2,
   RecipeGraph,
   RecipeNode,
   NodeData,
-  ScheduledNode,
 } from '@commons/types/recipe-graph'
 import type {
   TimeSummary,
@@ -24,8 +21,7 @@ import type {
   FatIngredient,
 } from '@commons/types/recipe'
 import { rnd } from '@commons/utils/format'
-import { topologicalSortGraph, getNodeTotalWeight } from '@commons/utils/graph-utils'
-import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
+import { topologicalSortGraph } from '@commons/utils/graph-utils'
 
 // ── Grouped ingredients type ──────────────────────────────────────
 export interface GroupedIngredients {
@@ -48,9 +44,9 @@ const DOUGH_NODE_TYPES = new Set([
 
 export function getNodeDuration(
   node: RecipeNode,
-  recipeType: string,
-  recipeSubtype: string,
-  thickness: number,
+  _recipeType: string,
+  _recipeSubtype: string,
+  _thickness: number,
 ): number {
   const d = node.data
   const rest = d.restDur || 0

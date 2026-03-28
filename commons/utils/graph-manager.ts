@@ -15,7 +15,6 @@ import type {
   RecipeGraph,
   RecipeNode,
   RecipeEdge,
-  RecipeEdgeData,
   NodeData,
   NodeTypeKey,
 } from '@commons/types/recipe-graph'

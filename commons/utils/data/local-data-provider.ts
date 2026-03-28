@@ -43,7 +43,7 @@ export class LocalDataProvider implements DataProvider {
   getStepTypes() { return STEP_TYPES }
   getColorMap() { return COLOR_MAP }
   getBakingProfiles() { return [...BAKING_PROFILES] }
-  getDoughDefaults(type: string, subtype: string | null) { return getDoughDefaults(type, subtype ?? undefined) }
+  getDoughDefaults(type: string, subtype: string | null) { return getDoughDefaults(type, subtype) }
   getRecipeList() { return [...RECIPE_LIST] }
   getRecipe(id: string) { return getRecipeById(id) }
 }

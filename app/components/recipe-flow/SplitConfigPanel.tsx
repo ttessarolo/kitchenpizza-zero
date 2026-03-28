@@ -1,6 +1,5 @@
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
-import { computeGraphTotals } from '~/hooks/useGraphCalculator'
 import { getParentIds } from '@commons/utils/graph-utils'
 import type { SplitOutput } from '@commons/types/recipe-graph'
 
@@ -22,7 +21,6 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
 
   // Estimate incoming weight (from parent nodes)
   const parentIds = getParentIds(nodeId, graph.edges)
-  const totals = computeGraphTotals(graph)
   // Simple estimate: sum of parent weights (for display)
   let incomingWeight = 0
   for (const pid of parentIds) {
@@ -49,7 +47,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
       : 0
     updateOutputs([
       ...outputs,
-      { handle: `out_${idx}`, label: `Parte ${idx + 1}`, value: remaining || (mode === 'pct' ? 0 : 100) },
+      { handle: `out_${idx}`, label: t("label_part_n", { n: idx + 1 }), value: remaining || (mode === 'pct' ? 0 : 100) },
     ])
   }
 
@@ -100,7 +98,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
                 type="text"
                 value={o.label}
                 onChange={(e) => updateOutput(i, { label: e.target.value })}
-                placeholder={`Parte ${i + 1}`}
+                placeholder={t("label_part_n", { n: i + 1 })}
                 className="w-full text-xs font-medium bg-transparent border-b border-dashed border-border outline-none pb-0.5 mb-1"
               />
               <div className="flex items-center gap-1.5">

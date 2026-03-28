@@ -92,7 +92,9 @@ const warningSchema = z.object({
   id: z.string(),
   category: z.string(),
   severity: z.enum(['info', 'warning', 'error']),
-  message: z.string(),
+  messageKey: z.string(),
+  messageVars: z.record(z.string(), z.unknown()).optional(),
+  selectionMode: z.enum(['choose_one', 'all']).optional(),
 })
 
 export const getWarningsOutputSchema = z.object({

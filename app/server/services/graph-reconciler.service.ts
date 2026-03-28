@@ -17,7 +17,7 @@ import type {
   RecipeGraph,
   RecipeNode,
   RecipeEdge,
-  NodeData,
+  ActionableWarning,
 } from '@commons/types/recipe-graph'
 import type {
   RecipeMeta,
@@ -27,7 +27,6 @@ import type {
 import {
   recalcPreFermentIngredients,
   adjustDoughForPreFerment,
-  getStepTotalWeight,
 } from '@commons/utils/recipe'
 import { calcRiseDuration } from '@commons/utils/rise-manager'
 import {
@@ -45,20 +44,22 @@ import {
 import {
   nodeToStep,
   stepToNodeData,
-  graphToRecipeV1,
 } from '@commons/utils/graph-adapter'
 import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
-import { calcDuration as calcBakeDurationV2, syncCookingFats } from '@commons/utils/bake-manager'
-import type { FryConfig } from '@commons/types/recipe'
-import { getDoughWarnings, getDoughDefaults, type DoughWarning as RecipeWarning } from '@commons/utils/dough-manager'
+import { calcDuration as calcBakeDurationV2, syncCookingFats, getWarnings as getBakeWarnings } from '@commons/utils/bake-manager'
+import type { FryConfig, CookingConfig } from '@commons/types/recipe'
+import { getDoughWarnings } from '@commons/utils/dough-manager'
+import { toActionableWarnings } from '@commons/utils/science/rule-engine'
 import { RISE_METHODS, YEAST_TYPES, FLOUR_CATALOG } from '../../../local_data'
 
-// ── Result type ─────────────────────────────────────────────────
+import type { ScienceProvider } from '@commons/utils/science/science-provider'
+
+// ── Result type ─────────────────────────────────────────────
 
 export interface ReconcileResult {
   graph: RecipeGraph
   portioning: Portioning
-  warnings: RecipeWarning[]
+  warnings: ActionableWarning[]
 }
 
 // maxRiseHoursForW → imported from dough-manager
@@ -131,7 +132,7 @@ function getDoughFlourProps(doughNode: RecipeNode): BlendedFlourProps {
   return blendFlourProperties(doughNode.data.flours, [...FLOUR_CATALOG])
 }
 
-// ── Helper: get yeast percentage and speed factor ───────────────
+// ── Helper: get yeast percentage and speed factor ───────────
 
 function getYeastInfo(doughNode: RecipeNode): { yPct: number; ySF: number } {
   const totalFlour = doughNode.data.flours.reduce((a, f) => a + f.g, 0)
@@ -154,12 +155,13 @@ export function reconcileGraph(
   graph: RecipeGraph,
   portioning: Portioning,
   meta: RecipeMeta,
+  provider?: ScienceProvider,
 ): ReconcileResult {
   if (graph.nodes.length === 0) {
     return { graph, portioning, warnings: [] }
   }
 
-  const warnings: RecipeWarning[] = []
+  const warnings: ActionableWarning[] = []
   let nodes = graph.nodes.map((n) => ({ ...n, data: { ...n.data } })) // deep-ish clone
   const edges = [...graph.edges]
 
@@ -221,7 +223,7 @@ export function reconcileGraph(
       })
 
       // Warning: flour W vs hours
-      const maxH = maxRiseHoursForW(bp.W)
+      const maxH = provider ? maxRiseHoursForW(provider, bp.W) : Infinity
       // Check all downstream rise nodes
       for (const riseNode of nodes.filter((x) => x.type === 'rise')) {
         const upstream = findUpstreamDough(riseNode.id, nodes, edges)
@@ -232,7 +234,13 @@ export function reconcileGraph(
               id: `flour_w_${nodeRef.id}_${riseNode.id}`,
               category: 'flour',
               severity: 'warning',
-              message: `Farina W${Math.round(bp.W)} supporta max ${maxH}h di lievitazione. "${riseNode.data.title}" è impostato a ${rnd(riseHours)}h.`,
+              messageKey: 'flour_w_max_rise',
+              messageVars: {
+                W: Math.round(bp.W),
+                maxH,
+                riseTitle: riseNode.data.title,
+                riseHours: rnd(riseHours),
+              },
             })
           }
         }
@@ -249,18 +257,23 @@ export function reconcileGraph(
           const rmEntry = RISE_METHODS.find((m) => m.key === rm)
           const tf = rmEntry?.tf ?? 1
 
-          const newDur = calcRiseDuration(
-            60, // base 60 min (1h at standard conditions)
-            rm,
-            props.bp,
-            props.yPct,
-            props.ySF,
-            tf,
-            [...RISE_METHODS],
-            props.saltPct,
-            props.sugarPct,
-            props.fatPct,
-          )
+          const newDur = provider ? calcRiseDuration(
+            provider,
+            {
+              base: 60,
+              method_key: rm,
+              W: props.bp.W,
+              yeastPct: props.yPct,
+              yeastSpeedFactor: props.ySF,
+              temperatureFactor: tf,
+              starchDamage: props.bp.starchDamage,
+              fallingNumber: props.bp.fallingNumber,
+              fiber: props.bp.fiber,
+              saltPct: props.saltPct,
+              sugarPct: props.sugarPct,
+              fatPct: props.fatPct,
+            },
+          ) : nodeRef.data.baseDur
 
           nodeRef.data.baseDur = Math.max(15, newDur) // min 15 minutes
         }
@@ -299,6 +312,27 @@ export function reconcileGraph(
       }
     }
 
+    // ── Bake: generate per-node warnings via Science rules ──
+    if (provider && nodeRef.type === 'bake') {
+      // Resolve cooking config: prefer cookingCfg, fallback to ovenCfg (legacy)
+      const cc = nodeRef.data.cookingCfg ?? (nodeRef.data.ovenCfg ? {
+        method: nodeRef.subtype ?? 'forno',
+        cfg: nodeRef.data.ovenCfg,
+      } as CookingConfig : null)
+
+      if (cc) {
+        const bakeRuleResults = getBakeWarnings(
+          provider,
+          cc,
+          meta.type,
+          meta.subtype,
+          nodeRef.data.baseDur,
+          nodeRef.data,
+        )
+        warnings.push(...toActionableWarnings(bakeRuleResults, nodeRef.id))
+      }
+    }
+
     // ── Bake/pre_bake/post_bake: ALWAYS assign "Cottura [dough title]" group ──
     if (nodeRef.type === 'bake' || nodeRef.type === 'pre_bake' || nodeRef.type === 'post_bake') {
       const upstreamDough = findUpstreamDough(nodeRef.id, nodes, edges)
@@ -314,7 +348,11 @@ export function reconcileGraph(
           id: `split_sum_${nodeRef.id}`,
           category: 'general',
           severity: 'warning',
-          message: `Split "${nodeRef.data.title}" somma ${Math.round(sum)}%, deve essere 100%.`,
+          messageKey: 'split_sum_not_100',
+          messageVars: {
+            title: nodeRef.data.title,
+            sum: Math.round(sum),
+          },
         })
       }
     }
@@ -327,7 +365,7 @@ export function reconcileGraph(
   const newPortioning = { ...portioning }
 
   // ── Phase 4: Generate composition warnings ───────────────────
-  const doughWarnings = getDoughWarnings({
+  const doughRuleResults = provider ? getDoughWarnings(provider, {
     doughHours: portioning.doughHours,
     yeastPct: portioning.yeastPct,
     saltPct: portioning.saltPct,
@@ -335,8 +373,8 @@ export function reconcileGraph(
     hydration: totals.currentHydration || portioning.targetHyd,
     recipeType: meta.type,
     recipeSubtype: meta.subtype,
-  })
-  warnings.push(...doughWarnings)
+  }) : []
+  warnings.push(...toActionableWarnings(doughRuleResults))
 
   // Autolisi + pre-ferment + high hydration warning
   const hasAutolisi = nodes.some((n) => n.type === 'pre_dough' && n.subtype === 'autolisi')
@@ -347,7 +385,8 @@ export function reconcileGraph(
       id: 'autolisi_preferment_hyd',
       category: 'hydration',
       severity: 'warning',
-      message: `Autolisi + pre-fermento con idratazione ${effectiveHyd}%. Consigliato ridurre di 2 punti (Casucci, Cap. 32).`,
+      messageKey: 'autolisi_preferment_hyd',
+      messageVars: { hydration: effectiveHyd },
     })
   }
 

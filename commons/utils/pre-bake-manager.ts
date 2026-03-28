@@ -7,7 +7,9 @@
  */
 
 import type { PreBakeConfig, BoilConfig, DockConfig, FlourDustConfig, OilCoatConfig, SteamInjectConfig } from '@commons/types/recipe'
-import type { ActionableWarning } from '@commons/types/recipe-graph'
+import type { ScienceProvider } from './science/science-provider'
+import { evaluateRules } from './science/rule-engine'
+import type { RuleResult } from './science/rule-engine'
 
 // ── Valid enum values ────────────────────────────────────────────
 
@@ -86,200 +88,121 @@ export function getDefaultConfig(subtype: string): PreBakeConfig {
 
 /**
  * Validates a PreBakeConfig against its sub-type constraints.
- * Returns an array of error messages (empty if valid).
+ * Returns an array of RuleResult[] from Science rules (empty if valid).
  */
-export function validateConfig(subtype: string, config: PreBakeConfig): string[] {
-  const errors: string[] = []
+export function validateConfig(
+  provider: ScienceProvider,
+  subtype: string,
+  config: PreBakeConfig,
+): RuleResult[] {
+  const ctx: Record<string, unknown> = {
+    subtype,
+    method: config.method,
+  }
 
   // Sub-type must be known
   if (!ALL_SUBTYPES.includes(subtype as typeof ALL_SUBTYPES[number])) {
-    errors.push(`Unknown pre_bake sub-type: "${subtype}"`)
-    return errors
+    ctx.unknownSubtype = true
   }
 
   // Method must match sub-type
   if (config.method !== subtype) {
-    errors.push(`Sub-type "${subtype}" does not match config method "${config.method}"`)
-    return errors
+    ctx.methodMismatch = true
   }
 
+  // Flatten config fields into context for rule evaluation
+  if (config.cfg) {
+    for (const [key, value] of Object.entries(config.cfg)) {
+      ctx[key] = value
+    }
+  }
+
+  // Add valid-enum flags for rule evaluation
   switch (config.method) {
     case 'boil': {
       const c = config.cfg
-      if (c.liquidTemp < 85 || c.liquidTemp > 100) {
-        errors.push(`liquidTemp must be 85-100, got ${c.liquidTemp}`)
-      }
-      if (c.additivePct < 1 || c.additivePct > 5) {
-        errors.push(`additivePct must be 1-5, got ${c.additivePct}`)
-      }
-      if (c.drainTime < 0.5 || c.drainTime > 2) {
-        errors.push(`drainTime must be 0.5-2, got ${c.drainTime}`)
-      }
-      if (!VALID_LIQUID_TYPES.includes(c.liquidType)) {
-        errors.push(`Invalid liquidType: "${c.liquidType}"`)
-      }
+      ctx.liquidTempValid = c.liquidTemp >= 85 && c.liquidTemp <= 100
+      ctx.additivePctValid = c.additivePct >= 1 && c.additivePct <= 5
+      ctx.drainTimeValid = c.drainTime >= 0.5 && c.drainTime <= 2
+      ctx.liquidTypeValid = VALID_LIQUID_TYPES.includes(c.liquidType)
       break
     }
     case 'dock': {
       const c = config.cfg
-      if (!VALID_DOCK_TOOLS.includes(c.tool)) {
-        errors.push(`Invalid dock tool: "${c.tool}"`)
-      }
-      if (!VALID_DOCK_PATTERNS.includes(c.pattern)) {
-        errors.push(`Invalid dock pattern: "${c.pattern}"`)
-      }
+      ctx.toolValid = VALID_DOCK_TOOLS.includes(c.tool)
+      ctx.patternValid = VALID_DOCK_PATTERNS.includes(c.pattern)
       break
     }
     case 'flour_dust': {
       const c = config.cfg
-      if (!VALID_FLOUR_TYPES.includes(c.flourType)) {
-        errors.push(`Invalid flourType: "${c.flourType}"`)
-      }
-      if (!VALID_FLOUR_APPLICATIONS.includes(c.application)) {
-        errors.push(`Invalid flour application: "${c.application}"`)
-      }
+      ctx.flourTypeValid = VALID_FLOUR_TYPES.includes(c.flourType)
+      ctx.applicationValid = VALID_FLOUR_APPLICATIONS.includes(c.application)
       break
     }
     case 'oil_coat': {
       const c = config.cfg
-      if (!VALID_OIL_TYPES.includes(c.oilType)) {
-        errors.push(`Invalid oilType: "${c.oilType}"`)
-      }
-      if (!VALID_OIL_METHODS.includes(c.method)) {
-        errors.push(`Invalid oil method: "${c.method}"`)
-      }
-      if (!VALID_OIL_SURFACES.includes(c.surface)) {
-        errors.push(`Invalid oil surface: "${c.surface}"`)
-      }
+      ctx.oilTypeValid = VALID_OIL_TYPES.includes(c.oilType)
+      ctx.oilMethodValid = VALID_OIL_METHODS.includes(c.method)
+      ctx.surfaceValid = VALID_OIL_SURFACES.includes(c.surface)
       break
     }
     case 'steam_inject': {
       const c = config.cfg
-      if (c.removeAfter < 10 || c.removeAfter > 25) {
-        errors.push(`removeAfter must be 10-25, got ${c.removeAfter}`)
-      }
-      if (!VALID_STEAM_METHODS.includes(c.method)) {
-        errors.push(`Invalid steam method: "${c.method}"`)
-      }
-      if (!VALID_STEAM_VOLUMES.includes(c.waterVolume)) {
-        errors.push(`Invalid waterVolume: "${c.waterVolume}"`)
-      }
+      ctx.removeAfterValid = c.removeAfter >= 10 && c.removeAfter <= 25
+      ctx.steamMethodValid = VALID_STEAM_METHODS.includes(c.method)
+      ctx.waterVolumeValid = VALID_STEAM_VOLUMES.includes(c.waterVolume)
       break
     }
-    // brush, topping, scoring, generic have cfg: null — nothing to validate
     default:
       break
   }
 
-  return errors
+  return evaluateRules(provider.getRules('pre_bake_validation'), ctx)
 }
 
 // ── 3. Warnings ─────────────────────────────────────────────────
 
 /**
  * Generates advisory warnings for a pre-bake configuration.
- * Checks domain-specific rules inline and returns ActionableWarning[].
+ * Evaluates Science rules and returns RuleResult[].
  *
+ * @param provider - ScienceProvider for rule lookup
  * @param preBakeCfg - The current pre-bake configuration
  * @param recipeType - Recipe type string (e.g., 'pizza', 'pane')
+ * @param recipeSubtype - Recipe subtype string (e.g., 'napoletana')
  * @param nextBakeSubtype - The bake sub-type that follows this pre-bake step (or null)
  */
 export function getWarnings(
+  provider: ScienceProvider,
   preBakeCfg: PreBakeConfig,
   recipeType: string,
+  recipeSubtype: string | null,
   nextBakeSubtype: string | null,
-): ActionableWarning[] {
-  const warnings: ActionableWarning[] = []
-
-  switch (preBakeCfg.method) {
-    case 'boil': {
-      const c = preBakeCfg.cfg
-
-      // Lye solution safety warning
-      if (c.liquidType === 'lye_solution') {
-        warnings.push({
-          id: 'boil_lye_safety',
-          category: 'pre_bake',
-          severity: 'warning',
-          message: 'La soluzione di liscivia richiede guanti e ventilazione adeguata. Maneggiare con estrema cautela.',
-        })
-      }
-
-      // Overcook warning when drain time exceeds 3 (using drainTime as proxy for baseDur)
-      if (c.drainTime > 3) {
-        warnings.push({
-          id: 'boil_overcook',
-          category: 'pre_bake',
-          severity: 'info',
-          message: 'Bollitura prolungata: rischio di sovracottura e perdita di struttura.',
-        })
-      }
-      break
-    }
-
-    case 'dock': {
-      // Docking not recommended for Neapolitan pizza
-      if (recipeType === 'pizza') {
-        warnings.push({
-          id: 'dock_not_for_neapolitan',
-          category: 'pre_bake',
-          severity: 'info',
-          message: 'La foratura non è consigliata per la pizza napoletana: compromette la lievitazione del cornicione.',
-        })
-      }
-      break
-    }
-
-    case 'flour_dust': {
-      const c = preBakeCfg.cfg
-
-      // Tipo 00 burns easily
-      if (c.flourType === 'tipo00') {
-        warnings.push({
-          id: 'flour_tipo00_burns',
-          category: 'pre_bake',
-          severity: 'warning',
-          message: 'La farina tipo 00 brucia facilmente ad alte temperature. Preferire semola o farina di riso.',
-        })
-      }
-      break
-    }
-
-    case 'oil_coat': {
-      const c = preBakeCfg.cfg
-
-      // EVOO not ideal for high-heat methods
-      if (c.oilType === 'olive' && nextBakeSubtype && ['griglia', 'frittura'].includes(nextBakeSubtype)) {
-        warnings.push({
-          id: 'oil_evoo_high_heat',
-          category: 'pre_bake',
-          severity: 'info',
-          message: "L'olio extravergine ha un punto di fumo basso. Per griglia o frittura, preferire olio di arachidi o girasole.",
-        })
-      }
-      break
-    }
-
-    case 'steam_inject': {
-      const c = preBakeCfg.cfg
-
-      // Home oven hint for manual steam methods
-      if (c.method === 'water_pan' || c.method === 'ice_cubes') {
-        warnings.push({
-          id: 'steam_home_oven_only',
-          category: 'pre_bake',
-          severity: 'info',
-          message: 'Questo metodo di vapore è pensato per forni domestici. I forni professionali hanno iniezione diretta.',
-        })
-      }
-      break
-    }
-
-    default:
-      break
+): RuleResult[] {
+  // Build context object matching the rule conditions in pre-bake-advisories.json
+  const ctx: Record<string, unknown> = {
+    nodeType: 'pre_bake',
+    nodeSubtype: preBakeCfg.method,
+    recipeType,
+    recipeSubtype,
+    nextBakeSubtype,
   }
 
-  return warnings
+  // Flatten subtype-specific config into nodeData for rule conditions
+  if (preBakeCfg.cfg) {
+    const nodeData: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(preBakeCfg.cfg)) {
+      nodeData[key] = value
+    }
+    ctx.nodeData = nodeData
+  }
+
+  // Add baseDur for boil overcook check (using drainTime as proxy)
+  if (preBakeCfg.method === 'boil' && preBakeCfg.cfg) {
+    ctx.baseDur = preBakeCfg.cfg.drainTime
+  }
+
+  return evaluateRules(provider.getRules('pre_bake'), ctx)
 }
 
 // ── 4. Suggestions ──────────────────────────────────────────────

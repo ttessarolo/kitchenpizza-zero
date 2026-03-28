@@ -1,5 +1,5 @@
 /**
- * ScienceProvider — Abstract interface for loading BreadScience JSON blocks.
+ * ScienceProvider — Abstract interface for loading CookingScienceBrain JSON blocks.
  *
  * Today: FileScienceProvider reads from /science/ directory.
  * Tomorrow: DbScienceProvider reads from Neon PostgreSQL.
@@ -12,8 +12,6 @@ import type {
   PiecewiseBlock,
   ClassificationBlock,
   RuleBlock,
-  CatalogBlock,
-  DefaultsBlock,
 } from './types'
 
 // ── Provider interface ─────────────────────────────────────────

@@ -1,11 +1,12 @@
 /**
- * RuleEngine — Evaluates declarative rules from BreadScience JSON.
+ * RuleEngine — Evaluates declarative rules from CookingScienceBrain JSON.
  *
  * Returns structured results with messageKey (never resolved text).
  * The client resolves messageKey → localized text via i18n.
  */
 
 import type { RuleBlock, RuleCondition, RuleAction } from './types'
+import type { ActionableWarning } from '@commons/types/recipe-graph'
 
 // ── Rule evaluation result ─────────────────────────────────────
 
@@ -15,6 +16,8 @@ export interface RuleResult {
   severity: 'info' | 'warning' | 'error'
   messageKey: string
   messageVars: Record<string, unknown>
+  /** Full evaluation context — available for action mutations to resolve values */
+  _ctx?: Record<string, unknown>
   selectionMode: 'choose_one' | 'all'
   actions?: RuleAction[]
 }
@@ -99,10 +102,34 @@ export function evaluateRules(
       severity: rule.severity,
       messageKey: rule.messageKey,
       messageVars,
+      _ctx: rule.actions?.length ? { ...ctx } : undefined, // Only include ctx when actions exist
       selectionMode: rule.selectionMode ?? 'all',
       actions: rule.actions,
     })
   }
 
   return results
+}
+
+// ── Bridge: RuleResult → ActionableWarning ──────────────────
+
+/** Converts RuleResult[] to ActionableWarning[] for UI rendering */
+export function toActionableWarnings(
+  results: RuleResult[],
+  sourceNodeId?: string,
+): ActionableWarning[] {
+  return results.map(r => ({
+    id: r.id,
+    sourceNodeId,
+    category: r.category as ActionableWarning['category'],
+    severity: r.severity,
+    messageKey: r.messageKey,
+    messageVars: r.messageVars ?? {},
+    ...(r._ctx ? { _ctx: r._ctx } : {}),
+    actions: r.actions?.map(a => ({
+      labelKey: a.labelKey,
+      ...(a.descriptionKey ? { descriptionKey: a.descriptionKey } : {}),
+      mutations: a.mutations as any,
+    })) as ActionableWarning['actions'],
+  }))
 }

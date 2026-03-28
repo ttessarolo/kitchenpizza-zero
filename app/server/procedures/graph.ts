@@ -1,15 +1,22 @@
+import { resolve } from 'path'
 import { baseProcedure } from '../middleware/auth'
 import { reconcileInputSchema, reconcileOutputSchema } from '../schemas/graph'
 import { reconcileGraph } from '../services/graph-reconciler.service'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+
+const provider = new FileScienceProvider(
+  resolve(process.cwd(), 'science'),
+  resolve(process.cwd(), 'commons/i18n'),
+)
 
 export const reconcile = baseProcedure
   .input(reconcileInputSchema)
   .output(reconcileOutputSchema)
   .handler(async ({ input }) => {
-    // The reconciler is a pure function — no DB/network needed
     return reconcileGraph(
       input.graph as any,
       input.portioning as any,
-      input.meta,
+      { ...input.meta, locale: 'it' },
+      provider,
     )
   })

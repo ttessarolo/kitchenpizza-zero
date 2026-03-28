@@ -6,7 +6,7 @@ const nodeSchema = z.object({
   subtype: z.string().nullable(),
   position: z.object({ x: z.number(), y: z.number() }),
   lane: z.string(),
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
 })
 
 const edgeDataSchema = z.object({
@@ -26,7 +26,7 @@ const edgeSchema = z.object({
 const graphSchema = z.object({
   nodes: z.array(nodeSchema),
   edges: z.array(edgeSchema),
-  lanes: z.array(z.record(z.unknown())),
+  lanes: z.array(z.record(z.string(), z.unknown())),
 })
 
 export const totalDurationInputSchema = graphSchema

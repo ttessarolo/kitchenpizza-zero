@@ -19,7 +19,6 @@ export {
   getBakingProfile,
   calcBakeDuration,
   getBakingWarnings,
-  type BakingWarning,
 } from './baking'
 
 export {

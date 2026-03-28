@@ -2,7 +2,7 @@
  * Automatic lane derivation from graph topology.
  */
 
-import type { RecipeGraph, RecipeNode, LaneDefinition } from '@commons/types/recipe-graph'
+import type { RecipeGraph, LaneDefinition } from '@commons/types/recipe-graph'
 
 /**
  * Derive lanes from the graph topology:

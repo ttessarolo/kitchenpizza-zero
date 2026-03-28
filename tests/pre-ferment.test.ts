@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { computePreFermentAmounts, validatePreFerment, rnd, recalcPreFermentIngredients, adjustDoughForPreFerment, reconcilePreFerments, getStepTotalWeight } from '@commons/utils/recipe'
 import { makeStep, makeDep, makePfCfg, makeRecipe } from './synthetic_data/helpers'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { resolve } from 'path'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 describe('Pre-ferment: Biga calculations', () => {
   const totalDough = 1000
@@ -108,29 +114,29 @@ describe('Pre-ferment: percentage changes', () => {
 describe('Pre-ferment: validation', () => {
   it('accepts valid 100% biga', () => {
     const cfg = makePfCfg({ preFermentPct: 100, hydrationPct: 65, yeastPct: 1 })
-    const errors = validatePreFerment(cfg, 606, 394, 1000)
+    const errors = validatePreFerment(provider, cfg, 606, 394, 1000)
     expect(errors).toHaveLength(0)
   })
 
   it('rejects preFermentPct at 0', () => {
-    const errors = validatePreFerment(makePfCfg({ preFermentPct: 0 }), 606, 394, 1000)
+    const errors = validatePreFerment(provider, makePfCfg({ preFermentPct: 0 }), 606, 394, 1000)
     expect(errors.length).toBeGreaterThan(0)
   })
 
   it('rejects preFermentPct at 101', () => {
-    const errors = validatePreFerment(makePfCfg({ preFermentPct: 101 }), 606, 394, 1000)
+    const errors = validatePreFerment(provider, makePfCfg({ preFermentPct: 101 }), 606, 394, 1000)
     expect(errors.length).toBeGreaterThan(0)
   })
 
   it('rejects negative preFermentPct', () => {
-    const errors = validatePreFerment(makePfCfg({ preFermentPct: -5 }), 606, 394, 1000)
+    const errors = validatePreFerment(provider, makePfCfg({ preFermentPct: -5 }), 606, 394, 1000)
     expect(errors.length).toBeGreaterThan(0)
   })
 
   it('warns when pfFlour exceeds total flour', () => {
     // 80% biga at 44% hydration on 1000g → pfFlour ≈ 555g, but totalFlour is only 300g
-    const errors = validatePreFerment(makePfCfg({ preFermentPct: 80, hydrationPct: 44 }), 300, 400, 1000)
-    expect(errors.some(e => e.includes('farina'))).toBe(true)
+    const errors = validatePreFerment(provider, makePfCfg({ preFermentPct: 80, hydrationPct: 44 }), 300, 400, 1000)
+    expect(errors.some(e => e.id.includes('flour') || e.messageKey.includes('flour'))).toBe(true)
   })
 })
 

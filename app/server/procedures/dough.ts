@@ -11,6 +11,12 @@ import {
   getDoughDefaults, getDoughWarnings,
 } from '@commons/utils/dough-manager'
 import { FLOUR_CATALOG } from '../../../local_data/flour-catalog'
+import { resolve } from 'path'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 export const blendFlours = baseProcedure
   .input(blendFloursInputSchema)
@@ -23,7 +29,7 @@ export const calcYeast = baseProcedure
   .input(calcYeastInputSchema)
   .output(calcYeastOutputSchema)
   .handler(async ({ input }) => ({
-    yeastPct: calcYeastPct(input.hours, input.hydration, input.tempC),
+    yeastPct: calcYeastPct(provider, input.hours, input.tempC),
   }))
 
 export const calcTemp = baseProcedure
@@ -44,5 +50,5 @@ export const getWarnings = baseProcedure
   .input(getWarningsInputSchema)
   .output(getWarningsOutputSchema)
   .handler(async ({ input }) => ({
-    warnings: getDoughWarnings(input),
+    warnings: getDoughWarnings(provider, input),
   }))

@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import { STEP_TYPES, COLOR_MAP } from '@/local_data'
 import { fmtDuration } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
@@ -24,7 +24,7 @@ export interface BaseNodeData extends Record<string, unknown> {
 }
 
 /** Generate a short preview line based on node type and data */
-function getPreview(type: NodeTypeKey, d: NodeData): string | null {
+function getPreview(type: NodeTypeKey, d: NodeData, t: (key: string, vars?: Record<string, unknown>) => string): string | null {
   const parts: string[] = []
 
   if (type === 'dough' || type === 'pre_dough' || type === 'pre_ferment') {
@@ -32,12 +32,12 @@ function getPreview(type: NodeTypeKey, d: NodeData): string | null {
     if (d.liquids.length > 0) parts.push(d.liquids.map((l) => `${l.type} ${l.g}g`).join(', '))
   } else if (type === 'bake' && d.ovenCfg) {
     parts.push(`${d.ovenCfg.temp}°C`)
-    if (d.ovenCfg.ovenMode) parts.push(d.ovenCfg.ovenMode === 'fan' ? 'ventilato' : 'statico')
+    if (d.ovenCfg.ovenMode) parts.push(d.ovenCfg.ovenMode === 'fan' ? t('oven_mode_fan_short') : t('oven_mode_static_short'))
   } else if (type === 'rise' && d.riseMethod) {
     const methods: Record<string, string> = { room: 'Ambiente', fridge: 'Frigo', ctrl18: '18°C', ctrl12: '12°C' }
     parts.push(methods[d.riseMethod] || d.riseMethod)
   } else if (type === 'shape' && d.shapeCount) {
-    parts.push(`${d.shapeCount} pezzi`)
+    parts.push(`${d.shapeCount} ${t('label_pieces_unit')}`)
   } else if (type === 'prep') {
     if (d.cookMethod) parts.push(d.cookMethod)
     if (d.cutStyle) parts.push(d.cutStyle)
@@ -47,7 +47,7 @@ function getPreview(type: NodeTypeKey, d: NodeData): string | null {
   return parts.length > 0 ? parts.join(' · ') : null
 }
 
-function BaseNodeInner({ id, data }: NodeProps<BaseNodeData>) {
+function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
   const t = useT()
   const { nodeData, nodeType, nodeSubtype, duration, isSelected, isPeek, isError } = data
   const inFlow = data.inFlow ?? []
@@ -55,7 +55,7 @@ function BaseNodeInner({ id, data }: NodeProps<BaseNodeData>) {
   const cm = COLOR_MAP[nodeType] || COLOR_MAP.dough
   const typeEntry = STEP_TYPES.find((t) => t.key === nodeType)
   const subtypeEntry = typeEntry?.subtypes?.find((s) => s.key === nodeSubtype)
-  const preview = getPreview(nodeType, nodeData)
+  const preview = getPreview(nodeType, nodeData, t)
 
   const borderStyle = isError
     ? { borderColor: '#dc2626', borderWidth: 3, boxShadow: '0 4px 20px rgba(220,38,38,0.2)' }

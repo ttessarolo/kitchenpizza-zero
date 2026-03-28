@@ -8,7 +8,6 @@ import {
   validateGraph,
   addNodeToGraph,
   updateNodeData,
-  getNodeTotalWeight,
 } from '@commons/utils/graph-manager'
 import { makeNode, makeEdge, makeGraph } from './synthetic_data/helpers'
 import type { RecipeGraph } from '@commons/types/recipe-graph'

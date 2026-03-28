@@ -23,23 +23,17 @@ import { autoLayout } from '~/lib/auto-layout'
 import { removeNodeFromGraph, getNodeTotalWeight } from '@commons/utils/graph-utils'
 import { rnd } from '@commons/utils/format'
 import {
-  getStepTotalWeight,
-  getChildIds,
-} from '@commons/utils/recipe'
-import {
-  recalcPreFermentIngredients,
-  adjustDoughForPreFerment,
   reconcilePreFerments,
 } from '@commons/utils/pre-ferment-manager'
-import { graphToRecipeV1, nodeToStep, stepToNodeData } from '@commons/utils/graph-adapter'
+import { graphToRecipeV1, stepToNodeData } from '@commons/utils/graph-adapter'
 import { computeGraphTotals, scaleNodeData } from '~/hooks/useGraphCalculator'
 import { generateDoughGraph } from '~/lib/generate-dough'
 import { RECIPE_SUBTYPES } from '@/local_data'
-import { getDoughDefaults } from '@commons/utils/dough-manager'
-import { calcYeastPct } from '@commons/utils/dough-manager'
+import { getDoughDefaults, calcYeastPctClient } from '@commons/utils/dough-manager'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
-import type { ActionableWarning, GraphMutation, NodeRef } from '@commons/types/recipe-graph'
-import type { DoughWarning as RecipeWarning } from '@commons/utils/dough-manager'
+import { staticProvider } from '@commons/utils/science/static-science-provider'
+import type { NodeRef } from '@commons/types/recipe-graph'
+import type { ActionableWarning as RecipeWarning } from '@commons/types/recipe-graph'
 import type { BaseNodeData } from '~/components/recipe-flow/nodes/BaseNode'
 import { getNodeDuration } from '~/hooks/useGraphCalculator'
 
@@ -280,6 +274,9 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
   /**
    * Apply a mutation to the graph, then run the reconciliation engine.
    * This is THE central mutation point — all graph changes should go through here.
+   *
+   * Uses staticProvider (browser-compatible, bundled at build-time) for
+   * Science-based warnings and calculations.
    */
   function applyMutation(fn: (s: RecipeFlowState) => { graph?: RecipeGraph; portioning?: Portioning; meta?: RecipeMeta }) {
     saveSnapshot()
@@ -289,8 +286,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       const newPortioning = partial.portioning ?? s.portioning
       const newMeta = partial.meta ?? s.meta
 
-      // Run reconciliation engine
-      const result = reconcileGraph(newGraph, newPortioning, newMeta)
+      // Run reconciliation engine WITH Science provider (sync, browser-safe)
+      const result = reconcileGraph(newGraph, newPortioning, newMeta, staticProvider)
 
       // Auto-ensure "Cottura *" groups from bake nodes exist in ingredientGroups
       const updatedGroups = [...s.ingredientGroups]
@@ -316,7 +313,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
   }
 
   return {
-    meta: { name: '', author: '', type: 'pane', subtype: 'pane_comune' },
+    meta: { name: '', author: '', type: 'pane', subtype: 'pane_comune', locale: 'it' },
     portioning: {
       mode: 'ball',
       tray: { preset: 't', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
@@ -394,14 +391,18 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       })
       const graph = { ...recipe.graph, nodes: reconciledNodes }
 
+      // Run full reconciliation with Science provider for initial warnings
+      const result = reconcileGraph(graph, recipe.portioning, recipe.meta, staticProvider)
+
       set({
         meta: recipe.meta,
-        portioning: recipe.portioning,
+        portioning: result.portioning,
         ingredientGroups: recipe.ingredientGroups,
-        graph,
-        lanes: graph.lanes,
-        flowNodes: syncFlowNodes(graph, recipe.meta, recipe.portioning, onExpandHandler, null, []),
-        flowEdges: graph.edges.map(toFlowEdge),
+        graph: result.graph,
+        lanes: result.graph.lanes,
+        warnings: result.warnings,
+        flowNodes: syncFlowNodes(result.graph, recipe.meta, result.portioning, onExpandHandler, null, []),
+        flowEdges: result.graph.edges.map(toFlowEdge),
         selectedNodeId: null,
         expandedNodeId: null,
       })
@@ -634,12 +635,45 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         return null
       }
 
+      // Resolve dotted paths in mutation patches (e.g., "ovenCfg.temp" → nested update)
+      // Resolve _contextRef values from the evaluation context (_ctx) or messageVars
+      function resolvePatch(rawPatch: Record<string, unknown>, nodeId: string): Record<string, unknown> {
+        const node = get().graph.nodes.find((n) => n.id === nodeId)
+        const ctx = warning._ctx ?? {}
+        const result: Record<string, unknown> = {}
+        for (const [key, val] of Object.entries(rawPatch)) {
+          // Resolve value references like "_suggestedTemp" from evaluation context
+          let resolvedVal = val
+          if (typeof val === 'string' && val.startsWith('_')) {
+            // Try full key in ctx first (e.g., "_suggestedTemp" → ctx._suggestedTemp)
+            if (ctx[val] !== undefined) {
+              resolvedVal = ctx[val]
+            } else if (warning.messageVars?.[val.slice(1)] !== undefined) {
+              // Fallback: strip underscore and try messageVars
+              resolvedVal = warning.messageVars[val.slice(1)]
+            }
+          }
+
+          if (key.includes('.')) {
+            // Dotted path: "ovenCfg.temp" → merge into nested object
+            const parts = key.split('.')
+            const topKey = parts[0]
+            const subKey = parts.slice(1).join('.')
+            const existing = (node?.data as any)?.[topKey] ?? result[topKey] ?? {}
+            result[topKey] = { ...(typeof existing === 'object' ? existing : {}), [subKey]: resolvedVal }
+          } else {
+            result[key] = resolvedVal
+          }
+        }
+        return result
+      }
+
       for (const m of action.mutations) {
-        const targetId = resolveRef(m.target)
+        const targetId = 'target' in m ? resolveRef(m.target) : null
         switch (m.type) {
           case 'updateNode': {
             if (targetId) {
-              const patch = { ...(m.patch as Record<string, unknown>) }
+              const patch = resolvePatch(m.patch as Record<string, unknown>, targetId)
               // Sync ovenCfg patch into cookingCfg for forno/pentola nodes
               if (patch.ovenCfg) {
                 const node = get().graph.nodes.find((n) => n.id === targetId)
@@ -689,7 +723,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       np.saltPct = doughDefs.saltPctDefault
       np.fatPct = doughDefs.fatPctDefault
       // Calculate yeast from Formula L
-      np.yeastPct = calcYeastPct(doughDefs.defaultDoughHours, np.targetHyd || 60)
+      np.yeastPct = calcYeastPctClient(doughDefs.defaultDoughHours, np.targetHyd || 60)
       get().handlePortioningChangeWithScale(np)
     },
 
@@ -800,7 +834,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
           thickness: d?.thickness || 0.5,
           targetHyd: d?.hyd || 65,
           doughHours: doughDefs.defaultDoughHours,
-          yeastPct: calcYeastPct(doughDefs.defaultDoughHours, d?.hyd || 65),
+          yeastPct: calcYeastPctClient(doughDefs.defaultDoughHours, d?.hyd || 65),
           saltPct: doughDefs.saltPctDefault,
           fatPct: doughDefs.fatPctDefault,
           preImpasto: null,

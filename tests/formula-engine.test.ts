@@ -19,9 +19,15 @@ import type {
 import { calcYeastPct } from '@commons/utils/dough-manager'
 import { classifyStrength } from '@commons/utils/flour-manager'
 import { maxRiseHoursForW } from '@commons/utils/rise-manager'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { resolve } from 'path'
 import yeastJson from '../science/formulas/yeast.json'
 import flourStrengthJson from '../science/classifications/flour-strength.json'
 import riseCapacityJson from '../science/classifications/rise-capacity.json'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 // ═══════════════════════════════════════════════════════════════
 // Formula evaluation
@@ -387,8 +393,8 @@ describe('i18n — resolveMessage', () => {
 // Snapshot: Science JSON matches hardcoded logic
 // ═══════════════════════════════════════════════════════════════
 
-describe('Snapshot — Science JSON produces same results as hardcoded', () => {
-  it('yeast_pct Formula L matches hardcoded calcYeastPct', () => {
+describe('Snapshot — Science JSON matches manager functions', () => {
+  it('yeast_pct Formula L: JSON evaluation matches calcYeastPct via provider', () => {
     const testCases = [
       { hours: 18, tempC: 24 },
       { hours: 4, tempC: 24 },
@@ -397,27 +403,27 @@ describe('Snapshot — Science JSON produces same results as hardcoded', () => {
     ]
 
     for (const tc of testCases) {
-      const hardcoded = calcYeastPct(tc.hours, 60, tc.tempC)
-      const fromJson = evaluateFormula(yeastJson as FormulaBlock, tc, 'formula_l')
-      expect(fromJson).toBeCloseTo(hardcoded, 3)
+      const viaManager = calcYeastPct(provider, tc.hours, tc.tempC, 'formula_l')
+      const fromJson = evaluateFormula(yeastJson as unknown as FormulaBlock, tc, 'formula_l')
+      expect(fromJson).toBeCloseTo(viaManager, 3)
     }
   })
 
-  it('flour_strength classification matches hardcoded classifyStrength', () => {
+  it('flour_strength classification: JSON evaluation matches classifyStrength via provider', () => {
     const testCases = [130, 180, 215, 260, 290, 350, 380, 400]
     for (const W of testCases) {
-      const hardcoded = classifyStrength(W)
+      const viaManager = classifyStrength(provider, W)
       const fromJson = evaluateClassification(flourStrengthJson as ClassificationBlock, { W })
-      expect(fromJson).toBe(hardcoded)
+      expect(fromJson).toBe(viaManager)
     }
   })
 
-  it('max_rise_hours matches hardcoded maxRiseHoursForW', () => {
+  it('max_rise_hours: JSON evaluation matches maxRiseHoursForW via provider', () => {
     const testCases = [100, 180, 190, 220, 250, 290, 300, 320, 330, 380, 400]
     for (const W of testCases) {
-      const hardcoded = maxRiseHoursForW(W)
+      const viaManager = maxRiseHoursForW(provider, W)
       const fromJson = evaluatePiecewise(riseCapacityJson as PiecewiseBlock, { W })
-      expect(fromJson).toBe(hardcoded)
+      expect(fromJson).toBe(viaManager)
     }
   })
 })

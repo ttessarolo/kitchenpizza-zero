@@ -4,7 +4,9 @@ import {
   EdgeLabelRenderer,
   getBezierPath,
   type EdgeProps,
+  type Edge,
 } from '@xyflow/react'
+import { useT } from '~/hooks/useTranslation'
 
 interface RecipeEdgeData extends Record<string, unknown> {
   scheduleTimeRatio: number
@@ -21,7 +23,8 @@ function RecipeFlowEdgeInner({
   targetPosition,
   data,
   markerEnd,
-}: EdgeProps<RecipeEdgeData>) {
+}: EdgeProps<Edge<RecipeEdgeData>>) {
+  const t = useT()
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -63,7 +66,7 @@ function RecipeFlowEdgeInner({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             }}
           >
-            {data?.label || (timeRatio < 1 ? `⏱ al ${Math.round(timeRatio * 100)}%` : `📦 al ${Math.round(qtyRatio * 100)}%`)}
+            {data?.label || (timeRatio < 1 ? t("edge_time_at_pct", { pct: Math.round(timeRatio * 100) }) : t("edge_qty_at_pct", { pct: Math.round(qtyRatio * 100) }))}
           </div>
         </EdgeLabelRenderer>
       )}

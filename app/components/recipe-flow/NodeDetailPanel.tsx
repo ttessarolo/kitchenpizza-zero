@@ -14,7 +14,6 @@ import { fmtDuration } from '@commons/utils/format'
 import { calcFinalDoughTemp } from '@commons/utils/dough-manager'
 import type { RecipeCalculator } from '~/hooks/useRecipeCalculator'
 import type { RecipeStep, Recipe } from '@commons/types/recipe'
-import type { RecipeNode } from '@commons/types/recipe-graph'
 
 // ── Single panel for one node ───────────────────────────────────
 

@@ -10,7 +10,6 @@ export function NodeContextToolbar() {
   const selectedNodeId = useRecipeFlowStore((s) => s.expandedNodeId)
   const addNode = useRecipeFlowStore((s) => s.addNode)
   const addRootNode = useRecipeFlowStore((s) => s.addRootNode)
-  const removeNode = useRecipeFlowStore((s) => s.removeNode)
   const runAutoLayout = useRecipeFlowStore((s) => s.runAutoLayout)
   const graphEmpty = useRecipeFlowStore((s) => s.graph.nodes.length === 0)
 

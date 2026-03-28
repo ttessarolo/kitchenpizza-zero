@@ -1,0 +1,364 @@
+[
+  {
+    "type": "rule",
+    "id": "temp_low",
+    "_meta": { "section": "baking", "displayName": "meta.rule.temp_low.name", "description": "meta.rule.temp_low.desc", "tags": ["temperature", "baking", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "temp",
+    "severity": "warning",
+    "messageKey": "advisory.temp_low",
+    "messageVars": ["ovenCfg.temp", "_tempMin", "_tempMax"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "ovenCfg.temp", "op": "lt", "value": "_tempMin" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.set_suggested_temp",
+        "mutations": [
+          { "type": "updateNode", "target": { "ref": "self" }, "patch": { "ovenCfg.temp": "_suggestedTemp" } }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "temp_high",
+    "_meta": { "section": "baking", "displayName": "meta.rule.temp_high.name", "description": "meta.rule.temp_high.desc", "tags": ["temperature", "baking", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "temp",
+    "severity": "warning",
+    "messageKey": "advisory.temp_high",
+    "messageVars": ["ovenCfg.temp", "_tempMin", "_tempMax"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "ovenCfg.temp", "op": "gt", "value": "_tempMax" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.set_suggested_temp",
+        "mutations": [
+          { "type": "updateNode", "target": { "ref": "self" }, "patch": { "ovenCfg.temp": "_suggestedTemp" } }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "cielo_too_low",
+    "_meta": { "section": "baking", "displayName": "meta.rule.cielo_too_low.name", "description": "meta.rule.cielo_too_low.desc", "tags": ["heat-distribution", "baking"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "baking",
+    "severity": "info",
+    "messageKey": "advisory.cielo_too_low",
+    "messageVars": ["ovenCfg.cieloPct", "_cieloMin", "_cieloMax"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "ovenCfg.cieloPct", "op": "lt", "value": "_cieloMin" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "cielo_too_high",
+    "_meta": { "section": "baking", "displayName": "meta.rule.cielo_too_high.name", "description": "meta.rule.cielo_too_high.desc", "tags": ["heat-distribution", "baking"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "baking",
+    "severity": "info",
+    "messageKey": "advisory.cielo_too_high",
+    "messageVars": ["ovenCfg.cieloPct", "_cieloMin", "_cieloMax"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "ovenCfg.cieloPct", "op": "gt", "value": "_cieloMax" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "mode_not_recommended",
+    "_meta": { "section": "baking", "displayName": "meta.rule.mode_not_recommended.name", "description": "meta.rule.mode_not_recommended.desc", "tags": ["oven-mode", "baking"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "baking",
+    "severity": "info",
+    "messageKey": "advisory.mode_not_recommended",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "ovenCfg.ovenMode", "op": "eq", "value": "fan" }
+    ],
+    "excludeIf": [
+      { "field": "recipeType", "op": "eq", "value": "dolce" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "double_bake_hint",
+    "_meta": { "section": "baking", "displayName": "meta.rule.double_bake_hint.name", "description": "meta.rule.double_bake_hint.desc", "tags": ["precottura", "baking"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "baking",
+    "severity": "info",
+    "messageKey": "advisory.double_bake_hint",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_isPrecottura", "op": "eq", "value": true }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "steam_with_pizza",
+    "_meta": { "section": "baking", "displayName": "meta.rule.steam_with_pizza.name", "description": "meta.rule.steam_with_pizza.desc", "tags": ["steam", "pizza", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "steam",
+    "severity": "warning",
+    "messageKey": "advisory.steam_with_pizza",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "ovenCfg.ovenMode", "op": "eq", "value": "steam" },
+      { "field": "recipeType", "op": "eq", "value": "pizza" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "steam_too_long",
+    "_meta": { "section": "baking", "displayName": "meta.rule.steam_too_long.name", "description": "meta.rule.steam_too_long.desc", "tags": ["steam", "duration", "baking"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "steam",
+    "severity": "info",
+    "messageKey": "advisory.steam_too_long",
+    "messageVars": ["ovenCfg.steamPct", "baseDur"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "ovenCfg.ovenMode", "op": "eq", "value": "steam" },
+      { "field": "baseDur", "op": "gt", "value": 30 }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.split_steam_phases",
+        "mutations": [
+          { "type": "addNodeAfter", "target": { "ref": "self" }, "nodeType": "bake", "subtype": "forno", "data": { "baseDur": 12 } }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pentola_no_lid",
+    "_meta": { "section": "baking", "displayName": "meta.rule.pentola_no_lid.name", "description": "meta.rule.pentola_no_lid.desc", "tags": ["steam", "pentola", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "steam",
+    "severity": "warning",
+    "messageKey": "advisory.pentola_no_lid",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "pentola" },
+      { "field": "ovenCfg.lidOn", "op": "eq", "value": false }
+    ],
+    "excludeIf": [
+      { "field": "recipeType", "op": "eq", "value": "pizza" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pentola_two_phase",
+    "_meta": { "section": "baking", "displayName": "meta.rule.pentola_two_phase.name", "description": "meta.rule.pentola_two_phase.desc", "tags": ["steam", "pentola", "baking"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "steam",
+    "severity": "info",
+    "messageKey": "advisory.pentola_two_phase",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "pentola" },
+      { "field": "ovenCfg.lidOn", "op": "eq", "value": true },
+      { "field": "baseDur", "op": "gt", "value": 30 }
+    ],
+    "excludeIf": [
+      { "field": "recipeType", "op": "eq", "value": "pizza" }
+    ],
+    "suppressedBy": ["steam_too_long"]
+  },
+  {
+    "type": "rule",
+    "id": "fry_oil_temp_low",
+    "_meta": { "section": "baking", "displayName": "meta.rule.fry_oil_temp_low.name", "description": "meta.rule.fry_oil_temp_low.desc", "tags": ["frying", "temperature", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "frying",
+    "severity": "warning",
+    "messageKey": "advisory.fry_oil_temp_low",
+    "messageVars": ["_oilTemp", "_oilTempMin"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "frittura" },
+      { "field": "_oilTemp", "op": "lt", "value": "_oilTempMin" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "fry_oil_temp_high",
+    "_meta": { "section": "baking", "displayName": "meta.rule.fry_oil_temp_high.name", "description": "meta.rule.fry_oil_temp_high.desc", "tags": ["frying", "temperature", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "frying",
+    "severity": "warning",
+    "messageKey": "advisory.fry_oil_temp_high",
+    "messageVars": ["_oilTemp", "_oilTempMax"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "frittura" },
+      { "field": "_oilTemp", "op": "gt", "value": "_oilTempMax" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "fry_dough_too_heavy",
+    "_meta": { "section": "baking", "displayName": "meta.rule.fry_dough_too_heavy.name", "description": "meta.rule.fry_dough_too_heavy.desc", "tags": ["frying", "weight"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "frying",
+    "severity": "info",
+    "messageKey": "advisory.fry_dough_too_heavy",
+    "messageVars": ["_maxDoughWeight"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "frittura" },
+      { "field": "nodeData.totalWeight", "op": "exists", "value": true }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "fry_finish_suggest",
+    "_meta": { "section": "baking", "displayName": "meta.rule.fry_finish_suggest.name", "description": "meta.rule.fry_finish_suggest.desc", "tags": ["frying", "pizza"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "frying",
+    "severity": "info",
+    "messageKey": "advisory.fry_finish_suggest",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "frittura" },
+      { "field": "recipeType", "op": "eq", "value": "pizza" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.add_oven_finish",
+        "mutations": [
+          { "type": "addNodeAfter", "target": { "ref": "self" }, "nodeType": "bake", "subtype": "forno", "data": { "ovenTemp": 285, "baseDur": 2 } }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "grill_flareup",
+    "_meta": { "section": "baking", "displayName": "meta.rule.grill_flareup.name", "description": "meta.rule.grill_flareup.desc", "tags": ["grilling", "baking"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "grilling",
+    "severity": "info",
+    "messageKey": "advisory.grill_flareup",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "griglia" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "grill_dock_hint",
+    "_meta": { "section": "baking", "displayName": "meta.rule.grill_dock_hint.name", "description": "meta.rule.grill_dock_hint.desc", "tags": ["grilling", "pizza"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "grilling",
+    "severity": "info",
+    "messageKey": "advisory.grill_dock_hint",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "griglia" },
+      { "field": "recipeType", "op": "eq", "value": "pizza" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "airfry_large_pizza",
+    "_meta": { "section": "baking", "displayName": "meta.rule.airfry_large_pizza.name", "description": "meta.rule.airfry_large_pizza.desc", "tags": ["air-fryer", "pizza"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "baking",
+    "severity": "info",
+    "messageKey": "advisory.airfry_large_pizza",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "aria" },
+      { "field": "recipeType", "op": "eq", "value": "pizza" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "airfry_flip_reminder",
+    "_meta": { "section": "baking", "displayName": "meta.rule.airfry_flip_reminder.name", "description": "meta.rule.airfry_flip_reminder.desc", "tags": ["air-fryer", "baking"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "baking",
+    "severity": "info",
+    "messageKey": "advisory.airfry_flip_reminder",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "aria" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "steamer_water_low",
+    "_meta": { "section": "baking", "displayName": "meta.rule.steamer_water_low.name", "description": "meta.rule.steamer_water_low.desc", "tags": ["steam", "steamer"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "steam",
+    "severity": "info",
+    "messageKey": "advisory.steamer_water_low",
+    "messageVars": ["baseDur"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "vapore" },
+      { "field": "baseDur", "op": "gt", "value": 15 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "steamer_lid_condensation",
+    "_meta": { "section": "baking", "displayName": "meta.rule.steamer_lid_condensation.name", "description": "meta.rule.steamer_lid_condensation.desc", "tags": ["steam", "steamer"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "steam",
+    "severity": "info",
+    "messageKey": "advisory.steamer_lid_condensation",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "vapore" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pan_cast_iron_preheat",
+    "_meta": { "section": "baking", "displayName": "meta.rule.pan_cast_iron_preheat.name", "description": "meta.rule.pan_cast_iron_preheat.desc", "tags": ["pan", "baking"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "baking",
+    "severity": "info",
+    "messageKey": "advisory.pan_cast_iron_preheat",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "padella" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pan_finish_suggest",
+    "_meta": { "section": "baking", "displayName": "meta.rule.pan_finish_suggest.name", "description": "meta.rule.pan_finish_suggest.desc", "tags": ["pan", "pizza"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "baking",
+    "severity": "info",
+    "messageKey": "advisory.pan_finish_suggest",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "bake" },
+      { "field": "_cookingMethod", "op": "eq", "value": "padella" },
+      { "field": "recipeType", "op": "eq", "value": "pizza" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.add_grill_finish",
+        "mutations": [
+          { "type": "addNodeAfter", "target": { "ref": "self" }, "nodeType": "bake", "subtype": "forno", "data": { "ovenTemp": 250, "ovenMode": "fan", "baseDur": 3 } }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "flour_w_too_weak",
+    "_meta": { "section": "baking", "displayName": "meta.rule.flour_w_too_weak.name", "description": "meta.rule.flour_w_too_weak.desc", "tags": ["flour", "composition", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "flour",
+    "severity": "warning",
+    "messageKey": "advisory.flour_w_too_weak",
+    "messageVars": ["flourW"],
+    "conditions": [
+      { "field": "flourW", "op": "lt", "value": 220 },
+      { "field": "flourW", "op": "gt", "value": 0 }
+    ]
+  }
+]

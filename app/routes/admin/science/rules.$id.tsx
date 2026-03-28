@@ -3,7 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { FileScienceProvider } from '@commons/utils/science/science-provider'
 import * as path from 'path'
 
-const loadBlock = createServerFn()
+const loadBlock = (createServerFn() as any)
   .handler(async ({ data: id }: { data: string }) => {
     const provider = new FileScienceProvider(
       path.resolve(process.cwd(), 'science'),
@@ -34,7 +34,7 @@ function RuleDetail() {
   }
 
   const t = (key: string) => i18nIt[key] ?? i18nEn[key] ?? key
-  const b = block as Record<string, unknown>
+  const b = block as unknown as Record<string, unknown>
   const meta = b._meta as Record<string, unknown> | undefined
 
   return (
@@ -44,29 +44,29 @@ function RuleDetail() {
       <div className="mt-4 border rounded-lg p-6 bg-background">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold">{meta ? t(String(meta.displayName)) : b.id as string}</h2>
-            {meta?.description && (
+            <h2 className="text-xl font-bold">{meta ? t(String(meta.displayName)) : String(b.id)}</h2>
+            {meta?.description != null && (
               <p className="text-sm text-muted-foreground mt-1">{t(String(meta.description))}</p>
             )}
           </div>
-          <span className="text-xs font-semibold bg-muted px-2 py-1 rounded">{b.type as string}</span>
+          <span className="text-xs font-semibold bg-muted px-2 py-1 rounded">{String(b.type)}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm mb-6">
           <div>
-            <span className="text-muted-foreground">ID:</span> <code className="bg-muted px-1 rounded">{b.id as string}</code>
+            <span className="text-muted-foreground">ID:</span> <code className="bg-muted px-1 rounded">{String(b.id)}</code>
           </div>
-          {meta?.section && (
+          {meta?.section != null && (
             <div>
               <span className="text-muted-foreground">Section:</span> {String(meta.section)}
             </div>
           )}
-          {b.ref && (
+          {b.ref != null && (
             <div className="col-span-2">
               <span className="text-muted-foreground">Ref:</span> {String(b.ref)}
             </div>
           )}
-          {meta?.tags && (
+          {meta?.tags != null && (
             <div className="col-span-2 flex gap-1 items-center">
               <span className="text-muted-foreground">Tags:</span>
               {(meta.tags as string[]).map((tag) => (
@@ -77,7 +77,7 @@ function RuleDetail() {
         </div>
 
         {/* Formula expression */}
-        {b.expression && (
+        {b.expression != null && (
           <div className="mb-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Expression</h3>
             <pre className="bg-muted p-3 rounded-lg text-sm font-mono overflow-x-auto">{String(b.expression)}</pre>
@@ -85,7 +85,7 @@ function RuleDetail() {
         )}
 
         {/* Variants */}
-        {b.variants && (
+        {b.variants != null && (
           <div className="mb-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Variants</h3>
             <div className="space-y-2">
@@ -93,10 +93,10 @@ function RuleDetail() {
                 <div key={String(v.key)} className={`border rounded-lg p-3 ${v.default ? 'border-primary bg-primary/5' : ''}`}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium">{t(String(v.nameKey))}</span>
-                    {v.default && <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded">default</span>}
+                    {v.default != null && <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded">default</span>}
                   </div>
                   <pre className="bg-muted p-2 rounded text-xs font-mono">{String(v.expression)}</pre>
-                  {v.constants && (
+                  {v.constants != null && (
                     <div className="mt-1 text-xs text-muted-foreground">
                       Constants: {Object.entries(v.constants as Record<string, number>).map(([k, val]) => `${k}=${val}`).join(', ')}
                     </div>
@@ -108,7 +108,7 @@ function RuleDetail() {
         )}
 
         {/* Constants */}
-        {b.constants && Object.keys(b.constants as object).length > 0 && (
+        {b.constants != null && Object.keys(b.constants as object).length > 0 && (
           <div className="mb-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Constants</h3>
             <div className="bg-muted rounded-lg p-3">
@@ -127,16 +127,16 @@ function RuleDetail() {
         )}
 
         {/* Factor chain */}
-        {b.factors && (
+        {b.factors != null && (
           <div className="mb-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Factors ({(b.factors as unknown[]).length})</h3>
             <div className="space-y-1">
               {(b.factors as Array<Record<string, unknown>>).map((f) => (
                 <div key={String(f.id)} className="bg-muted rounded p-2 text-xs">
                   <span className="font-mono font-semibold">{String(f.id)}</span>
-                  {f.expression && <span className="ml-2 text-muted-foreground">{String(f.expression)}</span>}
+                  {f.expression != null && <span className="ml-2 text-muted-foreground">{String(f.expression)}</span>}
                   {f.source === 'lookup' && <span className="ml-2 text-muted-foreground">lookup: {String(f.table)}.{String(f.field)}</span>}
-                  {f.ref && <span className="ml-2 italic text-muted-foreground">— {String(f.ref)}</span>}
+                  {f.ref != null && <span className="ml-2 italic text-muted-foreground">— {String(f.ref)}</span>}
                 </div>
               ))}
             </div>
@@ -144,7 +144,7 @@ function RuleDetail() {
         )}
 
         {/* Piecewise segments */}
-        {b.segments && (
+        {b.segments != null && (
           <div className="mb-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Segments</h3>
             <div className="bg-muted rounded-lg p-3">
@@ -158,7 +158,7 @@ function RuleDetail() {
                         {s.gte !== undefined && `>= ${s.gte}`}
                         {s.lt !== undefined && `< ${s.lt}`}
                         {s.lte !== undefined && `<= ${s.lte}`}
-                        {s.default && 'default'}
+                        {s.default != null && 'default'}
                       </td>
                       <td className="font-bold">{String(s.value ?? b.default)}</td>
                     </tr>
@@ -170,7 +170,7 @@ function RuleDetail() {
         )}
 
         {/* Rule conditions */}
-        {b.conditions && (
+        {b.conditions != null && (
           <div className="mb-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Conditions (AND)</h3>
             <div className="space-y-1">
@@ -184,7 +184,7 @@ function RuleDetail() {
         )}
 
         {/* Actions */}
-        {b.actions && (
+        {b.actions != null && (
           <div className="mb-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Actions {b.selectionMode === 'choose_one' && <span className="text-primary">(choose one)</span>}
@@ -193,7 +193,7 @@ function RuleDetail() {
               {(b.actions as Array<Record<string, unknown>>).map((a, i) => (
                 <div key={i} className="border rounded p-3">
                   <div className="text-sm font-medium">{t(String(a.labelKey))}</div>
-                  {a.descriptionKey && <div className="text-xs text-muted-foreground mt-0.5">{t(String(a.descriptionKey))}</div>}
+                  {a.descriptionKey != null && <div className="text-xs text-muted-foreground mt-0.5">{t(String(a.descriptionKey))}</div>}
                   <div className="text-[10px] text-muted-foreground mt-1">{(a.mutations as unknown[]).length} mutations</div>
                 </div>
               ))}
@@ -202,7 +202,7 @@ function RuleDetail() {
         )}
 
         {/* Output */}
-        {b.output && (
+        {b.output != null && (
           <div className="mb-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Output</h3>
             <div className="bg-muted rounded p-2 text-sm font-mono">

@@ -447,22 +447,22 @@ CLIENT (React/Expo) → oRPC API (auth) → Manager (pure function) → Config (
 - **Managers** = pure functions. Input → output. No DB, no state, no side effects.
 - **Config** = declarative TS/JSON in `local_data/`. Scientific constants, ranges, catalogs.
 
-### Manager Inventory (12 total)
+### Manager Inventory
 
-| Manager | File | Domain | Config |
-|---------|------|--------|--------|
-| **DoughManager** | `dough-manager.ts` | Blend, yeast (Formula L), temperature, composition warnings | `dough-defaults.ts` |
-| **FlourManager** | `flour-manager.ts` | Catalog lookup, blending, W estimation, classification | `flour-catalog.ts` |
-| **RiseManager** | `rise-manager.ts` | Duration (W + yeast + method + temp), Q10 factor | `rise-methods.ts` |
-| **PreFermentManager** | `pre-ferment-manager.ts` | Biga/poolish/madre ingredient calc, dough adjustment | `dough-defaults.ts` |
-| **BakeManager** | `bake-manager.ts` | 7 cooking methods, duration, validation, warnings | `baking-profiles.ts`, `fat-catalog.ts` |
-| **PreBakeManager** | `pre-bake-manager.ts` | 9 pre-bake subtypes, validation, suggestions | inline enums |
-| **AdvisoryManager** | `advisory-manager.ts` | Declarative rule engine (conditions, exclude, suppress) | `advisory-rules.ts` |
-| **PortioningManager** | `portioning-manager.ts` | Target weight, scaling, hydration sync | `tray-presets.ts` |
-| **GraphManager** | `graph-manager.ts` | Add/remove nodes, topology, validation, sort | `step-types.ts` |
-| **ScheduleManager** | `schedule-manager.ts` | Timeline, parallel phases, total duration | — |
-| **IngredientManager** | `ingredient-manager.ts` | Grouped totals, aggregation | `ingredient-presets.ts` |
-| **FormatUtils** | `format.ts` | `rnd`, `fmtDuration`, `fmtTime`, temperature conversion | — (pure helpers) |
+| Manager | File | CookingScienceBrain | Domain |
+|---------|------|:---:|--------|
+| **DoughManager** | `dough-manager.ts` | Yes | Formulas, rules, defaults |
+| **FlourManager** | `flour-manager.ts` | Yes | Classification, catalog |
+| **RiseManager** | `rise-manager.ts` | Yes | Factor chain, piecewise, rules |
+| **BakeManager** | `bake-manager.ts` | Yes | Rules (advisories) |
+| **PreBakeManager** | `pre-bake-manager.ts` | Yes | Rules (advisories, validation) |
+| **PreFermentManager** | `pre-ferment-manager.ts` | Yes | Rules (validation) |
+| **AdvisoryManager** | *(deleted)* | — | Replaced by science/rule-engine.ts |
+| **WarningManager** | *(deleted)* | — | Was deprecated wrapper |
+| **GraphManager** | `graph-manager.ts` | — | Pure topology |
+| **PortioningManager** | `portioning-manager.ts` | — | Pure math |
+| **IngredientManager** | `ingredient-manager.ts` | — | Pure aggregation |
+| **ScheduleManager** | `schedule-manager.ts` | — | Pure timeline |
 
 ### Dependency Hierarchy
 
@@ -542,7 +542,7 @@ Every formula in a Manager MUST reference its scientific source:
 
 ---
 
-## BreadScience JSON — Externalized Scientific Logic
+## CookingScienceBrain — Externalized Scientific Logic
 
 ### Philosophy
 
@@ -560,7 +560,7 @@ Every formula in a Manager MUST reference its scientific source:
 /science/*.json                 /i18n/{locale}/science.json
      │ (logic)                       │ (text)
      ▼                               ▼
-ScienceProvider ──────────────► Manager.*Science()
+ScienceProvider ──────────────► Manager.function(provider, ...)
      │                               │
      ▼                               ▼
 FormulaEngine (expr-eval)       RuleEngine (conditions)
@@ -572,7 +572,7 @@ FormulaEngine (expr-eval)       RuleEngine (conditions)
                                 Client: t(messageKey, vars) → localized text
 ```
 
-**Dual API**: Each Manager exposes both the original hardcoded function (e.g., `calcYeastPct()`) and a Science-aware version (e.g., `calcYeastPctScience(provider, ...)`). Snapshot tests guarantee identical results. The hardcoded versions remain for backward compatibility and as a fallback.
+All functions with scientific logic take `provider: ScienceProvider` as their first parameter. There is no hardcoded fallback — all science lives in JSON.
 
 All scientific formulas, rules, thresholds, and catalogs are stored as JSON in `/science/`. Text messages are in `/i18n/` (EN base + IT current).
 
@@ -580,7 +580,7 @@ All scientific formulas, rules, thresholds, and catalogs are stored as JSON in `
 
 ```
 /science/
-├── schema/breadscience.schema.json   ← JSON Schema validation
+├── schema/cookingsciencebrain.schema.json   ← JSON Schema validation
 ├── formulas/                         ← formula, factor_chain blocks
 ├── rules/                            ← rule blocks (messageKey, no text)
 ├── catalogs/                         ← catalog blocks (flours, fats, etc.)
@@ -614,7 +614,7 @@ All scientific formulas, rules, thresholds, and catalogs are stored as JSON in `
 
 ### Rule engine — advisory & warnings
 
-The rule engine (`commons/utils/science/rule-engine.ts`) evaluates declarative rules against a context object. It is an evolution of the original `advisory-manager.ts` with these improvements:
+The rule engine (`commons/utils/science/rule-engine.ts`) evaluates declarative rules against a context object. It replaces the original `advisory-manager.ts`:
 
 - **Returns `messageKey` + `messageVars`** — never resolved text. The client resolves via i18n.
 - **`selectionMode: "choose_one"`** — actions as alternative strategies (radio select), not just independent buttons.
@@ -634,12 +634,38 @@ Admin oRPC procedures: `science.listBlocks`, `science.getBlock`, `science.update
 ### Adding new science
 
 1. Create JSON file in appropriate `/science/` subdirectory
-2. Follow `breadscience.schema.json` format
+2. Follow `cookingsciencebrain.schema.json` format
 3. Add i18n keys to `/i18n/en/science.json` and `/i18n/it/science.json`
 4. Add `_meta` with section, displayName, description, tags
-5. Add `*Science()` function to the relevant Manager
-6. Write snapshot test comparing Science vs hardcoded results
+5. Implement the function in the relevant Manager with `provider: ScienceProvider` as first parameter
+6. Write tests using `FileScienceProvider`
 7. The new block will automatically appear in the admin panel dashboard
+
+### CookingScienceBrain — Mandatory Integration for ALL Managers
+
+Every Manager that contains domain knowledge (formulas, thresholds, warnings, catalogs, defaults) MUST use CookingScienceBrain. There is NO hardcoded fallback.
+
+1. **Single API**: all functions with scientific logic take `provider: ScienceProvider` as their first parameter. There is no version without provider.
+
+2. **Warning/Advisory**: ALL warning messages return `RuleResult` with `messageKey` + `messageVars`. Never resolved text in managers. The client resolves via `t(messageKey, messageVars)`.
+
+3. **ActionableWarning**: UI interface is purely i18n-native.
+   - `messageKey: string` (mandatory)
+   - `messageVars?: Record<string, unknown>`
+   - No `message: string` field
+
+4. **New Managers**: when creating a new Manager:
+   a. Create JSON blocks in `/science/` (formulas, rules, catalogs, defaults)
+   b. Add i18n keys to `/commons/i18n/{en,it}/science.json`
+   c. Implement functions with `provider: ScienceProvider` as first param
+   d. Use `toActionableWarnings()` to convert RuleResult → ActionableWarning
+   e. Write tests with FileScienceProvider
+
+5. **No human text in `/science/`**: only `messageKey`, `labelKey`, `titleKey`. Text lives in `/commons/i18n/`.
+
+6. **Schema**: all blocks must follow `cookingsciencebrain.schema.json`.
+
+7. **No legacy**: do not keep hardcoded "fallback" versions. If the logic is in JSON, the TypeScript code reads it from JSON. Period.
 
 ---
 

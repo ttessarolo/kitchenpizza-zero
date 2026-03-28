@@ -45,7 +45,7 @@ export const listBlocks = authProcedure
 
 export const getBlock = authProcedure
   .input(z.object({ id: z.string() }))
-  .output(z.object({ block: z.record(z.unknown()).nullable() }))
+  .output(z.object({ block: z.record(z.string(), z.unknown()).nullable() }))
   .handler(async ({ input }) => ({
     block: provider.getBlock(input.id) as any,
   }))
@@ -54,7 +54,7 @@ export const getBlock = authProcedure
 
 export const updateBlock = authProcedure
   .input(z.object({
-    block: z.record(z.unknown()),
+    block: z.record(z.string(), z.unknown()),
   }))
   .output(z.object({ success: z.boolean() }))
   .handler(async ({ input }) => {
@@ -66,7 +66,7 @@ export const updateBlock = authProcedure
 
 export const listI18n = authProcedure
   .input(z.object({ locale: z.string() }))
-  .output(z.object({ keys: z.record(z.string()) }))
+  .output(z.object({ keys: z.record(z.string(), z.string()) }))
   .handler(async ({ input }) => ({
     keys: provider.getI18nKeys(input.locale),
   }))

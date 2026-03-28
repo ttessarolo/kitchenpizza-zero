@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   rnd,
-  getFlour,
   blendFlourProperties,
   estimateW,
   calcYeastPct,
@@ -17,6 +16,12 @@ import {
 } from '@commons/utils/dough-manager'
 import { FLOUR_CATALOG } from '@/local_data/flour-catalog'
 import type { FlourIngredient, LiquidIngredient, SaltIngredient, SugarIngredient, FatIngredient } from '@commons/types/recipe'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { resolve } from 'path'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 // ═══════════════════════════════════════════════════════════════
 // Helpers
@@ -118,32 +123,32 @@ describe('DoughManager — estimateW', () => {
 
 describe('DoughManager — calcYeastPct (Casucci Formula L)', () => {
   it('returns 0 for invalid inputs', () => {
-    expect(calcYeastPct(0, 60)).toBe(0)
-    expect(calcYeastPct(10, 60, 0)).toBe(0)
-    expect(calcYeastPct(-1, 60)).toBe(0)
+    expect(calcYeastPct(provider, 0, 24)).toBe(0)
+    expect(calcYeastPct(provider, 10, 0)).toBe(0)
+    expect(calcYeastPct(provider, -1, 24)).toBe(0)
   })
 
   it('shorter rise time requires more yeast', () => {
-    const short = calcYeastPct(4, 60, 24)
-    const long = calcYeastPct(18, 60, 24)
+    const short = calcYeastPct(provider, 4, 24)
+    const long = calcYeastPct(provider, 18, 24)
     expect(short).toBeGreaterThan(long)
   })
 
   it('higher temperature requires less yeast', () => {
-    const cold = calcYeastPct(18, 60, 18)
-    const warm = calcYeastPct(18, 60, 28)
+    const cold = calcYeastPct(provider, 18, 18)
+    const warm = calcYeastPct(provider, 18, 28)
     expect(cold).toBeGreaterThan(warm)
   })
 
   it('produces reasonable values for typical pizza (18h, 24°C)', () => {
-    const pct = calcYeastPct(18, 60, 24)
+    const pct = calcYeastPct(provider, 18, 24)
     // Should be around 0.15-0.25% for 18h at 24°C
     expect(pct).toBeGreaterThan(0.1)
     expect(pct).toBeLessThan(0.4)
   })
 
   it('produces reasonable values for short rise (2h, 24°C)', () => {
-    const pct = calcYeastPct(2, 60, 24)
+    const pct = calcYeastPct(provider, 2, 24)
     // Should be around 1.5-2.0% for 2h at 24°C
     expect(pct).toBeGreaterThan(1)
     expect(pct).toBeLessThan(3)
@@ -259,59 +264,59 @@ describe('DoughManager — getDoughWarnings', () => {
   }
 
   it('returns no warnings for standard napoletana', () => {
-    const warnings = getDoughWarnings(baseProfile)
+    const warnings = getDoughWarnings(provider, baseProfile)
     expect(warnings).toHaveLength(0)
   })
 
   it('warns when yeast is too low', () => {
-    const w = getDoughWarnings({ ...baseProfile, yeastPct: 0.01 })
+    const w = getDoughWarnings(provider, { ...baseProfile, yeastPct: 0.01 })
     expect(w.find((w) => w.id === 'yeast_too_low')).toBeDefined()
     expect(w.find((w) => w.id === 'yeast_too_low')!.severity).toBe('error')
   })
 
   it('warns when yeast is too high', () => {
-    const w = getDoughWarnings({ ...baseProfile, yeastPct: 4.0 })
+    const w = getDoughWarnings(provider, { ...baseProfile, yeastPct: 4.0 })
     expect(w.find((w) => w.id === 'yeast_too_high')).toBeDefined()
   })
 
   it('warns when salt is below range', () => {
-    const w = getDoughWarnings({ ...baseProfile, saltPct: 1.0 })
+    const w = getDoughWarnings(provider, { ...baseProfile, saltPct: 1.0 })
     expect(w.find((w) => w.id === 'salt_low')).toBeDefined()
   })
 
   it('warns when salt is above range', () => {
-    const w = getDoughWarnings({ ...baseProfile, saltPct: 3.5 })
+    const w = getDoughWarnings(provider, { ...baseProfile, saltPct: 3.5 })
     expect(w.some((w) => w.id === 'salt_high' || w.id === 'salt_extreme')).toBe(true)
   })
 
   it('warns for extreme salt (>3%)', () => {
-    const w = getDoughWarnings({ ...baseProfile, saltPct: 3.5 })
+    const w = getDoughWarnings(provider, { ...baseProfile, saltPct: 3.5 })
     expect(w.find((w) => w.id === 'salt_extreme')).toBeDefined()
     expect(w.find((w) => w.id === 'salt_extreme')!.severity).toBe('error')
   })
 
   it('warns for high fat in pizza', () => {
-    const w = getDoughWarnings({ ...baseProfile, fatPct: 10 })
+    const w = getDoughWarnings(provider, { ...baseProfile, fatPct: 10 })
     expect(w.find((w) => w.id === 'fat_high')).toBeDefined()
   })
 
   it('does NOT warn for high fat in dolce', () => {
-    const w = getDoughWarnings({ ...baseProfile, recipeType: 'dolce', recipeSubtype: 'brioche', fatPct: 15 })
+    const w = getDoughWarnings(provider, { ...baseProfile, recipeType: 'dolce', recipeSubtype: 'brioche', fatPct: 15 })
     expect(w.find((w) => w.id === 'fat_extreme')).toBeUndefined()
   })
 
   it('warns for extreme hydration (>90%)', () => {
-    const w = getDoughWarnings({ ...baseProfile, hydration: 95 })
+    const w = getDoughWarnings(provider, { ...baseProfile, hydration: 95 })
     expect(w.find((w) => w.id === 'hyd_extreme')).toBeDefined()
   })
 
   it('warns for low hydration (<45%)', () => {
-    const w = getDoughWarnings({ ...baseProfile, hydration: 40 })
+    const w = getDoughWarnings(provider, { ...baseProfile, hydration: 40 })
     expect(w.find((w) => w.id === 'hyd_low')).toBeDefined()
   })
 
   it('warns for extreme duration (>72h)', () => {
-    const w = getDoughWarnings({ ...baseProfile, doughHours: 96 })
+    const w = getDoughWarnings(provider, { ...baseProfile, doughHours: 96 })
     expect(w.find((w) => w.id === 'hours_extreme')).toBeDefined()
   })
 })
@@ -322,23 +327,23 @@ describe('DoughManager — getDoughWarnings', () => {
 
 describe('DoughManager — maxRiseHoursForW', () => {
   it('strong flour (W>380) allows up to 20h', () => {
-    expect(maxRiseHoursForW(400)).toBe(20)
+    expect(maxRiseHoursForW(provider, 400)).toBe(20)
   })
 
   it('medium flour (W~300) allows up to 10h', () => {
-    expect(maxRiseHoursForW(300)).toBe(10)
+    expect(maxRiseHoursForW(provider, 300)).toBe(10)
   })
 
   it('weak flour (W<180) allows only 1h', () => {
-    expect(maxRiseHoursForW(150)).toBe(1)
+    expect(maxRiseHoursForW(provider, 150)).toBe(1)
   })
 
   it('matches Casucci Cap. 44 table', () => {
-    expect(maxRiseHoursForW(390)).toBe(20)
-    expect(maxRiseHoursForW(330)).toBe(14)
-    expect(maxRiseHoursForW(295)).toBe(10)
-    expect(maxRiseHoursForW(250)).toBe(6)
-    expect(maxRiseHoursForW(190)).toBe(2)
-    expect(maxRiseHoursForW(100)).toBe(1)
+    expect(maxRiseHoursForW(provider, 390)).toBe(20)
+    expect(maxRiseHoursForW(provider, 330)).toBe(14)
+    expect(maxRiseHoursForW(provider, 295)).toBe(10)
+    expect(maxRiseHoursForW(provider, 250)).toBe(6)
+    expect(maxRiseHoursForW(provider, 190)).toBe(2)
+    expect(maxRiseHoursForW(provider, 100)).toBe(1)
   })
 })

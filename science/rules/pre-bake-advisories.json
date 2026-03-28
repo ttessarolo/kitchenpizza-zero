@@ -1,0 +1,126 @@
+[
+  {
+    "type": "rule",
+    "id": "boil_lye_safety",
+    "_meta": { "section": "pre_bake", "displayName": "meta.rule.boil_lye_safety.name", "description": "meta.rule.boil_lye_safety.desc", "tags": ["pre-bake", "boil", "safety", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "pre_bake",
+    "severity": "warning",
+    "messageKey": "advisory.boil_lye_safety",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "pre_bake" },
+      { "field": "nodeSubtype", "op": "eq", "value": "boil" },
+      { "field": "nodeData.liquidType", "op": "eq", "value": "lye_solution" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "boil_overcook",
+    "_meta": { "section": "pre_bake", "displayName": "meta.rule.boil_overcook.name", "description": "meta.rule.boil_overcook.desc", "tags": ["pre-bake", "boil", "duration"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "pre_bake",
+    "severity": "info",
+    "messageKey": "advisory.boil_overcook",
+    "messageVars": ["baseDur"],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "pre_bake" },
+      { "field": "nodeSubtype", "op": "eq", "value": "boil" },
+      { "field": "baseDur", "op": "gt", "value": 3 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "boil_must_bake_after",
+    "_meta": { "section": "pre_bake", "displayName": "meta.rule.boil_must_bake_after.name", "description": "meta.rule.boil_must_bake_after.desc", "tags": ["pre-bake", "boil", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "pre_bake",
+    "severity": "warning",
+    "messageKey": "advisory.boil_must_bake_after",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "pre_bake" },
+      { "field": "nodeSubtype", "op": "eq", "value": "boil" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "dock_not_for_neapolitan",
+    "_meta": { "section": "pre_bake", "displayName": "meta.rule.dock_not_for_neapolitan.name", "description": "meta.rule.dock_not_for_neapolitan.desc", "tags": ["pre-bake", "dock", "napoletana"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "pre_bake",
+    "severity": "info",
+    "messageKey": "advisory.dock_not_for_neapolitan",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "pre_bake" },
+      { "field": "nodeSubtype", "op": "eq", "value": "dock" },
+      { "field": "recipeSubtype", "op": "eq", "value": "napoletana" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "flour_tipo00_burns",
+    "_meta": { "section": "pre_bake", "displayName": "meta.rule.flour_tipo00_burns.name", "description": "meta.rule.flour_tipo00_burns.desc", "tags": ["pre-bake", "flour-dust", "warning"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "pre_bake",
+    "severity": "warning",
+    "messageKey": "advisory.flour_tipo00_burns",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "pre_bake" },
+      { "field": "nodeSubtype", "op": "eq", "value": "flour_dust" },
+      { "field": "nodeData.flourType", "op": "eq", "value": "tipo00" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "flour_excess_remove",
+    "_meta": { "section": "pre_bake", "displayName": "meta.rule.flour_excess_remove.name", "description": "meta.rule.flour_excess_remove.desc", "tags": ["pre-bake", "flour-dust"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "pre_bake",
+    "severity": "info",
+    "messageKey": "advisory.flour_excess_remove",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "pre_bake" },
+      { "field": "nodeSubtype", "op": "eq", "value": "flour_dust" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "oil_evoo_high_heat",
+    "_meta": { "section": "pre_bake", "displayName": "meta.rule.oil_evoo_high_heat.name", "description": "meta.rule.oil_evoo_high_heat.desc", "tags": ["pre-bake", "oil-coat"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "pre_bake",
+    "severity": "info",
+    "messageKey": "advisory.oil_evoo_high_heat",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "pre_bake" },
+      { "field": "nodeSubtype", "op": "eq", "value": "oil_coat" },
+      { "field": "nodeData.oilType", "op": "eq", "value": "olive" },
+      { "field": "nextBakeSubtype", "op": "in", "value": ["griglia", "frittura"] }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "steam_home_oven_only",
+    "_meta": { "section": "pre_bake", "displayName": "meta.rule.steam_home_oven_only.name", "description": "meta.rule.steam_home_oven_only.desc", "tags": ["pre-bake", "steam-inject"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "pre_bake",
+    "severity": "info",
+    "messageKey": "advisory.steam_home_oven_only",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "pre_bake" },
+      { "field": "nodeSubtype", "op": "eq", "value": "steam_inject" },
+      { "field": "nodeData.method", "op": "in", "value": ["water_pan", "ice_cubes"] }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "steam_remove_for_crust",
+    "_meta": { "section": "pre_bake", "displayName": "meta.rule.steam_remove_for_crust.name", "description": "meta.rule.steam_remove_for_crust.desc", "tags": ["pre-bake", "steam-inject"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "pre_bake",
+    "severity": "info",
+    "messageKey": "advisory.steam_remove_for_crust",
+    "messageVars": [],
+    "conditions": [
+      { "field": "nodeType", "op": "eq", "value": "pre_bake" },
+      { "field": "nodeSubtype", "op": "eq", "value": "steam_inject" }
+    ]
+  }
+]

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { OvenConfig } from '@commons/types/recipe'
-import { getBakingWarnings } from '@commons/utils/baking'
 import { WarningCard } from '~/components/recipe-flow/WarningCard'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 
@@ -15,15 +14,14 @@ interface BakingAdvisoryProps {
 }
 
 export function BakingAdvisory({
-  ovenCfg,
-  recipeType,
-  recipeSubtype,
-  calculatedDur,
-  baseDur,
   nodeId,
-  method,
 }: BakingAdvisoryProps) {
-  const warnings = getBakingWarnings(ovenCfg, recipeType, recipeSubtype, calculatedDur, baseDur, method)
+  // Warnings are now computed server-side by the reconciler.
+  // Filter the store's warnings for this specific node.
+  const storeWarnings = useRecipeFlowStore((s) => s.warnings)
+  const warnings = nodeId
+    ? storeWarnings.filter((w) => w.sourceNodeId === nodeId)
+    : []
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const graphNodes = useRecipeFlowStore((s) => s.graph.nodes)
   const graphEdges = useRecipeFlowStore((s) => s.graph.edges)
@@ -46,14 +44,7 @@ export function BakingAdvisory({
       {visible.map((w) => (
         <WarningCard
           key={w.id}
-          warning={{
-            id: w.id,
-            sourceNodeId: nodeId,
-            category: w.category as any,
-            severity: w.severity,
-            message: w.message,
-            actions: w.actions,
-          }}
+          warning={w}
           appliedAdvisoryIds={appliedAdvisoryIds}
           onDismiss={() => setDismissed((s) => new Set(s).add(w.id))}
         />

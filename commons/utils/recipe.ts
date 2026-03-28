@@ -1,19 +1,10 @@
 import type {
-  FlourCatalogEntry,
-  FlourIngredient,
-  LiquidIngredient,
-  BlendedFlourProps,
-  RiseMethod,
   StepDep,
   RecipeStep,
   Recipe,
   RecipeStatus,
   TemperatureUnit,
   PlanningMode,
-  PreFermentConfig,
-  SaltIngredient,
-  SugarIngredient,
-  FatIngredient,
 } from '@commons/types/recipe'
 
 // ── Re-exports from DoughManager (canonical source) ────────────
@@ -24,6 +15,7 @@ export {
   blendFlourProperties,
   estimateW,
   calcYeastPct,
+  calcYeastPctClient,
   yeastGrams,
   calcFinalDoughTemp,
   computeSuggestedSalt,
@@ -34,7 +26,7 @@ export {
   getDoughWarnings,
   maxRiseHoursForW,
 } from './dough-manager'
-export type { DoughWarning, DoughProfileInput } from './dough-manager'
+export type { RuleResult, DoughProfileInput } from './dough-manager'
 
 // Re-exports from RiseManager
 export { calcRiseDuration, riseTemperatureFactor } from './rise-manager'
@@ -55,8 +47,6 @@ export {
   nextId, relativeDate, thicknessLabel,
 } from './format'
 
-// Local alias for internal use
-import { rnd } from './format'
 
 // getFlour, blendFlourProperties, estimateW → moved to dough-manager.ts (re-exported above)
 
@@ -336,7 +326,11 @@ function mergeStepIngredients(
   }
 }
 
-function mergeIngArray<T extends { type: string; g: number }>(
+function ingKey(item: Record<string, unknown>): string {
+  return (item.type as string) ?? (item.name as string) ?? ''
+}
+
+function mergeIngArray<T extends { g: number }>(
   target: T[],
   source: T[],
   factor: number,
@@ -345,7 +339,7 @@ function mergeIngArray<T extends { type: string; g: number }>(
   for (const s of source) {
     const scaled = Math.round(s.g * factor)
     if (scaled <= 0) continue
-    const existing = result.find((r) => r.type === s.type)
+    const existing = result.find((r) => ingKey(r as Record<string, unknown>) === ingKey(s as Record<string, unknown>))
     if (existing) {
       existing.g += scaled
     } else {

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kitchenpizza.app/schemas/breadscience.json",
-  "title": "BreadScience JSON",
+  "$id": "https://kitchenpizza.app/schemas/cookingsciencebrain.json",
+  "title": "CookingScienceBrain JSON",
   "description": "Schema for scientific formulas, rules, catalogs, classifications, and defaults used by recipe managers.",
 
   "oneOf": [

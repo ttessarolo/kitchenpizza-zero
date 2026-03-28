@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useT } from '~/hooks/useTranslation'
 
 export function EdgeCallout() {
+  const t = useT()
   const selectedEdgeId = useRecipeFlowStore((s) => s.selectedEdgeId)
   const edgeCalloutPos = useRecipeFlowStore((s) => s.edgeCalloutPos)
   const graph = useRecipeFlowStore((s) => s.graph)
@@ -48,7 +50,7 @@ export function EdgeCallout() {
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs font-semibold text-[#8a7a66] uppercase tracking-wider">
-          Connessione
+          {t("edge_connection")}
         </div>
         <button
           type="button"
@@ -57,7 +59,7 @@ export function EdgeCallout() {
           }}
           className="text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-2 py-1 hover:bg-red-100"
         >
-          ✕ Elimina
+          {"✕ " + t("edge_delete")}
         </button>
       </div>
 
@@ -67,13 +69,13 @@ export function EdgeCallout() {
       </div>
 
       <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-        Aspetta fino a quando hai:
+        {t("dep_wait_until", { n: "" })}
       </div>
 
       {/* Schedule: Time completion ratio */}
       <div className="mb-2">
         <div className="flex items-center justify-between text-[11px] mb-0.5">
-          <span className="text-muted-foreground font-medium">⏱ Tempo completato</span>
+          <span className="text-muted-foreground font-medium">{"⏱ " + t("dep_time_completed")}</span>
           <span className="font-semibold text-foreground">
             {edge.data.scheduleTimeRatio === 1 ? '100%' : `${Math.round(edge.data.scheduleTimeRatio * 100)}%`}
           </span>
@@ -92,7 +94,7 @@ export function EdgeCallout() {
       {/* Schedule: Quantity production ratio */}
       <div>
         <div className="flex items-center justify-between text-[11px] mb-0.5">
-          <span className="text-muted-foreground font-medium">📦 Quantità prodotta</span>
+          <span className="text-muted-foreground font-medium">{"📦 " + t("dep_qty_produced")}</span>
           <span className="font-semibold text-foreground">{Math.round(edge.data.scheduleQtyRatio * 100)}%</span>
         </div>
         <input

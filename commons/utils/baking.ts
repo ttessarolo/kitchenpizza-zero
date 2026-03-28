@@ -6,8 +6,10 @@
  */
 
 import type { OvenConfig, CookingConfig } from '@commons/types/recipe'
-import type { ActionableWarning, NodeData } from '@commons/types/recipe-graph'
+import type { NodeData } from '@commons/types/recipe-graph'
 import type { BakingProfile } from '../../local_data/baking-profiles'
+import type { ScienceProvider } from './science/science-provider'
+import type { RuleResult } from './science/rule-engine'
 import {
   getBakingProfile as _getBakingProfile,
   calcDuration as _calcDuration,
@@ -41,51 +43,24 @@ export function calcBakeDuration(
 
 // ── Advisory warnings (backward compat) ────────────────────────
 
-export interface BakingWarning {
-  id: string
-  type:
-    | 'temp_low'
-    | 'temp_high'
-    | 'time_mismatch'
-    | 'cielo_unusual'
-    | 'mode_warning'
-    | 'double_bake_hint'
-    | 'steam_with_pizza'
-    | 'steam_too_long'
-    | 'pentola_two_phase'
-  severity: 'info' | 'warning'
-  message: string
-  category: string
-  sourceNodeId?: string
-  actions?: import('@commons/types/recipe-graph').WarningAction[]
-}
-
 /**
  * @deprecated Use BakeManager.getWarnings() instead.
+ * Now returns RuleResult[] (messageKey-based, no resolved text).
  */
 export function getBakingWarnings(
+  provider: ScienceProvider,
   ovenCfg: OvenConfig,
   recipeType: string,
   recipeSubtype: string | null,
   _calculatedDur: number,
   baseDur: number,
   method: string = 'forno',
-): BakingWarning[] {
-  const cookingCfg: CookingConfig = { method, cfg: ovenCfg }
+): RuleResult[] {
+  const cookingCfg: CookingConfig = { method: method as CookingConfig['method'], cfg: ovenCfg } as CookingConfig
   const emptyNodeData: NodeData = {
     title: '', desc: '', group: '', baseDur, restDur: 0, restTemp: null,
     flours: [], liquids: [], extras: [], yeasts: [], salts: [], sugars: [], fats: [],
   }
 
-  const advisories: ActionableWarning[] = _getWarnings(cookingCfg, recipeType, recipeSubtype, baseDur, emptyNodeData)
-
-  return advisories.map((a) => ({
-    id: a.id,
-    type: a.id as BakingWarning['type'],
-    severity: a.severity as 'info' | 'warning',
-    message: a.message,
-    category: a.category,
-    sourceNodeId: a.sourceNodeId,
-    actions: a.actions,
-  }))
+  return _getWarnings(provider, cookingCfg, recipeType, recipeSubtype, baseDur, emptyNodeData)
 }

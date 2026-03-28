@@ -10,7 +10,7 @@ import { migrateRecipeV1toV2 } from '@commons/utils/recipe-migration'
 import { graphToRecipeV1, stepToNodeData, nodeToStep } from '@commons/utils/graph-adapter'
 import { computeGraphTotals } from '~/hooks/useGraphCalculator'
 import { scaleNodeData } from '~/hooks/useGraphCalculator'
-import { makeStep, makeDep, makeRecipe, makePfCfg } from './synthetic_data/helpers'
+import { makeStep, makeRecipe } from './synthetic_data/helpers'
 import { BIGA_80_STEPS } from './synthetic_data/base_biga_bread'
 
 // ── Helper: simulate updateNodeWithReconcile logic ──────────────

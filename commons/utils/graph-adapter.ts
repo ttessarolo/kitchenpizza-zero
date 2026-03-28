@@ -83,7 +83,7 @@ export function stepToNodeData(step: RecipeStep): Partial<NodeData> {
  */
 export function graphToRecipeV1(
   graph: RecipeGraph,
-  meta: { name: string; author: string; type: string; subtype: string },
+  meta: { name: string; author: string; type: string; subtype: string; locale: string },
   portioning: Recipe['portioning'],
   ingredientGroups: string[],
 ): Recipe {

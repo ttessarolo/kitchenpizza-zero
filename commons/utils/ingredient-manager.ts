@@ -8,7 +8,6 @@
 
 import type {
   RecipeGraph,
-  NodeData,
 } from '@commons/types/recipe-graph'
 import type {
   FlourIngredient,

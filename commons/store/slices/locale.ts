@@ -1,5 +1,4 @@
 import type { StateCreator } from 'zustand'
-import type { AppState } from '../types'
 
 export type SupportedLocale = 'en' | 'it'
 
@@ -9,7 +8,7 @@ export interface LocaleSlice {
 }
 
 export const createLocaleSlice: StateCreator<
-  AppState,
+  LocaleSlice,
   [['zustand/immer', never]],
   [],
   LocaleSlice

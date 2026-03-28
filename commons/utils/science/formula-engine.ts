@@ -1,5 +1,5 @@
 /**
- * FormulaEngine — Interprets BreadScience JSON blocks at runtime.
+ * FormulaEngine — Interprets CookingScienceBrain JSON blocks at runtime.
  *
  * Uses expr-eval for mathematical expression evaluation.
  * Supports: formula, factor_chain, piecewise, classification.

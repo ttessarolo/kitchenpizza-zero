@@ -4,7 +4,7 @@
  * Owns:
  * - Flour catalog lookup and filtering
  * - Weighted blending of flour properties (W, protein, P/L, absorption)
- * - Strength estimation and classification
+ * - Strength estimation and classification (via ScienceProvider)
  * - Search and suggestion functions
  *
  * Scientific references:
@@ -23,6 +23,11 @@ import { FLOUR_CATALOG, FLOUR_GROUPS } from '../../local_data/flour-catalog'
 export { FLOUR_CATALOG, FLOUR_GROUPS }
 
 import { rnd } from './format'
+
+// ── Science imports ────────────────────────────────────────────
+
+import type { ScienceProvider } from './science/science-provider'
+import { evaluateClassification } from './science/formula-engine'
 
 // ── Catalog lookup ─────────────────────────────────────────────
 
@@ -111,15 +116,17 @@ export function estimateW(protein: number): number {
 export type FlourStrength = 'weak' | 'medium' | 'strong' | 'very_strong'
 
 /**
- * Classify flour by W strength.
+ * Classify flour by W strength using the ScienceProvider.
+ * Reads classification from /science/ JSON.
+ *
  * [C] Cap. 20 — W ranges:
  *   weak < 180, medium 180-260, strong 260-350, very_strong > 350
  */
-export function classifyStrength(W: number): FlourStrength {
-  if (W < 180) return 'weak'
-  if (W < 260) return 'medium'
-  if (W <= 350) return 'strong'
-  return 'very_strong'
+export function classifyStrength(
+  provider: ScienceProvider,
+  W: number,
+): string {
+  return evaluateClassification(provider.getClassification('flour_strength'), { W })
 }
 
 /** Is this a whole grain flour? (fiber > 6%) */
@@ -148,25 +155,10 @@ export function suggestForW(
     .sort((a, b) => Math.abs(a.W - targetW) - Math.abs(b.W - targetW))
 }
 
-// ── Science-aware API ──────────────────────────────────────────
-
-import type { ScienceProvider } from './science/science-provider'
-import { evaluateClassification } from './science/formula-engine'
-
-/**
- * Classify flour strength using the Science provider (reads classification from JSON).
- */
-export function classifyStrengthScience(
-  provider: ScienceProvider,
-  W: number,
-): string {
-  return evaluateClassification(provider.getClassification('flour_strength'), { W })
-}
-
 /**
  * Get flour catalog from Science provider.
  */
-export function getFlourCatalogScience(
+export function getFlourCatalog(
   provider: ScienceProvider,
 ): FlourCatalogEntry[] {
   return provider.getCatalog('flours') as unknown as FlourCatalogEntry[]

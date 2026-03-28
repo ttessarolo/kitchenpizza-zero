@@ -1,19 +1,19 @@
 import { memo } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import { COLOR_MAP } from '@/local_data'
 import { fmtDuration } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
 import type { BaseNodeData } from './BaseNode'
 
-function SplitNodeInner({ id, data }: NodeProps<BaseNodeData>) {
+function SplitNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
   const t = useT()
   const { nodeData, duration, inFlow, outFlow } = data
   const cm = COLOR_MAP.split
   const outputs = nodeData.splitOutputs || []
 
   const actualOutputs = outputs.length > 0 ? outputs : [
-    { handle: 'out_0', label: 'Parte 1', value: 50 },
-    { handle: 'out_1', label: 'Parte 2', value: 50 },
+    { handle: 'out_0', label: t("label_part_n", { n: 1 }), value: 50 },
+    { handle: 'out_1', label: t("label_part_n", { n: 2 }), value: 50 },
   ]
 
   return (
@@ -34,7 +34,7 @@ function SplitNodeInner({ id, data }: NodeProps<BaseNodeData>) {
           <span className="text-2xl shrink-0">✂️</span>
           <div className="flex-1 min-w-0">
             <div className="text-lg font-bold truncate leading-tight" style={{ color: cm.tx }}>
-              {nodeData.title || 'Divisione'}
+              {nodeData.title || t("label_split_default")}
             </div>
             <div className="text-sm opacity-70" style={{ color: cm.tx }}>
               {t(cm.lbKey)} · {fmtDuration(duration)}

@@ -13,6 +13,12 @@ import {
   suggestForW,
 } from '@commons/utils/flour-manager'
 import type { FlourIngredient } from '@commons/types/recipe'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { resolve } from 'path'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 const makeFlour = (type: string, g: number): FlourIngredient => ({ id: 0, type, g, temp: null })
 
@@ -131,7 +137,7 @@ describe('FlourManager — blendFlourProperties', () => {
   })
 
   it('80/20 blend weights heavier flour more', () => {
-    const f1 = getFlour('gt_00_for') // W=290
+    getFlour('gt_00_for') // W=290
     const bp = blendFlourProperties([makeFlour('gt_00_for', 800), makeFlour('gt_00_deb', 200)])
     // Should be closer to 290 than to 130
     expect(bp.W).toBeGreaterThan(250)
@@ -160,19 +166,19 @@ describe('FlourManager — estimateW', () => {
 
 describe('FlourManager — classifyStrength', () => {
   it('classifies weak flour (W < 180)', () => {
-    expect(classifyStrength(130)).toBe('weak')
+    expect(classifyStrength(provider, 130)).toBe('weak')
   })
 
   it('classifies medium flour (180-260)', () => {
-    expect(classifyStrength(215)).toBe('medium')
+    expect(classifyStrength(provider, 215)).toBe('medium')
   })
 
   it('classifies strong flour (260-350)', () => {
-    expect(classifyStrength(290)).toBe('strong')
+    expect(classifyStrength(provider, 290)).toBe('strong')
   })
 
   it('classifies very_strong flour (> 350)', () => {
-    expect(classifyStrength(380)).toBe('very_strong')
+    expect(classifyStrength(provider, 380)).toBe('very_strong')
   })
 })
 
