@@ -14,8 +14,10 @@ export type { BakingProfile } from './baking-profiles'
 // ── Recipes — from local_data/recipes/ ────────────────────────
 export {
   RECIPE_0, RECIPE_1, RECIPE_2, RECIPE_3, RECIPE_4, RECIPE_5,
+  RECIPE_ML_MARGHERITA, RECIPE_ML_FUNGHI,
   DEFAULT_RECIPE, BASE_DOUGH_WEIGHT,
   RECIPE_LIST, RECIPES, getRecipeById,
+  RECIPES_V3, getRecipeByIdV3,
   type RecipeListEntry,
 } from './recipes'
 export { DEFAULT_RECIPE_V2, RECIPE_2_V2, RECIPE_3_V2 } from './recipes/recipes-v2'
