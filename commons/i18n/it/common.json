@@ -66,5 +66,7 @@
   "layer_type_ferment": "Fermentazione",
   "layer_type_ferment_desc": "Lattofermentazione, salamoia, aceto, starter",
   "layer_type_pastry": "Pasticceria",
-  "layer_type_pastry_desc": "Creme, meringhe, ganache, temperaggio, frolle"
+  "layer_type_pastry_desc": "Creme, meringhe, ganache, temperaggio, frolle",
+  "rise_method_room": "Ambiente",
+  "rise_method_fridge": "Frigo"
 }

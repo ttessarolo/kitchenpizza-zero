@@ -55,6 +55,8 @@ export function LeftSidebar() {
   const updateLayer = useRecipeFlowStore((s) => s.updateLayer)
   const inactiveLayerOpacity = useRecipeFlowStore((s) => s.inactiveLayerOpacity)
   const setInactiveLayerOpacity = useRecipeFlowStore((s) => s.setInactiveLayerOpacity)
+  const meta = useRecipeFlowStore((s) => s.meta)
+  const setMeta = useRecipeFlowStore((s) => s.setMeta)
 
   if (collapsed) {
     return (
@@ -89,112 +91,147 @@ export function LeftSidebar() {
         <ModeToggle />
       </div>
 
+      {/* Recipe details — always visible in both modes */}
+      <details open className="border-b border-border">
+        <summary className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
+          {t('section_recipe_details')}
+          <span className="text-[8px]">▾</span>
+        </summary>
+        <div className="px-3 pb-2 space-y-1.5">
+          <div>
+            <label className="text-[10px] text-muted-foreground">{t('label_recipe_name')}</label>
+            <input
+              type="text"
+              value={meta.name}
+              onChange={(e) => setMeta((m) => ({ ...m, name: e.target.value }))}
+              placeholder={t('label_recipe_name_placeholder')}
+              className="w-full text-xs border border-border rounded px-2 py-1 mt-0.5 outline-none focus:border-primary bg-background"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">{t('label_author')}</label>
+            <input
+              type="text"
+              value={meta.author}
+              onChange={(e) => setMeta((m) => ({ ...m, author: e.target.value }))}
+              placeholder={t('label_author_placeholder')}
+              className="w-full text-xs border border-border rounded px-2 py-1 mt-0.5 outline-none focus:border-primary bg-background"
+            />
+          </div>
+        </div>
+      </details>
+
       {/* Panoramica mode: show summary panel */}
       {viewMode === 'panoramica' ? (
         <PanoramicaSummaryPanel />
       ) : (
-        <>
-          {/* Inactive layer opacity slider */}
-          {layers.length >= 2 && (
-            <div className="px-3 py-1.5 border-b border-border flex items-center gap-2">
-              <span className="text-[9px] text-muted-foreground whitespace-nowrap">Opacity</span>
-              <input
-                type="range"
-                min={20} max={80} step={5}
-                value={Math.round(inactiveLayerOpacity * 100)}
-                onChange={(e) => setInactiveLayerOpacity(+e.target.value / 100)}
-                className="flex-1 accent-primary h-1"
-              />
-              <span className="text-[9px] text-muted-foreground tabular-nums w-7 text-right">
-                {Math.round(inactiveLayerOpacity * 100)}%
-              </span>
+        <details open className="border-b border-border flex-1 flex flex-col">
+          <summary className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
+            {t('layer_panel_title')}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setShowPicker(true) }}
+                className="w-5 h-5 rounded flex items-center justify-center text-primary hover:bg-primary/10 text-sm font-bold"
+                title={t('add_layer')}
+              >
+                +
+              </button>
+              <span className="text-[8px]">▾</span>
             </div>
-          )}
+          </summary>
+          <div className="flex-1 flex flex-col">
+            {/* Inactive layer opacity slider */}
+            {layers.length >= 2 && (
+              <div className="px-3 py-1.5 border-b border-border flex items-center gap-2">
+                <span className="text-[9px] text-muted-foreground whitespace-nowrap">Opacity</span>
+                <input
+                  type="range"
+                  min={20} max={80} step={5}
+                  value={Math.round(inactiveLayerOpacity * 100)}
+                  onChange={(e) => setInactiveLayerOpacity(+e.target.value / 100)}
+                  className="flex-1 accent-primary h-1"
+                />
+                <span className="text-[9px] text-muted-foreground tabular-nums w-7 text-right">
+                  {Math.round(inactiveLayerOpacity * 100)}%
+                </span>
+              </div>
+            )}
 
-          {/* Layer list */}
-          <div className="flex-1 px-1 py-1 space-y-0.5">
-            {layers.map((layer) => {
-              const isActive = layer.id === activeLayerId
-              return (
-                <div
-                  key={layer.id}
-                  onClick={() => setActiveLayer(layer.id)}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer ${
-                    layer.locked
-                      ? 'bg-amber-50 border border-amber-200 text-amber-700'
-                      : isActive
-                        ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-                        : 'text-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  <span
-                    className="w-3 h-3 rounded-sm shrink-0"
-                    style={{ backgroundColor: layer.color }}
-                  />
-                  <span className="flex-1 text-xs font-medium truncate">{layer.name}</span>
-                  <div className="flex items-center gap-0.5">
-                    {/* Visibility toggle */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        updateLayer(layer.id, { visible: !layer.visible })
-                      }}
-                      className={`w-5 h-5 rounded flex items-center justify-center text-[10px] hover:bg-muted ${
-                        layer.visible ? 'text-foreground' : 'text-muted-foreground/40'
-                      }`}
-                      title={layer.visible ? t('hide_layer') : t('show_layer')}
-                    >
-                      {layer.visible ? '\u{1F441}' : '\u{2014}'}
-                    </button>
-                    {/* Lock toggle */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        updateLayer(layer.id, { locked: !layer.locked })
-                      }}
-                      className={`w-5 h-5 rounded flex items-center justify-center text-[10px] hover:bg-muted ${
-                        layer.locked ? 'text-amber-600' : 'text-muted-foreground/40'
-                      }`}
-                      title={layer.locked ? t('unlock_layer') : t('lock_layer')}
-                    >
-                      {layer.locked ? '\u{1F512}' : '\u{1F513}'}
-                    </button>
-                    {/* Delete */}
-                    {layers.length > 1 && (
+            {/* Layer list */}
+            <div className="flex-1 px-1 py-1 space-y-0.5">
+              {layers.map((layer) => {
+                const isActive = layer.id === activeLayerId
+                return (
+                  <div
+                    key={layer.id}
+                    onClick={() => setActiveLayer(layer.id)}
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer ${
+                      layer.locked
+                        ? 'bg-gray-100 border border-gray-300 text-gray-500'
+                        : isActive
+                          ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+                          : 'text-foreground hover:bg-muted/50'
+                    }`}
+                  >
+                    <span
+                      className="w-3 h-3 rounded-sm shrink-0"
+                      style={{ backgroundColor: layer.color }}
+                    />
+                    <span className="flex-1 text-xs font-medium truncate">{layer.name}</span>
+                    <div className="flex items-center gap-0.5">
+                      {/* Visibility toggle */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          setDeleteLayerId(layer.id)
+                          updateLayer(layer.id, { visible: !layer.visible })
                         }}
-                        className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        title={t('remove_layer')}
+                        className={`w-5 h-5 rounded flex items-center justify-center text-[10px] hover:bg-muted ${
+                          layer.visible ? 'text-foreground' : 'text-muted-foreground/40'
+                        }`}
+                        title={layer.visible ? t('hide_layer') : t('show_layer')}
                       >
-                        ✕
+                        {layer.visible ? '\u{1F441}' : '\u{2014}'}
                       </button>
-                    )}
+                      {/* Lock toggle */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          updateLayer(layer.id, { locked: !layer.locked })
+                        }}
+                        className={`w-5 h-5 rounded flex items-center justify-center text-[10px] hover:bg-muted ${
+                          layer.locked ? 'text-amber-600' : 'text-muted-foreground/40'
+                        }`}
+                        title={layer.locked ? t('unlock_layer') : t('lock_layer')}
+                      >
+                        {layer.locked ? '\u{1F512}' : '\u{1F513}'}
+                      </button>
+                      {/* Delete */}
+                      {layers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeleteLayerId(layer.id)
+                          }}
+                          className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          title={t('remove_layer')}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Add layer */}
-          <div className="px-2 py-2 border-t border-border">
-            <button
-              type="button"
-              onClick={() => setShowPicker(true)}
-              className="w-full text-xs font-medium bg-background border border-border rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors"
-            >
-              + {t('add_layer')}
-            </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Layer type picker modal */}
           {showPicker && <LayerTypePicker onClose={() => setShowPicker(false)} />}
-        </>
+        </details>
       )}
 
       {/* Resize handle */}

@@ -160,32 +160,6 @@ export function RecipeToolbar() {
             </div>
           </AccordionSection>
 
-          {/* 1b. Dettagli ricetta */}
-          <AccordionSection title={t('section_recipe_details')} icon="📝">
-            <div className="space-y-2">
-              <div>
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_recipe_name')}</label>
-                <input
-                  type="text"
-                  value={meta.name}
-                  onChange={(e) => setMeta((m) => ({ ...m, name: e.target.value }))}
-                  placeholder={t('label_recipe_name_placeholder')}
-                  className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_author')}</label>
-                <input
-                  type="text"
-                  value={meta.author}
-                  onChange={(e) => setMeta((m) => ({ ...m, author: e.target.value }))}
-                  placeholder={t('label_author_placeholder')}
-                  className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-primary"
-                />
-              </div>
-            </div>
-          </AccordionSection>
-
           {/* 2. Porzionatura */}
           <AccordionSection title={t('section_portioning')} icon="📐">
             <PortioningSection

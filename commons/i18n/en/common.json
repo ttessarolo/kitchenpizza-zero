@@ -66,5 +66,7 @@
   "layer_type_ferment": "Fermentation",
   "layer_type_ferment_desc": "Lacto-fermentation, brine, vinegar, starter",
   "layer_type_pastry": "Pastry",
-  "layer_type_pastry_desc": "Creams, meringues, ganache, tempering, pastry dough"
+  "layer_type_pastry_desc": "Creams, meringues, ganache, tempering, pastry dough",
+  "rise_method_room": "Room temp",
+  "rise_method_fridge": "Fridge"
 }

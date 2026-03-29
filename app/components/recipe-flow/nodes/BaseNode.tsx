@@ -37,7 +37,7 @@ function getPreview(type: NodeTypeKey, d: NodeData, t: (key: string, vars?: Reco
     parts.push(`${d.ovenCfg.temp}°C`)
     if (d.ovenCfg.ovenMode) parts.push(d.ovenCfg.ovenMode === 'fan' ? t('oven_mode_fan_short') : t('oven_mode_static_short'))
   } else if (type === 'rise' && d.riseMethod) {
-    const methods: Record<string, string> = { room: 'Ambiente', fridge: 'Frigo', ctrl18: '18°C', ctrl12: '12°C' }
+    const methods: Record<string, string> = { room: t('rise_method_room'), fridge: t('rise_method_fridge'), ctrl18: '18°C', ctrl12: '12°C' }
     parts.push(methods[d.riseMethod] || d.riseMethod)
   } else if (type === 'shape' && d.shapeCount) {
     parts.push(`${d.shapeCount} ${t('label_pieces_unit')}`)
@@ -85,8 +85,8 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
       }}
     >
       {layerLocked && (
-        <div className="absolute top-1.5 right-1.5 z-10 flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 text-amber-600 text-[10px]">
-          🔒
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-600 text-white text-[9px] font-semibold uppercase tracking-wider shadow-sm">
+          🔒 {t('layer_locked')}
         </div>
       )}
       {/* Target handle (top) */}

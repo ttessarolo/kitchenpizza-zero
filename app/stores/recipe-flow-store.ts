@@ -1439,6 +1439,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         return {
           layers: filtered,
           crossEdges: newCrossEdges,
+          ...rebuildAllFlowNodes({ ...s, layers: filtered, crossEdges: newCrossEdges }),
         }
       })
     },
