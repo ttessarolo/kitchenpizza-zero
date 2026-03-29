@@ -1465,8 +1465,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     updateLayer: (layerId, patch) => {
       set((s) => {
         const newLayers = s.layers.map(l => l.id === layerId ? { ...l, ...patch } : l)
-        // If visibility changed, rebuild flow to show/hide inactive layer
-        if ('visible' in patch) {
+        // If visibility or locked changed, rebuild flow to reflect on canvas
+        if ('visible' in patch || 'locked' in patch) {
           return {
             layers: newLayers,
             ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
