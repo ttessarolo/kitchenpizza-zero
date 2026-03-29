@@ -42,6 +42,8 @@ export function LeftSidebar() {
   const setActiveLayer = useRecipeFlowStore((s) => s.setActiveLayer)
   const removeLayer = useRecipeFlowStore((s) => s.removeLayer)
   const updateLayer = useRecipeFlowStore((s) => s.updateLayer)
+  const inactiveLayerOpacity = useRecipeFlowStore((s) => s.inactiveLayerOpacity)
+  const setInactiveLayerOpacity = useRecipeFlowStore((s) => s.setInactiveLayerOpacity)
 
   if (collapsed) {
     return (
@@ -81,6 +83,23 @@ export function LeftSidebar() {
         <PanoramicaSummaryPanel />
       ) : (
         <>
+          {/* Inactive layer opacity slider */}
+          {layers.length >= 2 && (
+            <div className="px-3 py-1.5 border-b border-border flex items-center gap-2">
+              <span className="text-[9px] text-muted-foreground whitespace-nowrap">Opacity</span>
+              <input
+                type="range"
+                min={20} max={80} step={5}
+                value={Math.round(inactiveLayerOpacity * 100)}
+                onChange={(e) => setInactiveLayerOpacity(+e.target.value / 100)}
+                className="flex-1 accent-primary h-1"
+              />
+              <span className="text-[9px] text-muted-foreground tabular-nums w-7 text-right">
+                {Math.round(inactiveLayerOpacity * 100)}%
+              </span>
+            </div>
+          )}
+
           {/* Layer list */}
           <div className="flex-1 px-1 py-1 space-y-0.5">
             {layers.map((layer) => {

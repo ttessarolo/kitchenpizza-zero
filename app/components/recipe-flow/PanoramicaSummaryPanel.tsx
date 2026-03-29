@@ -257,22 +257,27 @@ export function PanoramicaSummaryPanel() {
   return (
     <div className="flex-1 overflow-y-auto text-xs">
       {/* Total Duration */}
-      <div className="p-3 border-b border-border">
-        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+      <details open className="border-b border-border">
+        <summary className="p-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
           {t('panoramica_total_duration')}
+          <span className="text-[8px] transition-transform [[open]>&]:rotate-180">&#9662;</span>
+        </summary>
+        <div className="px-3 pb-3">
+          <div className="text-xl font-bold text-primary">{formatDuration(result.totalDuration)}</div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">
+            {result.layers.length} {t('layers')} &middot; {result.layers.reduce((a, l) => a + l.nodeCount, 0)} {t('nodes')}
+          </div>
         </div>
-        <div className="text-xl font-bold text-primary">{formatDuration(result.totalDuration)}</div>
-        <div className="text-[10px] text-muted-foreground mt-0.5">
-          {result.layers.length} {t('layers')} &middot; {result.layers.reduce((a, l) => a + l.nodeCount, 0)} {t('nodes')}
-        </div>
-      </div>
+      </details>
 
       {/* Ingredienti */}
       {ingredientsByLayer.size > 0 && (
-        <div className="p-3 border-b border-border">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+        <details open className="border-b border-border">
+          <summary className="p-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
             {t('panoramica_ingredients')}
-          </div>
+            <span className="text-[8px] transition-transform [[open]>&]:rotate-180">&#9662;</span>
+          </summary>
+          <div className="px-3 pb-3">
 
           {/* Total aggregated ingredients */}
           {hasIngredients(totalIngredients) && (
@@ -388,15 +393,18 @@ export function PanoramicaSummaryPanel() {
               })}
             </div>
           </details>
-        </div>
+          </div>
+        </details>
       )}
 
-      {/* Cronogramma (Timeline) */}
+      {/* Cronoprogramma (Timeline) */}
       {timeline.length > 0 && (
-        <div className="p-3 border-b border-border">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            {t('panoramica_cronogramma')}
-          </div>
+        <details open className="border-b border-border">
+          <summary className="p-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
+            {t('panoramica_cronoprogramma')}
+            <span className="text-[8px] transition-transform [[open]>&]:rotate-180">&#9662;</span>
+          </summary>
+          <div className="px-3 pb-3">
           <div className="relative">
             {/* Vertical timeline line */}
             <div className="absolute left-[5px] top-1 bottom-1 w-px bg-border" />
@@ -485,15 +493,18 @@ export function PanoramicaSummaryPanel() {
               })()}
             </div>
           </div>
-        </div>
+          </div>
+        </details>
       )}
 
       {/* Cross-layer dependencies (compact) */}
       {result.crossDependencies.length > 0 && (
-        <div className="p-3">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+        <details open className="border-b border-border">
+          <summary className="p-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
             {t('panoramica_dependencies')}
-          </div>
+            <span className="text-[8px] transition-transform [[open]>&]:rotate-180">&#9662;</span>
+          </summary>
+          <div className="px-3 pb-3">
           <div className="space-y-0.5">
             {result.crossDependencies.map((dep) => {
               const srcLayer = layers.find((l) => l.id === dep.sourceLayerId)
@@ -515,7 +526,8 @@ export function PanoramicaSummaryPanel() {
               )
             })}
           </div>
-        </div>
+          </div>
+        </details>
       )}
     </div>
   )
