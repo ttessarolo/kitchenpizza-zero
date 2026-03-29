@@ -157,5 +157,60 @@
   "tip_rise_weak_long": "Weak flour with long fermentation: risk of over-proofing",
   "tip_rise_high_enzyme": "High enzymatic activity: check fermentation frequently",
 
-  "label_hydration_short": "Hydration:"
+  "label_hydration_short": "Hydration:",
+
+  "meta.piecewise.min_ferm_hours.name": "Min fermentation hours by flour W",
+  "meta.piecewise.min_ferm_hours.desc": "Minimum equivalent room-temperature fermentation hours based on flour W for proper gluten development.",
+
+  "meta.rule.total_fermentation_mismatch.name": "Fermentation time mismatch",
+  "meta.rule.total_fermentation_mismatch.desc": "Warning when equivalent fermentation hours differ >30% from portioning doughHours.",
+  "meta.rule.rise_phases_insufficient.name": "Rise phases insufficient",
+  "meta.rule.rise_phases_insufficient.desc": "Error when total equivalent fermentation is below minimum for flour W.",
+  "meta.rule.cold_rise_too_long.name": "Cold rise too long",
+  "meta.rule.cold_rise_too_long.desc": "Warning when a fridge rise exceeds 72 wall-clock hours — over-fermentation risk.",
+  "meta.rule.acclimatization_missing.name": "Acclimatization missing",
+  "meta.rule.acclimatization_missing.desc": "Info when a fridge rise is followed directly by bake without room-temp phase.",
+  "meta.rule.equiv_time_exceeds_w.name": "Equivalent time exceeds W capacity",
+  "meta.rule.equiv_time_exceeds_w.desc": "Warning when total equivalent room hours exceed flour W maximum rise capacity.",
+  "meta.rule.yeast_portioning_mismatch.name": "Yeast % mismatch",
+  "meta.rule.yeast_portioning_mismatch.desc": "Warning when portioning yeast% differs >20% from expected yeast% for actual graph phases.",
+
+  "warning.total_fermentation_mismatch": "Fermentation time mismatch: graph phases total {{equivalentRoomHours}}h equivalent, but settings expect {{doughHours}}h ({{mismatchPct}}% difference).",
+  "warning.rise_phases_insufficient": "Insufficient fermentation: only {{equivalentRoomHours}}h equivalent remain. Flour W{{flourW}} needs at least {{minHoursForW}}h.",
+  "warning.cold_rise_too_long": "Fridge rise exceeds {{maxFridgeWallHours}}h. Even with minimal yeast, over-fermentation is likely after 72h.",
+  "warning.acclimatization_missing": "No room-temperature phase after fridge rise \"{{fridgeNodeTitle}}\". Dough needs 30–60 min to warm up before baking.",
+  "warning.equivalent_time_exceeds_w_capacity": "Total equivalent fermentation ({{equivalentRoomHours}}h) exceeds flour W{{flourW}} capacity (max {{maxHoursForW}}h). Gluten network may degrade.",
+  "warning.yeast_portioning_mismatch": "Yeast % mismatch: settings have {{actualYeastPct}}% but actual graph phases suggest {{expectedYeastPct}}%.",
+
+  "action.sync_dough_hours": "Sync fermentation hours",
+  "action.sync_dough_hours.desc": "Update portioning doughHours to match the actual graph rise phases.",
+  "action.add_acclimatization": "Add room-temp phase",
+  "action.add_acclimatization.desc": "Add a 45-minute room-temperature rise after the fridge phase for dough acclimatization.",
+  "action.sync_yeast_pct": "Sync yeast %",
+  "action.sync_yeast_pct.desc": "Update portioning yeast% to match the expected value for current graph phases.",
+  "action.reduce_rise_to_max": "Reduce to max {{maxH}}h",
+  "action.increase_hydration": "Increase hydration",
+  "action.set_min_yeast": "Set minimum yeast",
+  "action.set_recommended_salt": "Set recommended salt",
+  "action.reduce_fridge_time": "Reduce to 72h",
+  "action.reduce_dough_hours": "Reduce fermentation hours",
+
+  "meta.formula.yeast_w_correction.name": "Yeast W correction factor",
+  "meta.formula.yeast_w_correction.desc": "Adjusts yeast percentage based on flour W strength. Higher W tolerates longer fermentation with less yeast.",
+  "variant.yeast_w.linear_280": "Linear W correction (ref 280)",
+  "variant.yeast_w.linear_280.desc": "Linear correction: factor = 280/W, clamped [0.6, 2.0]. W280 is neutral.",
+
+  "warning.flour_w_low_long_ferment": "Flour W{{flourW}} is weak for {{doughHours}}h fermentation. Flours below W180 degrade after 24h. Use a stronger flour or shorten fermentation.",
+  "warning.flour_w_high_low_hyd": "Strong flour (W{{flourW}}) with low hydration ({{hydration}}%). Strong flours need more water to develop gluten properly. Consider increasing hydration.",
+  "warning.gluten_free_with_yeast": "Gluten-free flour with yeast ({{yeastPct}}%). Without gluten, the dough cannot trap CO2 and will not rise. Use a gluten-containing flour or a chemical leavener.",
+  "warning.whole_grain_needs_hydration": "High whole-grain content ({{_wholeGrainPct}}%) with only {{hydration}}% hydration. Bran absorbs more water — increase hydration by 5-10%.",
+
+  "meta.rule.flour_w_low_long_ferment.name": "Weak flour with long fermentation",
+  "meta.rule.flour_w_low_long_ferment.desc": "Warns when flour W < 180 is used with fermentation > 24h.",
+  "meta.rule.flour_w_high_low_hyd.name": "Strong flour with low hydration",
+  "meta.rule.flour_w_high_low_hyd.desc": "Informs when strong flour needs more hydration.",
+  "meta.rule.gluten_free_with_yeast.name": "Gluten-free flour with yeast",
+  "meta.rule.gluten_free_with_yeast.desc": "Error when gluten-free flour is mixed with yeast.",
+  "meta.rule.whole_grain_needs_hydration.name": "Whole grain hydration",
+  "meta.rule.whole_grain_needs_hydration.desc": "Informs when whole grain needs higher hydration."
 }

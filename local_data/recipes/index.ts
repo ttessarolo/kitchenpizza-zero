@@ -36,7 +36,7 @@ export const RECIPE_LIST: RecipeListEntry[] = [
   { id: '2', name: 'Pane Casareccio con Biga', description: 'Pane rustico con prefermento biga al 80%', type: 'pane', subtype: 'pane_comune' },
   { id: '3', name: 'Pizza Bianca in Teglia alla Romana', description: 'Teglia romana ad alta idratazione', type: 'pizza', subtype: 'teglia_romana' },
   { id: '4', name: 'Treccia Bicolore Pomodoro e Basilico', description: 'Treccia con poolish e split/join', type: 'pane', subtype: 'pane_comune' },
-  { id: '5', name: 'Treccia Integrale-Bianca', description: 'Due impasti diversi che si uniscono', type: 'pane', subtype: 'pane_int' },
+  { id: '5', name: 'Pizza Margherita Napoletana', description: 'Pizza classica con lievitazione lunga in frigo', type: 'pizza', subtype: 'napoletana' },
 ]
 
 /** Lookup recipe by ID. */

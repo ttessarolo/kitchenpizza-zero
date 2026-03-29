@@ -43,7 +43,7 @@ export function makeRecipe(steps: RecipeStep[], groups = ['Impasto']): Recipe {
       tray: { preset: 't', l: 29, w: 8.5, h: 9, material: 'ci_lid', griglia: false, count: 1 },
       ball: { weight: 500, count: 2 },
       thickness: 0.6,
-      targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null,
+      targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null, flourMix: [], autoCorrect: false, reasoningLevel: 'medium',
     },
     ingredientGroups: groups,
     steps,
@@ -107,7 +107,7 @@ export function makeRecipeV2(graph: RecipeGraph, groups = ['Impasto']): RecipeV2
       tray: { preset: 't', l: 29, w: 8.5, h: 9, material: 'ci_lid', griglia: false, count: 1 },
       ball: { weight: 500, count: 2 },
       thickness: 0.6,
-      targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null,
+      targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null, flourMix: [], autoCorrect: false, reasoningLevel: 'medium',
     },
     ingredientGroups: groups,
     graph,
@@ -132,8 +132,9 @@ export function makePfCfg(overrides: Partial<PreFermentConfig> = {}): PreFerment
 // ── Warning / Advisory test helpers ──────────────────────────────
 
 /** Create a CookingConfig from a method name and arbitrary config fields */
-export function makeCookingCfg(method: string, cfg: Record<string, unknown>): CookingConfig {
-  return { method, cfg } as unknown as CookingConfig
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function makeCookingCfg(method: string, cfg: any): CookingConfig {
+  return { method, cfg } as CookingConfig
 }
 
 /** Create a default OvenConfig with optional overrides */
@@ -172,6 +173,9 @@ export function makeDefaultPortioning(overrides: Partial<Portioning> = {}): Port
     fatPct: 3,
     preImpasto: null,
     preFermento: null,
+    flourMix: [],
+    autoCorrect: false,
+    reasoningLevel: 'medium',
     ...overrides,
   }
 }
@@ -179,4 +183,36 @@ export function makeDefaultPortioning(overrides: Partial<Portioning> = {}): Port
 /** Create default recipe meta for tests */
 export function makeDefaultMeta(overrides: Partial<RecipeMeta> = {}): RecipeMeta {
   return { name: 'Test', author: '', type: 'pane', subtype: 'pane_comune', locale: 'it', ...overrides }
+}
+
+// ── Fermentation coherence test helpers ─────────────────────────
+
+/** Create a rise node with method and duration */
+export function makeRiseNode(id: string, baseDur: number, riseMethod = 'room', overrides: Partial<RecipeNode> = {}): RecipeNode {
+  return makeNode({
+    id,
+    type: 'rise',
+    ...overrides,
+    data: {
+      title: `Rise ${riseMethod}`,
+      riseMethod,
+      baseDur,
+      ...(overrides.data || {}),
+    },
+  })
+}
+
+/** Create a dough node with flour and typical ingredients */
+export function makeDoughNodeWithFlour(id: string, flourType = 'gt_00_deb', grams = 500): RecipeNode {
+  return makeNode({
+    id,
+    type: 'dough',
+    data: {
+      title: 'Impasto',
+      flours: [{ id: 1, type: flourType, g: grams, temp: null }],
+      liquids: [{ id: 1, type: 'water', g: Math.round(grams * 0.65), temp: null }],
+      yeasts: [{ id: 1, type: 'fresh', g: Math.round(grams * 0.0022 * 100) / 100 }],
+      salts: [{ id: 1, type: 'sale', g: Math.round(grams * 0.023 * 100) / 100 }],
+    },
+  })
 }

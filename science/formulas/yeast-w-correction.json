@@ -1,0 +1,28 @@
+{
+  "type": "formula",
+  "id": "yeast_w_correction",
+  "ref": "[C] Cap. 44 — W correction for yeast",
+  "_meta": {
+    "section": "dough",
+    "displayName": "meta.formula.yeast_w_correction.name",
+    "description": "meta.formula.yeast_w_correction.desc",
+    "tags": ["yeast", "flour", "W", "correction"],
+    "lastModified": "2026-03-28",
+    "author": "system"
+  },
+  "variants": [
+    {
+      "key": "linear_280",
+      "nameKey": "variant.yeast_w.linear_280",
+      "descriptionKey": "variant.yeast_w.linear_280.desc",
+      "expression": "max(MIN_FACTOR, min(MAX_FACTOR, REF_W / W))",
+      "constants": { "REF_W": 280, "MIN_FACTOR": 0.6, "MAX_FACTOR": 2.0 },
+      "default": true
+    }
+  ],
+  "inputs": ["W"],
+  "output": { "name": "correctionFactor", "unit": "ratio", "round": 3 },
+  "validation": {
+    "W": { "min": 1, "max": 500 }
+  }
+}

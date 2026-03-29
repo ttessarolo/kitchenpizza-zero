@@ -11,6 +11,7 @@
   "btn_cancel": "Cancel",
   "btn_edit": "Edit",
   "btn_delete": "Delete",
+  "btn_delete_node": "Delete node",
   "btn_confirm": "Confirm",
   "btn_back": "Back",
   "btn_add": "Add",
@@ -28,5 +29,13 @@
   "admin_section_advisory": "Advisory",
   "admin_section_composition": "Composition",
   "admin_section_portioning": "Portioning",
-  "admin_section_other": "Other"
+  "admin_section_other": "Other",
+  "label_flour_mix": "Flour mix",
+  "label_flour_mix_placeholder": "Select flours...",
+  "label_flour_mix_count": "{{count}} flours selected",
+  "label_flour_mix_all": "All flours",
+  "label_estimated_w": "Est. W",
+  "label_blended_w": "Blended W",
+  "btn_select_all": "Select all",
+  "btn_deselect_all": "Deselect all"
 }

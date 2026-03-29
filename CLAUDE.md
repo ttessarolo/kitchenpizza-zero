@@ -463,6 +463,8 @@ CLIENT (React/Expo) → oRPC API (auth) → Manager (pure function) → Config (
 | **PortioningManager** | `portioning-manager.ts` | — | Pure math |
 | **IngredientManager** | `ingredient-manager.ts` | — | Pure aggregation |
 | **ScheduleManager** | `schedule-manager.ts` | — | Pure timeline |
+| **RecipeAutoCorrectManager** | `recipe-auto-correct-manager.ts` | Yes | Iterative constraint solver |
+| **GraphMutationEngine** | `graph-mutation-engine.ts` | — | Pure graph/portioning mutations |
 
 ### Dependency Hierarchy
 
@@ -478,6 +480,10 @@ pre-ferment-manager.ts
 portioning-manager.ts
   ↑
 graph-reconciler.service.ts (orchestrator — calls all managers)
+  ↑
+graph-mutation-engine.ts (pure graph/portioning mutations)
+  ↑
+recipe-auto-correct-manager.ts (iterative solver — calls reconciler + mutation engine)
 ```
 
 ### How to Create a New Manager
@@ -539,6 +545,125 @@ Every formula in a Manager MUST reference its scientific source:
 - **[C]** = Casucci "La Pizza è un Arte" (2020) — chapters 01-69
 - **[M]** = Modernist Pizza Vol. 4 — sections by topic
 - Use the `bread-knowledge` skill to verify formulas against literature
+
+---
+
+## RecipeAutoCorrectManager — Iterative Constraint Solver
+
+### Problem
+
+Recipe warnings are **interdependent**: fixing one warning (e.g., reducing a rise duration to match flour W capacity) often resolves 2-3 other warnings (fermentation mismatch, yeast mismatch) as a cascade. A naive "apply each fix independently" approach fails because:
+
+1. Fixes reference stale context (`_ctx`) after the first mutation changes the graph
+2. Some warnings are **consequences** of the same root cause — fixing the root resolves all
+3. A fix can create NEW warnings that need further resolution
+
+### Solution: Iterative Constraint Solver
+
+**File:** `commons/utils/recipe-auto-correct-manager.ts`
+
+The `autoCorrectGraph()` function is a pure, iterative solver that:
+
+```
+for each round (up to maxRounds):
+  1. reconcileGraph() → collect all warnings
+  2. Sort warnings by priority TIER (structural first)
+  3. Apply highest-priority fix via pure mutation engine
+  4. reconcileGraph() again → verify improvement
+  5. If warning count decreased → COMMIT, continue
+     If warning count unchanged → SKIP this fix, try next
+     If max rounds reached → STOP, report 'ko'
+```
+
+### Warning Priority Tiers
+
+The solver applies fixes in scientifically-grounded priority order:
+
+| Tier | Warnings | Rationale | Scientific Basis |
+|------|----------|-----------|-----------------|
+| 1 | `flour_w_max_rise` (per-node) | Fix individual rise durations first — root cause | [C] Cap. 39: W determines max fermentation window |
+| 2 | `equivalent_time_exceeds_w_capacity`, `rise_phases_insufficient` | Graph-level aggregate after individual fixes | [C] Cap. 39: W capacity is absolute ceiling |
+| 3 | `total_fermentation_mismatch`, `yeast_portioning_mismatch` | Sync portioning to match graph — often auto-resolved by Tier 1 | [C] Cap. 44: Formula L ties yeast% to hours |
+| 4 | `cold_rise_too_long`, `acclimatization_missing` | Sequence/timing constraints — independent | [C] Cap. 31: 72h fridge limit, thermal shock |
+| 5 | All dough composition warnings | Independent range checks — fix in any order | Various |
+
+**Key insight:** Tier 1 fixes are **root causes**. Tier 2-3 warnings are often **consequences** that auto-resolve when Tier 1 is fixed. The solver exploits this dependency hierarchy.
+
+### Configuration
+
+```typescript
+interface AutoCorrectConfig {
+  autoCorrect: boolean                    // true = apply; false = analyze only
+  reasoningLevel: 'low' | 'medium' | 'high'  // max rounds: 3 / 5 / 8
+}
+```
+
+- **`autoCorrect: false`** — Returns sorted/analyzed warnings without modifying graph. Useful for "suggest but don't apply" UX.
+- **`reasoningLevel`** — Controls max iterations. `medium` (5 rounds) handles most recipes. `high` (8) for complex multi-dough graphs.
+
+### Report Structure
+
+```typescript
+interface AutoCorrectReport {
+  status: 'ok' | 'ko'                    // all resolved or some remain
+  steps: AutoCorrectStep[]               // what was tried, outcome per round
+  warningsResolved: number
+  warningsRemaining: ActionableWarning[]
+  roundsUsed: number
+  maxRounds: number
+}
+```
+
+Each step records: `round`, `warningId`, `outcome` ('applied' | 'skipped'), `warningsBefore`, `warningsAfter`. This enables the UI to show a summary banner and, in the future, a detailed step-by-step explanation.
+
+### Pure Mutation Engine
+
+**File:** `commons/utils/graph-mutation-engine.ts`
+
+Extracted from the store to enable pure (no-React, no-Zustand) graph mutations:
+
+- `resolveNodeRef(ref, sourceNodeId, nodes, edges)` — walks edges to resolve `self`, `upstream_dough`, `downstream_rise`, etc.
+- `resolvePatchValues(patch, nodeId, nodes, warning)` — resolves `_contextRef:key` and `_key` from `warning._ctx` and `messageVars`
+- `applyWarningActionPure(warning, actionIdx, graph, portioning)` — applies all mutations from one action, returns new graph + portioning
+
+Handles all mutation types: `updateNode`, `updatePortioning`, `addNodeAfter`, `removeNode`.
+
+### Integration
+
+**Store (`recipe-flow-store.ts`):**
+- `applyWarningAction(warning, idx)` → calls `applyWarningActionPure()` then `applyMutation()` for UI sync
+- `applyAllWarningActions()` → calls `autoCorrectGraph()` with `{ autoCorrect: true, reasoningLevel: 'medium' }`, stores report in `autoCorrectReport`
+
+**UI (`DoughCompositionPanel.tsx`):**
+- Shows `ActionableWarningBox` with deduplicated warnings + "Apply All" button
+- After auto-correct, shows report banner (green OK / amber KO) with summary
+
+**Programmatic (future oRPC):**
+- `autoCorrectGraph()` is a pure function — can be called from an oRPC procedure for headless recipe adaptation
+
+### Decisions
+
+1. **One fix per round** — The solver applies only the highest-priority fix per round, then re-reconciles. This ensures each subsequent fix sees fresh state and `_ctx`. Multi-fix-per-round was rejected because `_ctx` becomes stale after the first mutation.
+
+2. **Skip on no improvement** — If a fix doesn't reduce the warning count, it's added to `skippedIds` and not retried. This prevents infinite loops and correctly handles warnings whose suggested action is unhelpful (e.g., `equivalent_time_exceeds_w_capacity` action sets `doughHours` but doesn't change node durations).
+
+3. **SkippedIds in final status** — The 'ok'/'ko' determination excludes skipped warnings. If all resolvable issues are fixed but some un-fixable warnings remain, the report still shows 'ok'.
+
+4. **Pure mutation engine shared** — Both the store (single-action click) and the auto-correct manager (iterative solver) use the same `graph-mutation-engine.ts`. No logic duplication.
+
+5. **`_contextRef:` resolution** — Science JSON rules use `_contextRef:keyName` format in mutation patches. The engine strips the prefix and looks up the value in `warning._ctx`, with fallback to `messageVars`.
+
+### Future Improvements
+
+1. **Alternative actions** — At `high` reasoningLevel, try `action[1]` if `action[0]` fails (some warnings offer multiple fix strategies)
+2. **Multi-step combinations** — Detect when two fixes must be applied together (e.g., change flour type AND adjust hours simultaneously)
+3. **Flour suggestion** — When `equivalent_time_exceeds_w_capacity` fires, suggest a stronger flour from the catalog that matches the target fermentation hours
+4. **Phase redistribution** — Instead of just reducing individual rise durations, redistribute total fermentation time across phases optimally (use `suggestPhaseRedistribution()` from FermentationCoherenceManager)
+5. **Programmatic API** — Expose `autoCorrectGraph()` via oRPC procedure for headless recipe adaptation ("adapt this recipe to my flour/schedule")
+6. **User preference learning** — Track which fixes the user accepts vs. rejects, adjust priority ordering over time
+7. **Rollback granularity** — Currently skips on no improvement; could try partial rollback (undo last fix, try alternative) for more sophisticated solving
+8. **Conflict detection** — Pre-analyze which fixes conflict with each other before applying, to avoid wasted rounds
+9. **reasoningLevel expansion** — Beyond max iterations: control whether to consider cross-domain fixes (e.g., change flour to fix fermentation, not just reduce hours)
 
 ---
 
@@ -652,20 +777,93 @@ Every Manager that contains domain knowledge (formulas, thresholds, warnings, ca
 3. **ActionableWarning**: UI interface is purely i18n-native.
    - `messageKey: string` (mandatory)
    - `messageVars?: Record<string, unknown>`
+   - `sourceNodeId?: string` — which graph node triggered the warning (for red highlighting + per-node editor display)
+   - `_ctx?: Record<string, unknown>` — evaluation context for action mutations to resolve `_contextRef:` values
+   - `actions?: WarningAction[]` — actionable fix suggestions with `GraphMutation[]`
    - No `message: string` field
 
-4. **New Managers**: when creating a new Manager:
+4. **DedupedWarning**: UI display type extending `ActionableWarning` with `count: number` and `affectedNodeIds: string[]`. Used by `deduplicateWarnings()` (`commons/utils/warning-dedup.ts`) to group per-node markers by `messageKey` for display.
+
+5. **Warning Display**: Warnings appear in two places:
+   - **General Panel** (`DoughCompositionPanel`): all composition/fermentation warnings, deduplicated, with "Apply All" button that triggers `autoCorrectGraph()`
+   - **Node Editor** (`NodeDetailPanel`): per-node warnings filtered by `sourceNodeId === nodeId`, with individual action buttons
+
+6. **New Managers**: when creating a new Manager:
    a. Create JSON blocks in `/science/` (formulas, rules, catalogs, defaults)
    b. Add i18n keys to `/commons/i18n/{en,it}/science.json`
    c. Implement functions with `provider: ScienceProvider` as first param
    d. Use `toActionableWarnings()` to convert RuleResult → ActionableWarning
-   e. Write tests with FileScienceProvider
+   e. Add `sourceNodeId` to warnings so they appear in per-node editors
+   f. Add `actions` with `GraphMutation[]` so warnings are actionable
+   g. Write tests with FileScienceProvider
 
-5. **No human text in `/science/`**: only `messageKey`, `labelKey`, `titleKey`. Text lives in `/commons/i18n/`.
+7. **No human text in `/science/`**: only `messageKey`, `labelKey`, `titleKey`. Text lives in `/commons/i18n/`.
 
-6. **Schema**: all blocks must follow `cookingsciencebrain.schema.json`.
+8. **Schema**: all blocks must follow `cookingsciencebrain.schema.json`.
 
-7. **No legacy**: do not keep hardcoded "fallback" versions. If the logic is in JSON, the TypeScript code reads it from JSON. Period.
+9. **No legacy**: do not keep hardcoded "fallback" versions. If the logic is in JSON, the TypeScript code reads it from JSON. Period.
+
+---
+
+## Cross-Node Scientific Validation — MANDATORY
+
+**Every node type in the recipe graph MUST have cross-node scientific validation.** This is not optional. The graph reconciler validates individual nodes AND their coherence with upstream/downstream nodes. When adding a new node type, you MUST implement cross-node rules.
+
+### The FermentationCoherenceManager Pattern
+
+The `FermentationCoherenceManager` (`commons/utils/fermentation-coherence-manager.ts`) established the pattern for cross-node validation:
+
+1. **Equivalent metric**: convert heterogeneous phases to a comparable scale (e.g., equivalent room-temperature hours for rise phases with different methods)
+2. **Graph-level rules**: validate the aggregate of all related nodes, not just individual ones
+3. **Portioning coherence**: detect when portioning settings (doughHours, yeastPct) diverge from actual graph state
+4. **Sequence validation**: check node ordering constraints (e.g., fridge→bake needs acclimatization)
+5. **Visual feedback**: assign `sourceNodeId` on warnings so affected nodes turn red in the graph
+
+### Checklist for Adding a New Node Type
+
+When creating a new `NodeTypeKey`, you MUST complete ALL of these:
+
+- [ ] **Upstream constraints**: what upstream node types are required? What data must they provide?
+- [ ] **Downstream constraints**: what does this node demand from downstream nodes?
+- [ ] **Sequence rules**: is the node position in the graph constrained? (e.g., must follow X, cannot follow Y)
+- [ ] **Parameter coherence**: do this node's parameters depend on or conflict with other nodes' parameters?
+- [ ] **Science JSON rules**: create rule blocks in `/science/rules/` with `_meta.section` matching the domain
+- [ ] **i18n keys**: add messageKey, action labels to `commons/i18n/{en,it}/science.json`
+- [ ] **Manager function**: add validation function to existing or new `*-manager.ts` (pure function, ScienceProvider first param)
+- [ ] **Reconciler integration**: wire validation into `graph-reconciler.service.ts` (appropriate phase)
+- [ ] **Tests**: test all cross-node rules in `tests/` with synthetic graphs
+- [ ] **sourceNodeId**: assign to warnings targeting specific nodes for red highlighting
+- [ ] **UI filter**: ensure warning category appears in `DoughCompositionPanel.tsx` filter list
+
+### Cross-Node Constraints by Node Type
+
+| Node Type | Upstream Constraints | Downstream Constraints |
+|-----------|---------------------|----------------------|
+| **pre_dough** (autolisi) | None | Flour/water must be subset of dough node; duration vs W |
+| **pre_ferment** | None | Flour/water subtracted from dough; pH check; maturation state |
+| **dough** | Pre-ferment/autolisi flour+water balance | FDT determines all downstream fermentation speed |
+| **rest** | Duration proportional to W; puntata = 30-70% of total room-temp time | Must precede formatura |
+| **rise** | **FermentationCoherenceManager**: equiv hours, W capacity, yeast% match, acclimatization | Must reach target volume before bake |
+| **shape** | Requires relaxed dough (post-rest/rise); weight per piece from portioning | Determines geometry affecting bake time |
+| **pre_bake** | Sequence constraints (boil→bake, no oil before flour dust) | Must immediately precede bake |
+| **bake** | Temp/time from composition (W, hydration, thickness, sugar%) | Internal temp target |
+| **post_bake** | Cooling time before cut/wrap | Conservation constraints |
+| **split** | Percentages must sum to 100%; min weight per piece | Each branch independent |
+| **join** | Hydration compatibility (<15% diff); maturation compatibility | Combined params = weighted average |
+| **prep** | Depends on applicationTiming (pre_bake, post_bake) | Temperature/method compatibility with bake |
+| **done** | Terminal node | None |
+
+### Equivalent Room-Temperature Hours Model
+
+Rise phases at different temperatures are compared using **equivalent room-temperature hours**:
+
+```
+equivalentRoomHours = Σ(baseDur_i / 60 / tf_i)
+```
+
+Where `tf` is the rise method's time factor: room=1, fridge=3.6, ctrl18=1.4, ctrl12=2.2.
+
+This allows coherence checking across phases: e.g., 1h room + 18h fridge + 1.5h room = 1 + 5 + 1.5 = **7.5h equivalent**.
 
 ---
 

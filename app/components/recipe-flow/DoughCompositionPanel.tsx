@@ -5,6 +5,10 @@ import { rnd } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
 import { YEAST_TYPES } from '@/local_data'
 import { WarningCard } from './WarningCard'
+import { ActionableWarningBox } from './ActionableWarningBox'
+import { FlourMixSelector } from './FlourMixSelector'
+import { estimateBlendW, blendFlourProperties } from '@commons/utils/flour-manager'
+import { deduplicateWarnings } from '@commons/utils/warning-dedup'
 
 // ── Shared slider component ────────────────────────────────────
 
@@ -85,6 +89,13 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
   const fatPct = totalFlour > 0 ? Math.round(fatG / totalFlour * 1000) / 10 : 0
   const hyd = totalFlour > 0 ? Math.round(totalLiquid / totalFlour * 100) : 0
 
+  // Flour mix W for yeast correction
+  const flourMix = useRecipeFlowStore((s) => s.portioning.flourMix ?? [])
+  const allChainFlours = chainNodes.flatMap((n) => n.data.flours)
+  const flourW = allChainFlours.length > 0 && allChainFlours.some((f) => f.g > 0)
+    ? blendFlourProperties(allChainFlours).W
+    : estimateBlendW(flourMix)
+
   // Hours: use local state for smooth slider, fallback to estimate from yeast
   const estFromYeast = yeastPct > 0 ? Math.max(1, Math.min(96, Math.round(100000 / (hyd * 576 * yeastPct)))) : 18
   const doughHours = doughHoursLocal ?? estFromYeast
@@ -116,7 +127,7 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
   // Warnings come from the reconciler (store), filtered for composition category
   const storeWarnings = useRecipeFlowStore((s) => s.warnings)
   const warnings = storeWarnings.filter((w) =>
-    ['yeast', 'salt', 'fat', 'hydration', 'flour', 'general'].includes(w.category)
+    ['yeast', 'salt', 'fat', 'hydration', 'flour', 'general', 'fermentation'].includes(w.category)
   )
 
   // Scale ALL chain nodes proportionally when total flour changes
@@ -156,7 +167,7 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
     }
 
     // Recalculate yeast from Formula L (hydration changed → yeast amount changes)
-    const newYeastPct = calcYeastPctClient(doughHours, newHyd) // fresh-equivalent %
+    const newYeastPct = calcYeastPctClient(doughHours, newHyd, 24, flourW) // fresh-equivalent %
     if (newYeastPct > 0 && totalFlour > 0) {
       const freshG = rnd(totalFlour * newYeastPct / 100)
       const yeastType = (d.yeasts ?? [])[0]?.type || 'fresh'
@@ -169,6 +180,9 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
 
   return (
     <div>
+      {/* Flour mix selector */}
+      <FlourMixSelector />
+
       {/* Name — cosmetic, no reconciliation */}
       <div className="mb-2">
         <input
@@ -206,7 +220,7 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
           const hours = Math.round(v)
           setDoughHoursLocal(hours)
           // Inverse Formula L: change hours → recalculate yeast
-          const newYeastPct = calcYeastPctClient(hours, hyd || 60)
+          const newYeastPct = calcYeastPctClient(hours, hyd || 60, 24, flourW)
           setYeastPct(Math.round(newYeastPct * 100) / 100)
         }} />
 
@@ -220,13 +234,7 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
       <SliderRow icon="🫒" label={t('label_fats')} value={fatPct} min={0} max={25} step={0.5} unit="%"
         onChange={setFatPct} />
 
-      {warnings.length > 0 && (
-        <div className="mt-2 space-y-1.5">
-          {warnings.map((w) => (
-            <WarningCard key={w.id} warning={w as any} />
-          ))}
-        </div>
-      )}
+      <WarningSection warnings={warnings} />
     </div>
   )
 }
@@ -238,8 +246,9 @@ function GlobalCompositionSettings() {
   const portioning = useRecipeFlowStore((s) => s.portioning)
   const setPortioning = useRecipeFlowStore((s) => s.setPortioning)
 
-  const { doughHours, yeastPct, saltPct, fatPct, targetHyd, preImpasto, preFermento } = portioning
-  const suggestedYeast = calcYeastPctClient(doughHours, targetHyd || 60)
+  const { doughHours, yeastPct, saltPct, fatPct, targetHyd, preImpasto, preFermento, flourMix } = portioning
+  const globalFlourW = estimateBlendW(flourMix ?? [])
+  const suggestedYeast = calcYeastPctClient(doughHours, targetHyd || 60, 24, globalFlourW)
 
   function update(patch: Partial<typeof portioning>) {
     setPortioning((p) => ({ ...p, ...patch }))
@@ -248,11 +257,14 @@ function GlobalCompositionSettings() {
   // Warnings come from the reconciler (store), filtered for composition category
   const storeWarnings = useRecipeFlowStore((s) => s.warnings)
   const warnings = storeWarnings.filter((w) =>
-    ['yeast', 'salt', 'fat', 'hydration', 'flour', 'general'].includes(w.category)
+    ['yeast', 'salt', 'fat', 'hydration', 'flour', 'general', 'fermentation'].includes(w.category)
   )
 
   return (
     <div>
+      {/* Flour mix selector */}
+      <FlourMixSelector />
+
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("label_pre_dough")}</label>
@@ -280,7 +292,7 @@ function GlobalCompositionSettings() {
 
       <SliderRow icon="⏱" label={t('label_dough_duration')} value={doughHours} min={1} max={98} step={1} unit={t("label_hours")}
         onChange={(v) => {
-          const newYeast = calcYeastPctClient(v, targetHyd || 60)
+          const newYeast = calcYeastPctClient(v, targetHyd || 60, 24, globalFlourW)
           update({ doughHours: v, yeastPct: Math.round(newYeast * 1000) / 1000 })
         }} />
       <SliderRow icon="🍞" label={t('label_yeast')} value={Math.round(yeastPct * 100) / 100} min={0} max={3.5} step={0.01} unit="%"
@@ -291,10 +303,60 @@ function GlobalCompositionSettings() {
       <SliderRow icon="🫒" label={t('label_fats')} value={Math.round(fatPct * 10) / 10} min={0} max={25} step={0.5} unit="%"
         onChange={(v) => update({ fatPct: v })} />
 
-      {warnings.length > 0 && (
-        <div className="mt-2 space-y-1.5">
-          {warnings.map((w) => (
-            <WarningCard key={w.id} warning={w as any} />
+      <WarningSection warnings={warnings} />
+    </div>
+  )
+}
+
+// ── Shared warning section with deduplication + Apply All ────────
+
+function WarningSection({ warnings }: { warnings: import('@commons/types/recipe-graph').ActionableWarning[] }) {
+  const t = useT()
+  const applyAllWarningActions = useRecipeFlowStore((s) => s.applyAllWarningActions)
+  const autoCorrectReport = useRecipeFlowStore((s) => s.autoCorrectReport)
+
+  const deduped = deduplicateWarnings(warnings)
+  const actionable = deduped.filter((w) => w.actions && w.actions.length > 0)
+  const informational = deduped.filter((w) => !w.actions || w.actions.length === 0)
+
+  const hasWarnings = actionable.length > 0 || informational.length > 0
+  const hasReport = autoCorrectReport && autoCorrectReport.steps.length > 0
+
+  if (!hasWarnings && !hasReport) return null
+
+  return (
+    <div className="mt-2 space-y-2">
+      {/* Auto-correct report banner */}
+      {hasReport && !hasWarnings && (
+        <div className={`rounded-xl p-3 text-xs ${autoCorrectReport.status === 'ok' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">
+              {autoCorrectReport.status === 'ok'
+                ? `✓ ${t('auto_correct_ok', { count: autoCorrectReport.warningsResolved, rounds: autoCorrectReport.roundsUsed })}`
+                : `⚠ ${t('auto_correct_ko', { resolved: autoCorrectReport.warningsResolved, remaining: autoCorrectReport.warningsRemaining.filter(w => w.actions?.length).length })}`
+              }
+            </span>
+            <button
+              type="button"
+              onClick={() => useRecipeFlowStore.setState({ autoCorrectReport: null })}
+              className="text-[10px] opacity-50 hover:opacity-80"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {actionable.length > 0 && (
+        <ActionableWarningBox
+          warnings={actionable}
+          onApplyAll={() => applyAllWarningActions()}
+        />
+      )}
+      {informational.length > 0 && (
+        <div className="space-y-1.5">
+          {informational.map((w) => (
+            <WarningCard key={w.id} warning={w} count={w.count} />
           ))}
         </div>
       )}
@@ -302,97 +364,15 @@ function GlobalCompositionSettings() {
   )
 }
 
-// ── Main panel: multi-tab or global ─────────────────────────────
+// ── Main panel: single dough or global ───────────────────────────
 
 export function DoughCompositionPanel() {
-  const t = useT()
   const graph = useRecipeFlowStore((s) => s.graph)
-  const addRootNode = useRecipeFlowStore((s) => s.addRootNode)
-  const removeNode = useRecipeFlowStore((s) => s.removeNode)
   const doughNodes = graph.nodes.filter((n) => n.type === 'dough')
 
-  const [activeTabId, setActiveTabId] = useState<string | null>(null)
-  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
-
-  // If no dough nodes exist → show global settings for generation
   if (doughNodes.length === 0) {
     return <GlobalCompositionSettings />
   }
 
-  // Auto-select first tab if none selected
-  const activeId = activeTabId && doughNodes.some((n) => n.id === activeTabId)
-    ? activeTabId
-    : doughNodes[0].id
-
-  return (
-    <div>
-      {/* Tab bar */}
-      <div className="flex items-center gap-0.5 border-b border-border mb-2 overflow-x-auto">
-        {doughNodes.map((d) => (
-          <div key={d.id} className="flex items-center shrink-0">
-            <button
-              type="button"
-              onClick={() => setActiveTabId(d.id)}
-              className={`text-[11px] px-2.5 py-1.5 border-b-2 transition-colors ${
-                d.id === activeId
-                  ? 'border-primary text-primary font-semibold'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {d.data.title || t("label_dough_default")}
-            </button>
-            {doughNodes.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setConfirmRemoveId(d.id)}
-                className="text-[9px] text-red-400 hover:text-red-600 px-0.5"
-                title={t('btn_remove_dough')}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-        {doughNodes.length < 4 && (
-          <button
-            type="button"
-            onClick={() => addRootNode('dough')}
-            className="text-[11px] px-2 py-1.5 text-primary hover:bg-primary/5 rounded shrink-0"
-            title={t('btn_add_dough')}
-          >
-            +
-          </button>
-        )}
-      </div>
-
-      {/* Active tab content */}
-      <DoughTabContent nodeId={activeId} />
-
-      {/* Confirm remove dialog */}
-      {confirmRemoveId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl shadow-xl p-5 max-w-sm mx-4">
-            <div className="text-base font-bold text-foreground mb-2">{t('dialog_remove_dough_title')}</div>
-            <p className="text-sm text-muted-foreground mb-4">
-              {t('dialog_remove_dough_message')}
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setConfirmRemoveId(null)}
-                className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-[#faf8f5]">
-                {t('btn_cancel')}
-              </button>
-              <button type="button" onClick={() => {
-                removeNode(confirmRemoveId)
-                setConfirmRemoveId(null)
-                if (activeTabId === confirmRemoveId) setActiveTabId(null)
-              }}
-                className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">
-                {t('btn_delete')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
+  return <DoughTabContent nodeId={doughNodes[0].id} />
 }

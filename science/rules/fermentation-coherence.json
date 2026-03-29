@@ -1,0 +1,172 @@
+[
+  {
+    "type": "rule",
+    "id": "total_fermentation_mismatch",
+    "_meta": {
+      "section": "fermentation_coherence",
+      "displayName": "meta.rule.total_fermentation_mismatch.name",
+      "description": "meta.rule.total_fermentation_mismatch.desc",
+      "tags": ["fermentation", "coherence", "rise", "portioning"],
+      "lastModified": "2026-03-28",
+      "author": "system"
+    },
+    "category": "fermentation",
+    "severity": "warning",
+    "messageKey": "warning.total_fermentation_mismatch",
+    "messageVars": ["equivalentRoomHours", "doughHours", "mismatchPct"],
+    "conditions": [
+      { "field": "doughHours", "op": "gt", "value": 0 },
+      { "field": "_mismatchPct", "op": "gt", "value": 30 }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.sync_dough_hours",
+        "descriptionKey": "action.sync_dough_hours.desc",
+        "mutations": [
+          {
+            "type": "updatePortioning",
+            "patch": { "doughHours": "_contextRef:equivalentRoomHours" }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "rise_phases_insufficient",
+    "_meta": {
+      "section": "fermentation_coherence",
+      "displayName": "meta.rule.rise_phases_insufficient.name",
+      "description": "meta.rule.rise_phases_insufficient.desc",
+      "tags": ["fermentation", "coherence", "rise", "insufficient", "error"],
+      "lastModified": "2026-03-28",
+      "author": "system"
+    },
+    "category": "fermentation",
+    "severity": "error",
+    "messageKey": "warning.rise_phases_insufficient",
+    "messageVars": ["equivalentRoomHours", "minHoursForW", "flourW"],
+    "conditions": [
+      { "field": "equivalentRoomHours", "op": "lt", "value": "_minFermentationHoursForW" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "cold_rise_too_long",
+    "_meta": {
+      "section": "fermentation_coherence",
+      "displayName": "meta.rule.cold_rise_too_long.name",
+      "description": "meta.rule.cold_rise_too_long.desc",
+      "tags": ["fermentation", "coherence", "fridge", "over-fermentation"],
+      "lastModified": "2026-03-28",
+      "author": "system"
+    },
+    "category": "fermentation",
+    "severity": "warning",
+    "messageKey": "warning.cold_rise_too_long",
+    "messageVars": ["maxFridgeWallHours"],
+    "conditions": [
+      { "field": "maxFridgeWallHours", "op": "gt", "value": 72 }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.reduce_fridge_time",
+        "mutations": [{ "type": "updatePortioning", "patch": { "doughHours": 72 } }]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "acclimatization_missing",
+    "_meta": {
+      "section": "fermentation_coherence",
+      "displayName": "meta.rule.acclimatization_missing.name",
+      "description": "meta.rule.acclimatization_missing.desc",
+      "tags": ["fermentation", "coherence", "fridge", "acclimatization"],
+      "lastModified": "2026-03-28",
+      "author": "system"
+    },
+    "category": "fermentation",
+    "severity": "info",
+    "messageKey": "warning.acclimatization_missing",
+    "messageVars": ["fridgeNodeTitle", "fridgeNodeId"],
+    "conditions": [
+      { "field": "fridgeFollowedByBake", "op": "eq", "value": true }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.add_acclimatization",
+        "descriptionKey": "action.add_acclimatization.desc",
+        "mutations": [
+          {
+            "type": "addNodeAfter",
+            "afterNodeRef": { "ref": "self" },
+            "nodeType": "rise",
+            "patch": {
+              "title": "Acclimatazione",
+              "baseDur": 45,
+              "riseMethod": "room"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "equivalent_time_exceeds_w_capacity",
+    "_meta": {
+      "section": "fermentation_coherence",
+      "displayName": "meta.rule.equiv_time_exceeds_w.name",
+      "description": "meta.rule.equiv_time_exceeds_w.desc",
+      "tags": ["fermentation", "coherence", "flour", "W", "over-fermentation"],
+      "lastModified": "2026-03-28",
+      "author": "system"
+    },
+    "category": "fermentation",
+    "severity": "warning",
+    "messageKey": "warning.equivalent_time_exceeds_w_capacity",
+    "messageVars": ["equivalentRoomHours", "maxHoursForW", "flourW"],
+    "conditions": [
+      { "field": "equivalentRoomHours", "op": "gt", "value": "_maxRiseHoursForW" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.reduce_dough_hours",
+        "mutations": [{ "type": "updatePortioning", "patch": { "doughHours": "_contextRef:maxHoursForW" } }]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "yeast_portioning_mismatch",
+    "_meta": {
+      "section": "fermentation_coherence",
+      "displayName": "meta.rule.yeast_portioning_mismatch.name",
+      "description": "meta.rule.yeast_portioning_mismatch.desc",
+      "tags": ["fermentation", "coherence", "yeast", "portioning"],
+      "lastModified": "2026-03-28",
+      "author": "system"
+    },
+    "category": "fermentation",
+    "severity": "warning",
+    "messageKey": "warning.yeast_portioning_mismatch",
+    "messageVars": ["expectedYeastPct", "actualYeastPct"],
+    "conditions": [
+      { "field": "actualYeastPct", "op": "gt", "value": 0 },
+      { "field": "_yeastMismatchPct", "op": "gt", "value": 20 }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.sync_yeast_pct",
+        "descriptionKey": "action.sync_yeast_pct.desc",
+        "mutations": [
+          {
+            "type": "updatePortioning",
+            "patch": { "yeastPct": "_contextRef:expectedYeastPct" }
+          }
+        ]
+      }
+    ]
+  }
+]

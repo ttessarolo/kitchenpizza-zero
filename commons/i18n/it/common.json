@@ -11,6 +11,7 @@
   "btn_cancel": "Annulla",
   "btn_edit": "Modifica",
   "btn_delete": "Elimina",
+  "btn_delete_node": "Elimina nodo",
   "btn_confirm": "Conferma",
   "btn_back": "Indietro",
   "btn_add": "Aggiungi",
@@ -28,5 +29,13 @@
   "admin_section_advisory": "Advisory",
   "admin_section_composition": "Composizione",
   "admin_section_portioning": "Porzionatura",
-  "admin_section_other": "Altro"
+  "admin_section_other": "Altro",
+  "label_flour_mix": "Mix farine",
+  "label_flour_mix_placeholder": "Seleziona farine...",
+  "label_flour_mix_count": "{{count}} farine selezionate",
+  "label_flour_mix_all": "Tutte le farine",
+  "label_estimated_w": "W stimato",
+  "label_blended_w": "W miscela",
+  "btn_select_all": "Seleziona tutte",
+  "btn_deselect_all": "Deseleziona tutte"
 }

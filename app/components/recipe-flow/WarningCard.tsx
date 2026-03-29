@@ -28,11 +28,12 @@ const SEVERITY_STYLES = {
 
 interface WarningCardProps {
   warning: ActionableWarning
+  count?: number
   appliedAdvisoryIds?: Set<string>
   onDismiss?: () => void
 }
 
-export function WarningCard({ warning, appliedAdvisoryIds, onDismiss }: WarningCardProps) {
+export function WarningCard({ warning, count, appliedAdvisoryIds, onDismiss }: WarningCardProps) {
   const t = useT()
   const applyWarningAction = useRecipeFlowStore((s) => s.applyWarningAction)
   const style = SEVERITY_STYLES[warning.severity]
@@ -42,6 +43,9 @@ export function WarningCard({ warning, appliedAdvisoryIds, onDismiss }: WarningC
     <div className={`${style.bg} ${style.border} border rounded-xl p-3 ${style.text}`}>
       <div className="flex items-start gap-2">
         <span className="text-sm shrink-0 mt-0.5">{style.icon}</span>
+        {count != null && count > 1 && (
+          <span className="text-[10px] font-bold opacity-70 shrink-0 mt-0.5">{t('warning_affected_nodes', { count })}</span>
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-xs leading-relaxed">{t(warning.messageKey, warning.messageVars)}</p>
 
@@ -64,7 +68,7 @@ export function WarningCard({ warning, appliedAdvisoryIds, onDismiss }: WarningC
                     onClick={() => applyWarningAction(warning, i)}
                     className={`text-[10px] font-semibold text-white px-2.5 py-1 rounded-lg ${style.btnBg} transition-colors`}
                   >
-                    ✓ {t(action.labelKey)}
+                    ✓ {t(action.labelKey, warning.messageVars)}
                   </button>
                 )
               })}

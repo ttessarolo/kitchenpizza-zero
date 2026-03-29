@@ -29,11 +29,14 @@ import { graphToRecipeV1, stepToNodeData } from '@commons/utils/graph-adapter'
 import { computeGraphTotals, scaleNodeData } from '~/hooks/useGraphCalculator'
 import { generateDoughGraph } from '~/lib/generate-dough'
 import { RECIPE_SUBTYPES } from '@/local_data'
-import { getDoughDefaults, calcYeastPctClient } from '@commons/utils/dough-manager'
+import { getDoughDefaults, calcYeastPctClient, estimateBlendW } from '@commons/utils/dough-manager'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
 import { staticProvider } from '@commons/utils/science/static-science-provider'
 import type { NodeRef } from '@commons/types/recipe-graph'
 import type { ActionableWarning as RecipeWarning } from '@commons/types/recipe-graph'
+import type { AutoCorrectReport } from '@commons/types/auto-correct'
+import { applyWarningActionPure } from '@commons/utils/graph-mutation-engine'
+import { autoCorrectGraph } from '@commons/utils/recipe-auto-correct-manager'
 import type { BaseNodeData } from '~/components/recipe-flow/nodes/BaseNode'
 import { getNodeDuration } from '~/hooks/useGraphCalculator'
 
@@ -124,6 +127,7 @@ interface RecipeFlowState {
   removeDep: (nodeId: string, parentId: string) => void
   updateDep: (nodeId: string, parentId: string, field: 'wait' | 'grams', value: number) => void  // v1 compat: 'wait'→scheduleTimeRatio, 'grams'→scheduleQtyRatio
   warnings: RecipeWarning[]
+  autoCorrectReport: AutoCorrectReport | null
   selectedEdgeId: string | null
   edgeCalloutPos: { x: number; y: number } | null
   selectEdge: (id: string | null, pos?: { x: number; y: number }) => void
@@ -131,6 +135,7 @@ interface RecipeFlowState {
   setGlobalHydration: (h: number) => void
   handlePortioningChangeWithScale: (np: Portioning) => void
   applyWarningAction: (warning: import('@commons/types/recipe-graph').ActionableWarning, actionIdx: number) => void
+  applyAllWarningActions: () => void
   applyTypeDefaults: (typeKey: string, subtypeKey: string) => void
   resetRecipe: () => void
   generateDough: () => void
@@ -148,6 +153,17 @@ const REQUIRES_INPUT = new Set([
   'rise', 'shape', 'pre_bake', 'bake', 'post_bake', 'done', 'rest', 'join',
 ])
 
+/** Pre-compute set of node IDs with error/warning-level warnings (for red highlighting) */
+function buildCriticalWarningNodeIds(warnings: RecipeWarning[]): Set<string> {
+  const ids = new Set<string>()
+  for (const w of warnings) {
+    if (w.sourceNodeId && (w.severity === 'error' || w.severity === 'warning')) {
+      ids.add(w.sourceNodeId)
+    }
+  }
+  return ids
+}
+
 function syncFlowNodes(
   graph: RecipeGraph,
   meta: RecipeMeta,
@@ -155,8 +171,10 @@ function syncFlowNodes(
   onExpand: (id: string) => void,
   expandedNodeId?: string | null,
   peekNodeIds?: string[],
+  criticalWarningNodeIds?: Set<string>,
 ): Node<BaseNodeData>[] {
   const nodesWithIncoming = new Set(graph.edges.map((e) => e.target))
+  const nodesWithCriticalWarnings = criticalWarningNodeIds ?? new Set<string>()
 
   // ── Phase 1: Topological sort (Kahn's) ──
   const inDegree = new Map<string, number>()
@@ -249,7 +267,7 @@ function syncFlowNodes(
     const fn = toFlowNode(n, dur, onExpand)
     fn.data.isSelected = n.id === expandedNodeId
     fn.data.isPeek = peekNodeIds?.includes(n.id) ?? false
-    fn.data.isError = REQUIRES_INPUT.has(n.type) && !nodesWithIncoming.has(n.id)
+    fn.data.isError = (REQUIRES_INPUT.has(n.type) && !nodesWithIncoming.has(n.id)) || nodesWithCriticalWarnings.has(n.id)
     fn.data.inFlow = nodeInFlow.get(n.id) || []
     fn.data.outFlow = nodeOutFlow.get(n.id) || []
     return fn
@@ -302,7 +320,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         portioning: result.portioning,
         warnings: result.warnings,
         ingredientGroups: updatedGroups,
-        flowNodes: syncFlowNodes(result.graph, newMeta, result.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+        flowNodes: syncFlowNodes(result.graph, newMeta, result.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(result.warnings)),
         flowEdges: result.graph.edges.map(toFlowEdge),
       }
     })
@@ -319,7 +337,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       tray: { preset: 't', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
       ball: { weight: 250, count: 4 },
       thickness: 0.5,
-      targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null,
+      targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null, flourMix: [], autoCorrect: false, reasoningLevel: 'medium',
     },
     ingredientGroups: ['Impasto'],
     graph: { nodes: [], edges: [], lanes: [] },
@@ -333,6 +351,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     undoSnapshot: null,
     canUndo: false,
     warnings: [],
+    autoCorrectReport: null,
     selectedEdgeId: null,
     edgeCalloutPos: null,
     temperatureUnit: 'C' as TemperatureUnit,
@@ -370,7 +389,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const newGraph = { ...s.graph, edges: [...s.graph.edges, newEdge] }
         return {
           graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
           flowEdges: addEdge(
             { ...connection, type: 'recipe', data: newEdge.data },
             s.flowEdges,
@@ -401,7 +420,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         graph: result.graph,
         lanes: result.graph.lanes,
         warnings: result.warnings,
-        flowNodes: syncFlowNodes(result.graph, recipe.meta, result.portioning, onExpandHandler, null, []),
+        flowNodes: syncFlowNodes(result.graph, recipe.meta, result.portioning, onExpandHandler, null, [], buildCriticalWarningNodeIds(result.warnings)),
         flowEdges: result.graph.edges.map(toFlowEdge),
         selectedNodeId: null,
         expandedNodeId: null,
@@ -415,7 +434,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const newP = fn(s.portioning)
         return {
           portioning: newP,
-          flowNodes: syncFlowNodes(s.graph, s.meta, newP, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(s.graph, s.meta, newP, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
         }
       })
     },
@@ -428,7 +447,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         expandedNodeId: newExpanded,
         peekNodeIds: [],
         lastAddedNodeId: null,
-        flowNodes: syncFlowNodes(s.graph, s.meta, s.portioning, onExpandHandler, newExpanded, []),
+        flowNodes: syncFlowNodes(s.graph, s.meta, s.portioning, onExpandHandler, newExpanded, [], buildCriticalWarningNodeIds(s.warnings ?? [])),
       }
     }),
 
@@ -441,7 +460,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       return {
         peekNodeIds: newPeek,
         lastAddedNodeId: null,
-        flowNodes: syncFlowNodes(s.graph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, newPeek),
+        flowNodes: syncFlowNodes(s.graph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, newPeek, buildCriticalWarningNodeIds(s.warnings ?? [])),
       }
     }),
 
@@ -466,7 +485,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       set((s) => ({
         graph: undoSnapshot.graph,
         portioning: undoSnapshot.portioning,
-        flowNodes: syncFlowNodes(undoSnapshot.graph, s.meta, undoSnapshot.portioning, onExpandHandler, null, []),
+        flowNodes: syncFlowNodes(undoSnapshot.graph, s.meta, undoSnapshot.portioning, onExpandHandler, null, [], buildCriticalWarningNodeIds(s.warnings ?? [])),
         flowEdges: undoSnapshot.graph.edges.map(toFlowEdge),
         undoSnapshot: null,
         canUndo: false,
@@ -488,7 +507,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const newGraph = { ...s.graph, nodes: newNodes }
         return {
           graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
         }
       })
     },
@@ -564,7 +583,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         return {
           portioning: newPortioning,
           graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, newPortioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, newPortioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
         }
       })
     },
@@ -590,120 +609,32 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         return {
           portioning: np,
           graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, np, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, np, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
         }
       })
     },
 
-    // ── Apply type defaults ──────────────────────────────────────
-    // ── Execute warning action with relative ref resolution ─────
+    // ── Execute warning action via pure mutation engine ──────────
     applyWarningAction: (warning, actionIdx) => {
-      const action = warning.actions?.[actionIdx]
-      if (!action) return
-
       const s = get()
-      const srcId = warning.sourceNodeId
+      const { graph: newGraph, portioning: newPort } = applyWarningActionPure(
+        warning, actionIdx, s.graph, s.portioning,
+      )
+      applyMutation(() => ({ graph: newGraph, portioning: newPort }))
+    },
 
-      // Resolve relative ref → actual node ID
-      function resolveRef(ref: NodeRef): string | null {
-        if (ref.ref === 'self') return srcId ?? null
-        if (ref.ref === 'upstream_dough' && srcId) {
-          const visited = new Set<string>()
-          const queue = s.graph.edges.filter((e) => e.target === srcId).map((e) => e.source)
-          while (queue.length) {
-            const id = queue.shift()!
-            if (visited.has(id)) continue
-            visited.add(id)
-            const n = s.graph.nodes.find((x) => x.id === id)
-            if (n?.type === 'dough') return n.id
-            s.graph.edges.filter((e) => e.target === id).forEach((e) => queue.push(e.source))
-          }
-        }
-        if ((ref.ref === 'downstream_rise' || ref.ref === 'downstream_bake') && srcId) {
-          const targetType = ref.ref === 'downstream_rise' ? 'rise' : 'bake'
-          const visited = new Set<string>()
-          const queue = s.graph.edges.filter((e) => e.source === srcId).map((e) => e.target)
-          while (queue.length) {
-            const id = queue.shift()!
-            if (visited.has(id)) continue
-            visited.add(id)
-            const n = s.graph.nodes.find((x) => x.id === id)
-            if (n?.type === targetType) return n.id
-            s.graph.edges.filter((e) => e.source === id).forEach((e) => queue.push(e.target))
-          }
-        }
-        return null
-      }
-
-      // Resolve dotted paths in mutation patches (e.g., "ovenCfg.temp" → nested update)
-      // Resolve _contextRef values from the evaluation context (_ctx) or messageVars
-      function resolvePatch(rawPatch: Record<string, unknown>, nodeId: string): Record<string, unknown> {
-        const node = get().graph.nodes.find((n) => n.id === nodeId)
-        const ctx = warning._ctx ?? {}
-        const result: Record<string, unknown> = {}
-        for (const [key, val] of Object.entries(rawPatch)) {
-          // Resolve value references like "_suggestedTemp" from evaluation context
-          let resolvedVal = val
-          if (typeof val === 'string' && val.startsWith('_')) {
-            // Try full key in ctx first (e.g., "_suggestedTemp" → ctx._suggestedTemp)
-            if (ctx[val] !== undefined) {
-              resolvedVal = ctx[val]
-            } else if (warning.messageVars?.[val.slice(1)] !== undefined) {
-              // Fallback: strip underscore and try messageVars
-              resolvedVal = warning.messageVars[val.slice(1)]
-            }
-          }
-
-          if (key.includes('.')) {
-            // Dotted path: "ovenCfg.temp" → merge into nested object
-            const parts = key.split('.')
-            const topKey = parts[0]
-            const subKey = parts.slice(1).join('.')
-            const existing = (node?.data as any)?.[topKey] ?? result[topKey] ?? {}
-            result[topKey] = { ...(typeof existing === 'object' ? existing : {}), [subKey]: resolvedVal }
-          } else {
-            result[key] = resolvedVal
-          }
-        }
-        return result
-      }
-
-      for (const m of action.mutations) {
-        const targetId = 'target' in m ? resolveRef(m.target) : null
-        switch (m.type) {
-          case 'updateNode': {
-            if (targetId) {
-              const patch = resolvePatch(m.patch as Record<string, unknown>, targetId)
-              // Sync ovenCfg patch into cookingCfg for forno/pentola nodes
-              if (patch.ovenCfg) {
-                const node = get().graph.nodes.find((n) => n.id === targetId)
-                const cc = node?.data.cookingCfg
-                if (cc && (cc.method === 'forno' || cc.method === 'pentola')) {
-                  patch.cookingCfg = { ...cc, cfg: patch.ovenCfg }
-                }
-              }
-              get().updateNodeData(targetId, patch as any)
-            }
-            break
-          }
-          case 'addNodeAfter': {
-            const afterId = targetId ?? srcId
-            if (afterId) get().addNode(afterId, m.nodeType as any, m.subtype ?? null)
-            if (get().lastAddedNodeId) {
-              // Tag node with advisory source ID + apply provided data
-              const nodeData = { ...(m.data || {}), advisorySourceId: warning.id } as any
-              get().updateNodeCosmetic(get().lastAddedNodeId!, nodeData)
-            }
-            break
-          }
-          case 'removeNode':
-            if (targetId) get().removeNode(targetId)
-            break
-          case 'updatePortioning':
-            get().setPortioning((p) => ({ ...p, ...m.patch }))
-            break
-        }
-      }
+    // ── Apply all warnings via iterative auto-correct solver ──────
+    applyAllWarningActions: () => {
+      const s = get()
+      const result = autoCorrectGraph(
+        staticProvider, s.graph, s.portioning, s.meta,
+        { autoCorrect: true, reasoningLevel: s.portioning.reasoningLevel },
+      )
+      applyMutation(() => ({
+        graph: result.graph,
+        portioning: result.portioning,
+      }))
+      set({ autoCorrectReport: result.report })
     },
 
     applyTypeDefaults: (typeKey, subtypeKey) => {
@@ -723,7 +654,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       np.saltPct = doughDefs.saltPctDefault
       np.fatPct = doughDefs.fatPctDefault
       // Calculate yeast from Formula L
-      np.yeastPct = calcYeastPctClient(doughDefs.defaultDoughHours, np.targetHyd || 60)
+      np.yeastPct = calcYeastPctClient(doughDefs.defaultDoughHours, np.targetHyd || 60, 24, estimateBlendW(np.flourMix ?? []))
       get().handlePortioningChangeWithScale(np)
     },
 
@@ -752,7 +683,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         return {
           graph: newGraph,
           flowEdges: newGraph.edges.map(toFlowEdge),
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
           selectedEdgeId: s.selectedEdgeId === edgeId ? null : s.selectedEdgeId,
           edgeCalloutPos: null,
         }
@@ -773,7 +704,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         return {
           graph: newGraph,
           flowEdges: newGraph.edges.map(toFlowEdge),
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
         }
       })
     },
@@ -794,7 +725,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         return {
           graph: { ...newGraph, nodes: newNodes },
           flowEdges: newGraph.edges.map(toFlowEdge),
-          flowNodes: syncFlowNodes({ ...newGraph, nodes: newNodes }, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes({ ...newGraph, nodes: newNodes }, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
         }
       })
     },
@@ -834,11 +765,14 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
           thickness: d?.thickness || 0.5,
           targetHyd: d?.hyd || 65,
           doughHours: doughDefs.defaultDoughHours,
-          yeastPct: calcYeastPctClient(doughDefs.defaultDoughHours, d?.hyd || 65),
+          yeastPct: calcYeastPctClient(doughDefs.defaultDoughHours, d?.hyd || 65, 24, estimateBlendW([])),
           saltPct: doughDefs.saltPctDefault,
           fatPct: doughDefs.fatPctDefault,
           preImpasto: null,
           preFermento: null,
+          flourMix: [],
+          autoCorrect: false,
+          reasoningLevel: 'medium',
         }
 
         const emptyGraph: RecipeGraph = { nodes: [], edges: [], lanes: [] }
@@ -869,7 +803,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         })
         return {
           graph,
-          flowNodes: syncFlowNodes(graph, s.meta, s.portioning, onExpandHandler, null, []),
+          flowNodes: syncFlowNodes(graph, s.meta, s.portioning, onExpandHandler, null, [], buildCriticalWarningNodeIds(s.warnings ?? [])),
           flowEdges: graph.edges.map(toFlowEdge),
           expandedNodeId: null,
           peekNodeIds: [],
@@ -940,7 +874,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
         return {
           graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
           flowEdges: newGraph.edges.map(toFlowEdge),
           lastAddedNodeId: newId,
         }
@@ -1020,7 +954,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
         return {
           graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
           flowEdges: newGraph.edges.map(toFlowEdge),
           lastAddedNodeId: newId,
         }
@@ -1033,7 +967,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const newGraph = autoLayout(removeNodeFromGraph(id, s.graph))
         return {
           graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
           flowEdges: newGraph.edges.map(toFlowEdge),
           expandedNodeId: s.expandedNodeId === id ? null : s.expandedNodeId,
           selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
@@ -1046,7 +980,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const newGraph = autoLayout(s.graph)
         return {
           graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds),
+          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
         }
       })
     },

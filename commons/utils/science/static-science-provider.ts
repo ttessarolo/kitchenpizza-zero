@@ -22,6 +22,7 @@ import riseDuration from '@/science/formulas/rise-duration.json'
 import bakeDuration from '@/science/formulas/bake-duration.json'
 import composition from '@/science/formulas/composition.json'
 import doughTemp from '@/science/formulas/dough-temp.json'
+import yeastWCorrection from '@/science/formulas/yeast-w-correction.json'
 
 // Rules
 import doughWarnings from '@/science/rules/dough-warnings.json'
@@ -29,6 +30,7 @@ import bakingAdvisories from '@/science/rules/baking-advisories.json'
 import preBakeAdvisories from '@/science/rules/pre-bake-advisories.json'
 import preFermentValidation from '@/science/rules/pre-ferment-validation.json'
 import riseWarnings from '@/science/rules/rise-warnings.json'
+import fermentationCoherence from '@/science/rules/fermentation-coherence.json'
 
 // Catalogs
 import flours from '@/science/catalogs/flours.json'
@@ -44,15 +46,16 @@ import doughDefaults from '@/science/defaults/dough.json'
 // Classifications
 import flourStrength from '@/science/classifications/flour-strength.json'
 import riseCapacity from '@/science/classifications/rise-capacity.json'
+import minFermentationHours from '@/science/classifications/min-fermentation-hours.json'
 
 // ── Build indexes ─────────────────────────────────────────────────
 
 const allFiles = [
-  yeast, riseDuration, bakeDuration, composition, doughTemp,
-  doughWarnings, bakingAdvisories, preBakeAdvisories, preFermentValidation, riseWarnings,
+  yeast, riseDuration, bakeDuration, composition, doughTemp, yeastWCorrection,
+  doughWarnings, bakingAdvisories, preBakeAdvisories, preFermentValidation, riseWarnings, fermentationCoherence,
   flours, fats, bakingProfiles, ovenConfig, riseMethods, saltsSugars,
   doughDefaults,
-  flourStrength, riseCapacity,
+  flourStrength, riseCapacity, minFermentationHours,
 ]
 
 const blocks = new Map<string, ScienceBlock>()

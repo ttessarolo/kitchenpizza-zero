@@ -16,6 +16,7 @@ const portioningSchema = z.object({
   fatPct: z.number(),
   preImpasto: z.string().nullable(),
   preFermento: z.string().nullable(),
+  flourMix: z.array(z.string()).default([]),
 })
 
 export const calcTargetInputSchema = portioningSchema

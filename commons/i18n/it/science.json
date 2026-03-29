@@ -157,5 +157,60 @@
   "tip_rise_weak_long": "Farina debole con lievitazione lunga: rischio di over-proofing",
   "tip_rise_high_enzyme": "Attività enzimatica alta: controlla la lievitazione frequentemente",
 
-  "label_hydration_short": "Idrataz.:"
+  "label_hydration_short": "Idrataz.:",
+
+  "meta.piecewise.min_ferm_hours.name": "Ore min fermentazione per W",
+  "meta.piecewise.min_ferm_hours.desc": "Ore minime di fermentazione equivalente a temperatura ambiente in base al W farina per lo sviluppo del glutine.",
+
+  "meta.rule.total_fermentation_mismatch.name": "Mismatch tempo fermentazione",
+  "meta.rule.total_fermentation_mismatch.desc": "Warning quando le ore equivalenti di fermentazione differiscono >30% dal doughHours nel portioning.",
+  "meta.rule.rise_phases_insufficient.name": "Fasi lievitazione insufficienti",
+  "meta.rule.rise_phases_insufficient.desc": "Errore quando la fermentazione equivalente totale è sotto il minimo per il W farina.",
+  "meta.rule.cold_rise_too_long.name": "Lievitazione in frigo troppo lunga",
+  "meta.rule.cold_rise_too_long.desc": "Warning quando una lievitazione in frigo supera 72 ore — rischio di sovra-fermentazione.",
+  "meta.rule.acclimatization_missing.name": "Acclimatazione mancante",
+  "meta.rule.acclimatization_missing.desc": "Info quando un nodo frigo è seguito direttamente da cottura senza fase a temperatura ambiente.",
+  "meta.rule.equiv_time_exceeds_w.name": "Tempo equivalente supera capacità W",
+  "meta.rule.equiv_time_exceeds_w.desc": "Warning quando le ore equivalenti totali superano la capacità massima della farina.",
+  "meta.rule.yeast_portioning_mismatch.name": "Mismatch % lievito",
+  "meta.rule.yeast_portioning_mismatch.desc": "Warning quando la % lievito nel portioning differisce >20% da quella attesa per le fasi del grafo.",
+
+  "warning.total_fermentation_mismatch": "Mismatch tempo fermentazione: le fasi del grafo totalizzano {{equivalentRoomHours}}h equivalenti, ma i settings prevedono {{doughHours}}h ({{mismatchPct}}% di differenza).",
+  "warning.rise_phases_insufficient": "Fermentazione insufficiente: solo {{equivalentRoomHours}}h equivalenti rimaste. Farina W{{flourW}} richiede almeno {{minHoursForW}}h.",
+  "warning.cold_rise_too_long": "Lievitazione in frigo oltre {{maxFridgeWallHours}}h. Anche con lievito minimo, la sovra-fermentazione è probabile oltre le 72h.",
+  "warning.acclimatization_missing": "Nessuna fase a temperatura ambiente dopo la lievitazione in frigo \"{{fridgeNodeTitle}}\". L'impasto ha bisogno di 30–60 min per riscaldarsi prima della cottura.",
+  "warning.equivalent_time_exceeds_w_capacity": "Fermentazione equivalente totale ({{equivalentRoomHours}}h) supera la capacità della farina W{{flourW}} (max {{maxHoursForW}}h). La rete glutinica potrebbe degradarsi.",
+  "warning.yeast_portioning_mismatch": "Mismatch % lievito: i settings hanno {{actualYeastPct}}% ma le fasi del grafo suggeriscono {{expectedYeastPct}}%.",
+
+  "action.sync_dough_hours": "Sincronizza ore fermentazione",
+  "action.sync_dough_hours.desc": "Aggiorna le ore doughHours nel portioning per allinearle alle fasi di lievitazione del grafo.",
+  "action.add_acclimatization": "Aggiungi fase a temperatura ambiente",
+  "action.add_acclimatization.desc": "Aggiunge 45 minuti di lievitazione a temperatura ambiente dopo la fase in frigo per acclimatare l'impasto.",
+  "action.sync_yeast_pct": "Sincronizza % lievito",
+  "action.sync_yeast_pct.desc": "Aggiorna la % lievito nel portioning al valore atteso per le fasi attuali del grafo.",
+  "action.reduce_rise_to_max": "Riduci a max {{maxH}}h",
+  "action.increase_hydration": "Aumenta idratazione",
+  "action.set_min_yeast": "Imposta lievito minimo",
+  "action.set_recommended_salt": "Imposta sale raccomandato",
+  "action.reduce_fridge_time": "Riduci a 72h",
+  "action.reduce_dough_hours": "Riduci ore fermentazione",
+
+  "meta.formula.yeast_w_correction.name": "Fattore correzione W per lievito",
+  "meta.formula.yeast_w_correction.desc": "Corregge la percentuale di lievito in base al W della farina. W più alto tollera fermentazioni più lunghe con meno lievito.",
+  "variant.yeast_w.linear_280": "Correzione W lineare (rif. 280)",
+  "variant.yeast_w.linear_280.desc": "Correzione lineare: fattore = 280/W, limitato a [0.6, 2.0]. W280 è neutro.",
+
+  "warning.flour_w_low_long_ferment": "Farina W{{flourW}} troppo debole per {{doughHours}}h di fermentazione. Farine sotto W180 si degradano oltre le 24h. Usa una farina più forte o riduci i tempi.",
+  "warning.flour_w_high_low_hyd": "Farina forte (W{{flourW}}) con idratazione bassa ({{hydration}}%). Le farine forti necessitano di più acqua per sviluppare il glutine. Considera di aumentare l'idratazione.",
+  "warning.gluten_free_with_yeast": "Farina senza glutine con lievito ({{yeastPct}}%). Senza glutine l'impasto non può trattenere la CO2 e non lieviterà. Usa una farina con glutine o un agente lievitante chimico.",
+  "warning.whole_grain_needs_hydration": "Alto contenuto integrale ({{_wholeGrainPct}}%) con solo {{hydration}}% di idratazione. La crusca assorbe più acqua — aumenta l'idratazione del 5-10%.",
+
+  "meta.rule.flour_w_low_long_ferment.name": "Farina debole con fermentazione lunga",
+  "meta.rule.flour_w_low_long_ferment.desc": "Avviso quando farina W < 180 è usata con fermentazione > 24h.",
+  "meta.rule.flour_w_high_low_hyd.name": "Farina forte con idratazione bassa",
+  "meta.rule.flour_w_high_low_hyd.desc": "Info quando farina forte necessita più idratazione.",
+  "meta.rule.gluten_free_with_yeast.name": "Farina senza glutine con lievito",
+  "meta.rule.gluten_free_with_yeast.desc": "Errore quando farina senza glutine è usata con lievito.",
+  "meta.rule.whole_grain_needs_hydration.name": "Idratazione per integrale",
+  "meta.rule.whole_grain_needs_hydration.desc": "Info quando farina integrale necessita più idratazione."
 }

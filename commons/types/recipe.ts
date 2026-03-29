@@ -166,6 +166,11 @@ export interface Portioning {
   // Pre-techniques (used by "Genera Impasto" to build the node graph)
   preImpasto: string | null   // null | "tangzhong" | "autolisi"
   preFermento: string | null  // null | "biga" | "poolish" | "sponge" | "idrobiga" | "sourdough" | "old_dough"
+  // Flour mix selection (keys from FLOUR_CATALOG)
+  flourMix: string[]          // [] = all flours allowed (no filter)
+  // Auto-correct settings
+  autoCorrect: boolean                              // enable iterative constraint solver
+  reasoningLevel: 'low' | 'medium' | 'high'        // max solver iterations: 3 / 5 / 8
 }
 
 export interface RecipeMeta {

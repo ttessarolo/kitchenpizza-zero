@@ -101,6 +101,27 @@ export function blendFlourProperties(
 }
 
 /**
+ * Estimate blended W from flour keys using equal-weight assumption.
+ * Used for UI display before the user sets gram weights.
+ * For actual blends with gram weights, use blendFlourProperties().
+ *
+ * [C] Cap. 17-23 — W blends linearly for same-grain mixtures.
+ *
+ * @returns estimated W (integer), or 280 if keys is empty
+ */
+export function estimateBlendW(
+  keys: string[],
+  catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[],
+): number {
+  if (keys.length === 0) return 280
+  let totalW = 0
+  for (const key of keys) {
+    totalW += getFlour(key, catalog).W
+  }
+  return Math.round(totalW / keys.length)
+}
+
+/**
  * Estimate W strength from protein percentage.
  * Linear correlation for Italian soft wheat: W ≈ 22·protein - 70.
  * Clamped to [60, 420].

@@ -26,7 +26,7 @@ import { DOUGH_COMPOSITION_DEFAULTS, type DoughCompositionDefaults } from '../..
 // ── Re-exports from FlourManager (flour is lower-level) ────────
 // DoughManager depends on FlourManager for flour operations.
 // Re-exported so existing consumers of DoughManager still work.
-export { getFlour, blendFlourProperties, estimateW } from './flour-manager'
+export { getFlour, blendFlourProperties, estimateBlendW, estimateW } from './flour-manager'
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -60,9 +60,15 @@ export function calcYeastPct(
   hours: number,
   tempC = 24,
   variantKey?: string,
+  flourW?: number,
 ): number {
   if (hours <= 0 || tempC <= 0) return 0
-  return evaluateFormula(provider.getFormula('yeast_pct'), { hours, tempC }, variantKey)
+  const base = evaluateFormula(provider.getFormula('yeast_pct'), { hours, tempC }, variantKey)
+  if (flourW && flourW > 0) {
+    const correction = evaluateFormula(provider.getFormula('yeast_w_correction'), { W: flourW })
+    return Math.round(base * correction * 1000) / 1000
+  }
+  return base
 }
 
 /**
@@ -77,11 +83,17 @@ export function calcYeastPctClient(
   hours: number,
   hydration = 56,
   tempC = 24,
+  flourW?: number,
 ): number {
   if (hours <= 0 || tempC <= 0) return 0
   const K = 100000
   const raw = K / (hydration * tempC * tempC * hours)
-  return Math.round(raw * 1000) / 1000
+  let result = Math.round(raw * 1000) / 1000
+  if (flourW && flourW > 0) {
+    const correction = Math.max(0.6, Math.min(2.0, 280 / flourW))
+    result = Math.round(result * correction * 1000) / 1000
+  }
+  return result
 }
 
 /** Convert yeast percentage to grams given flour weight. */
@@ -187,8 +199,11 @@ export interface DoughProfileInput {
   saltPct: number
   fatPct: number
   hydration: number
+  flourW: number                    // blended W of the flour mix
   recipeType: string
   recipeSubtype: string | null
+  _hasGlutenFreeFlour?: boolean     // any gluten-free flour in mix
+  _wholeGrainPct?: number           // % of whole-grain flour by weight
 }
 
 /**

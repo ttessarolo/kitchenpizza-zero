@@ -259,6 +259,7 @@ describe('DoughManager — getDoughWarnings', () => {
     saltPct: 2.3,
     fatPct: 0,
     hydration: 65,
+    flourW: 290,
     recipeType: 'pizza',
     recipeSubtype: 'napoletana',
   }

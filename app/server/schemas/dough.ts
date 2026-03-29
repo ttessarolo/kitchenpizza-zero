@@ -84,8 +84,11 @@ export const getWarningsInputSchema = z.object({
   saltPct: z.number(),
   fatPct: z.number(),
   hydration: z.number(),
+  flourW: z.number().default(280),
   recipeType: z.string(),
   recipeSubtype: z.string().nullable(),
+  _hasGlutenFreeFlour: z.boolean().optional(),
+  _wholeGrainPct: z.number().optional(),
 })
 
 const warningSchema = z.object({

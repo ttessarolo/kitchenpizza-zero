@@ -9,6 +9,7 @@ import { TimeSummary } from '~/components/recipe/TimeSummary'
 import { DoughCompositionPanel } from './DoughCompositionPanel'
 import { DoughTotalsPanel } from './DoughTotalsPanel'
 import { RECIPE_SUBTYPES } from '@/local_data'
+import { Switch } from '~/components/ui/switch'
 
 function AccordionSection({
   title,
@@ -48,6 +49,7 @@ export function RecipeToolbar() {
   const scaleAllNodes = useRecipeFlowStore((s) => s.scaleAllNodes)
   const setGlobalHydration = useRecipeFlowStore((s) => s.setGlobalHydration)
   const handlePortioningChangeWithScale = useRecipeFlowStore((s) => s.handlePortioningChangeWithScale)
+  const setPortioning = useRecipeFlowStore((s) => s.setPortioning)
   const applyTypeDefaults = useRecipeFlowStore((s) => s.applyTypeDefaults)
   const generateDough = useRecipeFlowStore((s) => s.generateDough)
   const graphEmpty = useRecipeFlowStore((s) => s.graph.nodes.length === 0)
@@ -124,6 +126,31 @@ export function RecipeToolbar() {
             applyTypeDefaults(meta.type, subtypeKey)
           }}
         />
+
+        {/* Auto-correct settings */}
+        <div className="mt-3 space-y-2">
+          <label className="flex items-center justify-between cursor-pointer">
+            <span className="text-xs font-medium">{t('label_auto_correct')}</span>
+            <Switch
+              checked={portioning.autoCorrect}
+              onCheckedChange={(checked) => setPortioning((p) => ({ ...p, autoCorrect: checked }))}
+            />
+          </label>
+          {portioning.autoCorrect && (
+            <div>
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_reasoning_level')}</label>
+              <select
+                value={portioning.reasoningLevel}
+                onChange={(e) => setPortioning((p) => ({ ...p, reasoningLevel: e.target.value as 'low' | 'medium' | 'high' }))}
+                className="w-full text-xs border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none"
+              >
+                <option value="low">{t('reasoning_low')}</option>
+                <option value="medium">{t('reasoning_medium')}</option>
+                <option value="high">{t('reasoning_high')}</option>
+              </select>
+            </div>
+          )}
+        </div>
       </AccordionSection>
 
       {/* 1b. Dettagli ricetta */}

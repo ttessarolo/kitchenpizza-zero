@@ -10,8 +10,16 @@ import { StepBody } from '~/components/recipe/StepBody'
 import { SplitConfigPanel } from './SplitConfigPanel'
 import { JoinConfigPanel } from './JoinConfigPanel'
 import { COLOR_MAP, STEP_TYPES, KNEAD_METHODS } from '@/local_data'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '~/components/ui/alert-dialog'
 import { fmtDuration } from '@commons/utils/format'
 import { calcFinalDoughTemp } from '@commons/utils/dough-manager'
+import { WarningCard } from './WarningCard'
+import { ActionableWarningBox } from './ActionableWarningBox'
+import { deduplicateWarnings } from '@commons/utils/warning-dedup'
+import type { ActionableWarning } from '@commons/types/recipe-graph'
 import type { RecipeCalculator } from '~/hooks/useRecipeCalculator'
 import type { RecipeStep, Recipe } from '@commons/types/recipe'
 
@@ -40,6 +48,8 @@ function SinglePanel({
   const storeAddDep = useRecipeFlowStore((s) => s.addDep)
   const storeRemoveDep = useRecipeFlowStore((s) => s.removeDep)
   const storeUpdateDep = useRecipeFlowStore((s) => s.updateDep)
+  const storeWarnings = useRecipeFlowStore((s) => s.warnings)
+  const nodeWarnings = storeWarnings.filter((w) => w.sourceNodeId === nodeId)
 
   const node = graph.nodes.find((n) => n.id === nodeId)
 
@@ -178,16 +188,6 @@ function SinglePanel({
             {t(cm.lbKey)} · {fmtDuration(getNodeDuration(node, meta.type, meta.subtype, portioning.thickness))}
           </div>
         </div>
-        {!isPeek && (
-          <button
-            type="button"
-            onClick={() => removeNode(nodeId)}
-            className="w-7 h-7 rounded-md flex items-center justify-center text-xs bg-red-50 text-red-600 hover:bg-red-100"
-            title={t('btn_delete')}
-          >
-            ✕
-          </button>
-        )}
         <button
           type="button"
           onClick={onClose}
@@ -197,6 +197,11 @@ function SinglePanel({
           ▶
         </button>
       </div>
+
+      {/* Per-node warnings */}
+      {nodeWarnings.length > 0 && (
+        <NodeWarningSection warnings={nodeWarnings} />
+      )}
 
       {/* StepBody with bridge context */}
       <div className="p-2 flex-1 overflow-y-auto">
@@ -214,6 +219,58 @@ function SinglePanel({
           <JoinConfigPanel nodeId={nodeId} />
         )}
       </div>
+
+      {/* Footer — Delete node */}
+      {!isPeek && (
+        <div className="sticky bottom-0 border-t bg-white px-3 py-2 shrink-0">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button type="button" className="w-full text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-md py-2 font-medium cursor-pointer">
+                {t('btn_delete_node')}
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('dialog_delete_step_title')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('dialog_delete_step_message', { title: node.data.title || t(typeEntry?.labelKey || node.type) })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('btn_cancel')}</AlertDialogCancel>
+                <AlertDialogAction onClick={() => removeNode(nodeId)} className="bg-red-600 hover:bg-red-700">
+                  {t('btn_delete')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Per-node warning section ─────────────────────────────────────
+
+function NodeWarningSection({ warnings }: { warnings: ActionableWarning[] }) {
+  const applyAllWarningActions = useRecipeFlowStore((s) => s.applyAllWarningActions)
+  if (warnings.length === 0) return null
+
+  const deduped = deduplicateWarnings(warnings)
+  const actionable = deduped.filter((w) => w.actions && w.actions.length > 0)
+  const informational = deduped.filter((w) => !w.actions || w.actions.length === 0)
+
+  return (
+    <div className="px-2 pt-2 space-y-1.5">
+      {actionable.length > 0 && (
+        <ActionableWarningBox
+          warnings={actionable}
+          onApplyAll={() => applyAllWarningActions()}
+        />
+      )}
+      {informational.map((w) => (
+        <WarningCard key={w.id} warning={w} />
+      ))}
     </div>
   )
 }

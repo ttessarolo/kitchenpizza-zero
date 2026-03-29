@@ -9,15 +9,15 @@ import { describe, it, expect } from 'vitest'
 import { resolve } from 'path'
 import { FileScienceProvider } from '@commons/utils/science/science-provider'
 import { getWarnings as getBakeWarnings } from '@commons/utils/bake-manager'
-import { getWarnings as getPreBakeWarnings, validateConfig as validatePreBakeConfig } from '@commons/utils/pre-bake-manager'
+import { getWarnings as getPreBakeWarnings } from '@commons/utils/pre-bake-manager'
 import { validatePreFerment } from '@commons/utils/pre-ferment-manager'
 import { getRiseWarnings } from '@commons/utils/rise-manager'
 import { getDoughWarnings } from '@commons/utils/dough-manager'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
 import { toActionableWarnings, evaluateRules } from '@commons/utils/science/rule-engine'
 import { makeNode, makeEdge, makeGraph, makePfCfg } from './synthetic_data/helpers'
-import type { CookingConfig, OvenConfig, PreBakeConfig, Portioning, RecipeMeta, PreFermentConfig } from '@commons/types/recipe'
-import type { NodeData, RecipeGraph } from '@commons/types/recipe-graph'
+import type { CookingConfig, OvenConfig, PreBakeConfig, Portioning, RecipeMeta } from '@commons/types/recipe'
+import type { NodeData } from '@commons/types/recipe-graph'
 
 // ── Provider setup ─────────────────────────────────────────────────
 
@@ -36,13 +36,14 @@ const defaultPortioning: Portioning = {
   mode: 'ball', tray: { preset: 't', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
   ball: { weight: 250, count: 4 }, thickness: 0.5, targetHyd: 65,
   doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3,
-  preImpasto: null, preFermento: null,
+  preImpasto: null, preFermento: null, flourMix: [], autoCorrect: false, reasoningLevel: 'medium',
 }
 
 const defaultMeta: RecipeMeta = { name: 'Test', author: '', type: 'pane', subtype: 'pane_comune', locale: 'it' }
 
-function makeCookingCfg(method: string, cfg: Record<string, unknown>): CookingConfig {
-  return { method, cfg } as unknown as CookingConfig
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeCookingCfg(method: string, cfg: any): CookingConfig {
+  return { method, cfg } as CookingConfig
 }
 
 function makeOvenCfg(overrides: Partial<OvenConfig> = {}): OvenConfig {
@@ -330,9 +331,6 @@ describe('Baking advisories — Pan', () => {
 
 describe('Baking advisories — Flour W', () => {
   it('flour_w_too_weak fires when flourW < 220', () => {
-    const cfg = makeCookingCfg('forno', makeOvenCfg({ temp: 300 }))
-    const nodeData: NodeData = { ...emptyNodeData }
-    const warnings = getBakeWarnings(provider, cfg, 'pizza', 'napoletana', 3, nodeData)
     // getBakeWarnings sets flourW=0 by default, and the rule requires flourW > 0 AND flourW < 220
     // We need to test via the rule engine directly since getBakeWarnings hardcodes flourW=0
     const rules = provider.getRules('baking')
@@ -521,6 +519,7 @@ describe('Dough warnings — composition', () => {
     saltPct: 2.3,
     fatPct: 0,
     hydration: 65,
+    flourW: 290,
     recipeType: 'pizza',
     recipeSubtype: 'napoletana',
   }
@@ -770,7 +769,7 @@ describe('Advisory deduplication', () => {
 describe('Exclusions & Suppression', () => {
   it('fat_extreme excluded for dolce recipe type', () => {
     const w = getDoughWarnings(provider, {
-      doughHours: 18, yeastPct: 0.22, saltPct: 0.8,
+      doughHours: 18, yeastPct: 0.22, saltPct: 0.8, flourW: 290,
       fatPct: 18, hydration: 65, recipeType: 'dolce', recipeSubtype: 'brioche',
     })
     expect(w.find((w) => w.id === 'fat_extreme')).toBeUndefined()
@@ -778,7 +777,7 @@ describe('Exclusions & Suppression', () => {
 
   it('fat_extreme fires for non-dolce with same fatPct', () => {
     const w = getDoughWarnings(provider, {
-      doughHours: 18, yeastPct: 0.22, saltPct: 2.3,
+      doughHours: 18, yeastPct: 0.22, saltPct: 2.3, flourW: 290,
       fatPct: 18, hydration: 65, recipeType: 'pizza', recipeSubtype: 'napoletana',
     })
     expect(w.find((w) => w.id === 'fat_extreme')).toBeDefined()
@@ -878,5 +877,62 @@ describe('Pre-Bake validation rules', () => {
     const w = warnings.find((w) => w.id === 'steam_remove_for_crust')
     expect(w).toBeDefined()
     expect(w!.severity).toBe('info')
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════
+// W-AWARE FLOUR WARNINGS
+// ═══════════════════════════════════════════════════════════════
+
+describe('Dough warnings — W-aware flour rules', () => {
+  const base = {
+    doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 0,
+    hydration: 65, flourW: 290, recipeType: 'pizza', recipeSubtype: 'napoletana',
+  }
+
+  it('flour_w_low_long_ferment fires when W<180 AND hours>24', () => {
+    const w = getDoughWarnings(provider, { ...base, flourW: 130, doughHours: 48 })
+    expect(w.find((w) => w.id === 'flour_w_low_long_ferment')).toBeDefined()
+  })
+
+  it('flour_w_low_long_ferment does NOT fire when W>=180', () => {
+    const w = getDoughWarnings(provider, { ...base, flourW: 200, doughHours: 48 })
+    expect(w.find((w) => w.id === 'flour_w_low_long_ferment')).toBeUndefined()
+  })
+
+  it('flour_w_low_long_ferment does NOT fire when hours<=24', () => {
+    const w = getDoughWarnings(provider, { ...base, flourW: 130, doughHours: 12 })
+    expect(w.find((w) => w.id === 'flour_w_low_long_ferment')).toBeUndefined()
+  })
+
+  it('flour_w_high_low_hyd fires when W>320 AND hydration<55', () => {
+    const w = getDoughWarnings(provider, { ...base, flourW: 350, hydration: 50 })
+    expect(w.find((w) => w.id === 'flour_w_high_low_hyd')).toBeDefined()
+  })
+
+  it('flour_w_high_low_hyd does NOT fire when hydration>=55', () => {
+    const w = getDoughWarnings(provider, { ...base, flourW: 350, hydration: 65 })
+    expect(w.find((w) => w.id === 'flour_w_high_low_hyd')).toBeUndefined()
+  })
+
+  it('gluten_free_with_yeast fires when _hasGlutenFreeFlour AND yeast>0', () => {
+    const w = getDoughWarnings(provider, { ...base, _hasGlutenFreeFlour: true, yeastPct: 0.5 })
+    expect(w.find((w) => w.id === 'gluten_free_with_yeast')).toBeDefined()
+    expect(w.find((w) => w.id === 'gluten_free_with_yeast')!.severity).toBe('error')
+  })
+
+  it('gluten_free_with_yeast does NOT fire without flag', () => {
+    const w = getDoughWarnings(provider, { ...base, yeastPct: 0.5 })
+    expect(w.find((w) => w.id === 'gluten_free_with_yeast')).toBeUndefined()
+  })
+
+  it('whole_grain_needs_hydration fires when _wholeGrainPct>30 AND hydration<65', () => {
+    const w = getDoughWarnings(provider, { ...base, _wholeGrainPct: 50, hydration: 55 })
+    expect(w.find((w) => w.id === 'whole_grain_needs_hydration')).toBeDefined()
+  })
+
+  it('whole_grain_needs_hydration does NOT fire when hydration>=65', () => {
+    const w = getDoughWarnings(provider, { ...base, _wholeGrainPct: 50, hydration: 70 })
+    expect(w.find((w) => w.id === 'whole_grain_needs_hydration')).toBeUndefined()
   })
 })

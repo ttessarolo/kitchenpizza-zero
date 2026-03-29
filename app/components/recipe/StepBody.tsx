@@ -48,6 +48,7 @@ export function StepBody({ step: s }: StepBodyProps) {
     totalDough,
   } = useRecipe()
   const { ingredientGroups: ig, steps: allSteps } = recipe
+  const flourMix = useRecipeFlowStore((s) => s.portioning.flourMix)
   const sF = s.flours.reduce((a, f) => a + f.g, 0)
   const sL = s.liquids.reduce((a, l) => a + l.g, 0)
   const sH = sF > 0 ? Math.round((sL / sF) * 100) : 0
@@ -435,6 +436,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                   <FlourPicker
                     value={item.type as string}
                     onChange={(v) => onU('type', v)}
+                    allowedKeys={flourMix?.length ? flourMix : undefined}
                   />
                   <div className="grid grid-cols-2 gap-1 mt-1">
                     <div className="flex items-center gap-0.5">

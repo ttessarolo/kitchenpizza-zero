@@ -320,11 +320,17 @@ export interface WarningAction {
 export interface ActionableWarning {
   id: string
   sourceNodeId?: string
-  category: 'yeast' | 'salt' | 'fat' | 'hydration' | 'temp' | 'baking' | 'flour' | 'steam' | 'general' | 'frying' | 'grilling' | 'pre_bake'
+  category: 'yeast' | 'salt' | 'fat' | 'hydration' | 'temp' | 'baking' | 'flour' | 'steam' | 'general' | 'frying' | 'grilling' | 'pre_bake' | 'fermentation'
   severity: 'info' | 'warning' | 'error'
   messageKey: string
   messageVars?: Record<string, unknown>
   /** Evaluation context for action mutations to resolve computed values */
   _ctx?: Record<string, unknown>
   actions?: WarningAction[]
+}
+
+/** A warning deduplicated for UI display — same messageKey grouped with count */
+export interface DedupedWarning extends ActionableWarning {
+  count: number
+  affectedNodeIds: string[]
 }

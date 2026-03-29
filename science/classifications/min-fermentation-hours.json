@@ -1,0 +1,23 @@
+{
+  "type": "piecewise",
+  "id": "min_fermentation_hours_for_W",
+  "ref": "[C] Cap. 44 — Minimum fermentation for gluten development",
+  "_meta": {
+    "section": "fermentation_coherence",
+    "displayName": "meta.piecewise.min_ferm_hours.name",
+    "description": "meta.piecewise.min_ferm_hours.desc",
+    "tags": ["rise", "flour", "W", "minimum", "fermentation"],
+    "lastModified": "2026-03-28",
+    "author": "system"
+  },
+  "input": "W",
+  "segments": [
+    { "gt": 380, "value": 4 },
+    { "gt": 320, "value": 3 },
+    { "gt": 290, "value": 2 },
+    { "gt": 220, "value": 1.5 },
+    { "gt": 180, "value": 1 }
+  ],
+  "default": 0.5,
+  "output": { "name": "minFermentationHours", "unit": "h" }
+}

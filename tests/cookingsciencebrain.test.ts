@@ -129,27 +129,27 @@ describe('CookingScienceBrain — getDoughWarnings', () => {
   const profiles: Array<{ label: string; profile: DoughProfileInput; expectIds: string[] }> = [
     {
       label: 'standard napoletana — no warnings',
-      profile: { doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 0, hydration: 65, recipeType: 'pizza', recipeSubtype: 'napoletana' },
+      profile: { doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 0, hydration: 65, flourW: 280, recipeType: 'pizza', recipeSubtype: 'napoletana' },
       expectIds: [],
     },
     {
       label: 'very low yeast',
-      profile: { doughHours: 18, yeastPct: 0.01, saltPct: 2.3, fatPct: 0, hydration: 65, recipeType: 'pizza', recipeSubtype: 'napoletana' },
+      profile: { doughHours: 18, yeastPct: 0.01, saltPct: 2.3, fatPct: 0, hydration: 65, flourW: 280, recipeType: 'pizza', recipeSubtype: 'napoletana' },
       expectIds: ['yeast_too_low'],
     },
     {
       label: 'very high yeast',
-      profile: { doughHours: 18, yeastPct: 4.0, saltPct: 2.3, fatPct: 0, hydration: 65, recipeType: 'pizza', recipeSubtype: 'napoletana' },
+      profile: { doughHours: 18, yeastPct: 4.0, saltPct: 2.3, fatPct: 0, hydration: 65, flourW: 280, recipeType: 'pizza', recipeSubtype: 'napoletana' },
       expectIds: ['yeast_too_high'],
     },
     {
       label: 'extreme hydration',
-      profile: { doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 0, hydration: 95, recipeType: 'pizza', recipeSubtype: 'napoletana' },
+      profile: { doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 0, hydration: 95, flourW: 280, recipeType: 'pizza', recipeSubtype: 'napoletana' },
       expectIds: ['hyd_extreme'],
     },
     {
       label: 'extreme duration',
-      profile: { doughHours: 96, yeastPct: 0.22, saltPct: 2.3, fatPct: 0, hydration: 65, recipeType: 'pizza', recipeSubtype: 'napoletana' },
+      profile: { doughHours: 96, yeastPct: 0.22, saltPct: 2.3, fatPct: 0, hydration: 65, flourW: 280, recipeType: 'pizza', recipeSubtype: 'napoletana' },
       expectIds: ['hours_extreme'],
     },
   ]
@@ -169,7 +169,7 @@ describe('CookingScienceBrain — getDoughWarnings', () => {
 
   it('all warnings have messageKey (never resolved text)', () => {
     const warnings = getDoughWarnings(provider, {
-      doughHours: 18, yeastPct: 0.01, saltPct: 2.3, fatPct: 0, hydration: 65,
+      doughHours: 18, yeastPct: 0.01, saltPct: 2.3, fatPct: 0, hydration: 65, flourW: 290,
       recipeType: 'pizza', recipeSubtype: 'napoletana',
     })
     for (const w of warnings) {

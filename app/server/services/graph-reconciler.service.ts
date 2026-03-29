@@ -37,6 +37,7 @@ import {
   getFatPct,
   maxRiseHoursForW,
 } from '@commons/utils/dough-manager'
+import { getFlour, isGlutenFree, isWholeGrain } from '@commons/utils/flour-manager'
 import {
   topologicalSortGraph,
   getNodeTotalWeight,
@@ -52,6 +53,7 @@ import { getDoughWarnings } from '@commons/utils/dough-manager'
 import { toActionableWarnings } from '@commons/utils/science/rule-engine'
 import { RISE_METHODS, YEAST_TYPES, FLOUR_CATALOG } from '../../../local_data'
 
+import { validateFermentationCoherence } from '@commons/utils/fermentation-coherence-manager'
 import type { ScienceProvider } from '@commons/utils/science/science-provider'
 
 // ── Result type ─────────────────────────────────────────────
@@ -232,6 +234,7 @@ export function reconcileGraph(
           if (riseHours > maxH) {
             warnings.push({
               id: `flour_w_${nodeRef.id}_${riseNode.id}`,
+              sourceNodeId: riseNode.id,
               category: 'flour',
               severity: 'warning',
               messageKey: 'flour_w_max_rise',
@@ -241,6 +244,11 @@ export function reconcileGraph(
                 riseTitle: riseNode.data.title,
                 riseHours: rnd(riseHours),
               },
+              _ctx: { _maxBaseDur: Math.round(maxH * 60) },
+              actions: [{
+                labelKey: 'action.reduce_rise_to_max',
+                mutations: [{ type: 'updateNode', target: { ref: 'self' }, patch: { baseDur: '_maxBaseDur', userOverrideDuration: true } }],
+              }],
             })
           }
         }
@@ -346,6 +354,7 @@ export function reconcileGraph(
       if (Math.abs(sum - 100) > 0.01) {
         warnings.push({
           id: `split_sum_${nodeRef.id}`,
+          sourceNodeId: nodeRef.id,
           category: 'general',
           severity: 'warning',
           messageKey: 'split_sum_not_100',
@@ -358,6 +367,58 @@ export function reconcileGraph(
     }
   }
 
+  // ── Phase 2.5: Cross-node fermentation coherence ──────────────
+  if (provider) {
+    const risePhases = nodes.filter((n) => n.type === 'rise').map((n) => {
+      const rm = n.data.riseMethod || 'room'
+      const rmEntry = RISE_METHODS.find((m) => m.key === rm)
+      return {
+        nodeId: n.id,
+        title: n.data.title,
+        riseMethod: rm,
+        baseDur: n.data.baseDur,
+        tf: rmEntry?.tf ?? 1,
+        userOverride: !!n.data.userOverrideDuration,
+      }
+    })
+
+    if (risePhases.length > 0) {
+      const mainDough = nodes.find((n) => n.type === 'dough')
+      const doughProps = mainDough ? doughPropsCache.get(mainDough.id) : null
+      const flourW = doughProps?.bp.W ?? 280
+      const nodeSequence = sorted.map((n) => ({
+        nodeId: n.id,
+        type: n.type,
+        riseMethod: n.data.riseMethod ?? undefined,
+      }))
+
+      const coherenceResults = validateFermentationCoherence(
+        provider,
+        risePhases,
+        { flourW, yeastPct: doughProps?.yPct ?? 0 },
+        { doughHours: portioning.doughHours, yeastPct: portioning.yeastPct },
+        { nodeSequence },
+      )
+      // Emit warnings: one canonical warning for the UI panel, plus per-node entries for red highlighting
+      const NODE_LEVEL_RULES = new Set(['rise_phases_insufficient', 'equivalent_time_exceeds_w_capacity', 'cold_rise_too_long'])
+      for (const r of coherenceResults) {
+        if (NODE_LEVEL_RULES.has(r.id)) {
+          // Canonical warning (no sourceNodeId) for the panel
+          warnings.push(...toActionableWarnings([r]))
+          // Per-node markers for red highlighting (unique IDs)
+          for (const p of risePhases) {
+            const [aw] = toActionableWarnings([r], p.nodeId)
+            warnings.push({ ...aw, id: `${aw.id}_${p.nodeId}`, actions: undefined })
+          }
+        } else if (r.id === 'acclimatization_missing' && r.messageVars?.fridgeNodeId) {
+          warnings.push(...toActionableWarnings([r], r.messageVars.fridgeNodeId as string))
+        } else {
+          warnings.push(...toActionableWarnings([r]))
+        }
+      }
+    }
+  }
+
   // Phase 3 REMOVED: portioning is the user's source of truth.
   // The reconciler does NOT overwrite portioning.thickness or ball.weight.
   // Only explicit user actions (scaleAllNodes, handlePortioningChangeWithScale) change portioning.
@@ -365,16 +426,35 @@ export function reconcileGraph(
   const newPortioning = { ...portioning }
 
   // ── Phase 4: Generate composition warnings ───────────────────
+  const mainDoughForWarnings = nodes.find((n) => n.type === 'dough')
+  const mainDoughProps = mainDoughForWarnings ? doughPropsCache.get(mainDoughForWarnings.id) : null
+  const warningFlourW = mainDoughProps?.bp.W ?? 280
+
+  const doughFlours = mainDoughForWarnings?.data.flours ?? []
+  const _hasGlutenFreeFlour = doughFlours.some((f) => {
+    const entry = getFlour(f.type)
+    return isGlutenFree(entry)
+  })
+  const totalFlourForWG = doughFlours.reduce((a, f) => a + f.g, 0)
+  const wholeGrainG = doughFlours.reduce((a, f) => {
+    const entry = getFlour(f.type)
+    return a + (isWholeGrain(entry) ? f.g : 0)
+  }, 0)
+  const _wholeGrainPct = totalFlourForWG > 0 ? Math.round(wholeGrainG / totalFlourForWG * 100) : 0
+
   const doughRuleResults = provider ? getDoughWarnings(provider, {
     doughHours: portioning.doughHours,
     yeastPct: portioning.yeastPct,
     saltPct: portioning.saltPct,
     fatPct: portioning.fatPct,
     hydration: totals.currentHydration || portioning.targetHyd,
+    flourW: warningFlourW,
+    _hasGlutenFreeFlour,
+    _wholeGrainPct,
     recipeType: meta.type,
     recipeSubtype: meta.subtype,
   }) : []
-  warnings.push(...toActionableWarnings(doughRuleResults))
+  warnings.push(...toActionableWarnings(doughRuleResults, mainDoughForWarnings?.id))
 
   // Autolisi + pre-ferment + high hydration warning
   const hasAutolisi = nodes.some((n) => n.type === 'pre_dough' && n.subtype === 'autolisi')

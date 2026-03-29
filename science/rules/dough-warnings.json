@@ -10,6 +10,12 @@
     "conditions": [
       { "field": "yeastPct", "op": "gt", "value": 0 },
       { "field": "yeastPct", "op": "lt", "value": 0.03 }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.set_min_yeast",
+        "mutations": [{ "type": "updatePortioning", "patch": { "yeastPct": 0.05 } }]
+      }
     ]
   },
   {
@@ -34,6 +40,12 @@
     "messageVars": ["saltPct", "recipeType", "_saltMin", "_saltMax"],
     "conditions": [
       { "field": "saltPct", "op": "lt", "value": "_saltMin" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.set_recommended_salt",
+        "mutations": [{ "type": "updatePortioning", "patch": { "saltPct": "_contextRef:_saltMin" } }]
+      }
     ]
   },
   {
@@ -46,6 +58,12 @@
     "messageVars": ["saltPct", "recipeType", "_saltMin", "_saltMax"],
     "conditions": [
       { "field": "saltPct", "op": "gt", "value": "_saltMax" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.set_recommended_salt",
+        "mutations": [{ "type": "updatePortioning", "patch": { "saltPct": "_contextRef:_saltMax" } }]
+      }
     ]
   },
   {
@@ -121,6 +139,77 @@
     "messageVars": ["doughHours"],
     "conditions": [
       { "field": "doughHours", "op": "gt", "value": 72 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "flour_w_low_long_ferment",
+    "_meta": { "section": "composition", "displayName": "meta.rule.flour_w_low_long_ferment.name", "description": "meta.rule.flour_w_low_long_ferment.desc", "tags": ["flour", "W", "fermentation"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "flour",
+    "severity": "warning",
+    "messageKey": "warning.flour_w_low_long_ferment",
+    "messageVars": ["flourW", "doughHours"],
+    "conditions": [
+      { "field": "flourW", "op": "gt", "value": 0 },
+      { "field": "flourW", "op": "lt", "value": 180 },
+      { "field": "doughHours", "op": "gt", "value": 24 }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.reduce_dough_hours",
+        "mutations": [{ "type": "updatePortioning", "patch": { "doughHours": 24 } }]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "flour_w_high_low_hyd",
+    "_meta": { "section": "composition", "displayName": "meta.rule.flour_w_high_low_hyd.name", "description": "meta.rule.flour_w_high_low_hyd.desc", "tags": ["flour", "W", "hydration"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "flour",
+    "severity": "info",
+    "messageKey": "warning.flour_w_high_low_hyd",
+    "messageVars": ["flourW", "hydration"],
+    "conditions": [
+      { "field": "flourW", "op": "gt", "value": 320 },
+      { "field": "hydration", "op": "lt", "value": 55 }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.increase_hydration",
+        "mutations": [{ "type": "updatePortioning", "patch": { "targetHyd": 65 } }]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "gluten_free_with_yeast",
+    "_meta": { "section": "composition", "displayName": "meta.rule.gluten_free_with_yeast.name", "description": "meta.rule.gluten_free_with_yeast.desc", "tags": ["flour", "gluten-free", "yeast"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "flour",
+    "severity": "error",
+    "messageKey": "warning.gluten_free_with_yeast",
+    "messageVars": ["yeastPct"],
+    "conditions": [
+      { "field": "_hasGlutenFreeFlour", "op": "eq", "value": true },
+      { "field": "yeastPct", "op": "gt", "value": 0 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "whole_grain_needs_hydration",
+    "_meta": { "section": "composition", "displayName": "meta.rule.whole_grain_needs_hydration.name", "description": "meta.rule.whole_grain_needs_hydration.desc", "tags": ["flour", "whole-grain", "hydration"], "lastModified": "2026-03-28", "author": "system" },
+    "category": "flour",
+    "severity": "info",
+    "messageKey": "warning.whole_grain_needs_hydration",
+    "messageVars": ["_wholeGrainPct", "hydration"],
+    "conditions": [
+      { "field": "_wholeGrainPct", "op": "gt", "value": 30 },
+      { "field": "hydration", "op": "lt", "value": 65 }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.increase_hydration",
+        "mutations": [{ "type": "updatePortioning", "patch": { "targetHyd": 70 } }]
+      }
     ]
   }
 ]

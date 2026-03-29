@@ -19,7 +19,7 @@ const defaultPortioning: Portioning = {
   mode: 'ball', tray: { preset: 't', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
   ball: { weight: 250, count: 4 }, thickness: 0.5, targetHyd: 65,
   doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3,
-  preImpasto: null, preFermento: null,
+  preImpasto: null, preFermento: null, flourMix: [], autoCorrect: false, reasoningLevel: 'medium',
 }
 const defaultMeta: RecipeMeta = { name: 'Test', author: '', type: 'pane', subtype: 'pane_comune', locale: 'it' }
 

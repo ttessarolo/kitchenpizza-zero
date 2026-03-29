@@ -18,7 +18,7 @@ const ballPortioning: Portioning = {
   ball: { weight: 250, count: 4 },
   thickness: 0.5,
   targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3,
-  preImpasto: null, preFermento: null,
+  preImpasto: null, preFermento: null, flourMix: [], autoCorrect: false, reasoningLevel: 'medium',
 }
 
 const trayPortioning: Portioning = {

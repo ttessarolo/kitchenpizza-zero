@@ -17,15 +17,20 @@ interface FlourPickerProps {
   onChange: (key: string) => void
   customFlours?: FlourCatalogEntry[]
   onAddCustomFlour?: (flour: FlourCatalogEntry) => void
+  /** When provided and non-empty, only show these flour keys from the catalog. */
+  allowedKeys?: string[]
 }
 
-export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlour }: FlourPickerProps) {
+export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlour, allowedKeys }: FlourPickerProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const allFlours = [...(FLOUR_CATALOG as unknown as FlourCatalogEntry[]), ...customFlours]
+  const baseCatalog = allowedKeys && allowedKeys.length > 0
+    ? (FLOUR_CATALOG as unknown as FlourCatalogEntry[]).filter((f) => allowedKeys.includes(f.key))
+    : (FLOUR_CATALOG as unknown as FlourCatalogEntry[])
+  const allFlours = [...baseCatalog, ...customFlours]
   const cur = customFlours.find((f) => f.key === value) || getFlour(value, FLOUR_CATALOG as unknown as FlourCatalogEntry[])
 
   useEffect(() => {
