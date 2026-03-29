@@ -3,17 +3,16 @@ import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { ModeToggle } from './ModeToggle'
 import { PanoramicaSummaryPanel } from './PanoramicaSummaryPanel'
-import { LAYER_TYPE_META, LAYER_TYPES } from '@commons/constants/layer-defaults'
-import type { LayerType } from '@commons/types/recipe-layers'
+import { LayerTypePicker } from './LayerTypePicker'
 
 export function LeftSidebar() {
   const [collapsed, setCollapsed] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
   const t = useT()
   const viewMode = useRecipeFlowStore((s) => s.viewMode)
   const layers = useRecipeFlowStore((s) => s.layers)
   const activeLayerId = useRecipeFlowStore((s) => s.activeLayerId)
   const setActiveLayer = useRecipeFlowStore((s) => s.setActiveLayer)
-  const addLayer = useRecipeFlowStore((s) => s.addLayer)
   const removeLayer = useRecipeFlowStore((s) => s.removeLayer)
   const updateLayer = useRecipeFlowStore((s) => s.updateLayer)
 
@@ -75,6 +74,7 @@ export function LeftSidebar() {
                   />
                   <span className="flex-1 text-xs font-medium truncate">{layer.name}</span>
                   <div className="flex items-center gap-0.5">
+                    {/* Visibility toggle */}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -86,14 +86,31 @@ export function LeftSidebar() {
                       }`}
                       title={layer.visible ? t('hide_layer') : t('show_layer')}
                     >
-                      {layer.visible ? '\u{1F441}' : '\u{1F441}\u200D\u{1F5E8}'}
+                      {layer.visible ? '\u{1F441}' : '\u{2014}'}
                     </button>
+                    {/* Lock toggle */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updateLayer(layer.id, { locked: !layer.locked })
+                      }}
+                      className={`w-5 h-5 rounded flex items-center justify-center text-[10px] hover:bg-muted ${
+                        layer.locked ? 'text-amber-600' : 'text-muted-foreground/40'
+                      }`}
+                      title={layer.locked ? t('unlock_layer') : t('lock_layer')}
+                    >
+                      {layer.locked ? '\u{1F512}' : '\u{1F513}'}
+                    </button>
+                    {/* Delete */}
                     {layers.length > 1 && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          removeLayer(layer.id)
+                          if (window.confirm(t('confirm_remove_layer'))) {
+                            removeLayer(layer.id)
+                          }
                         }}
                         className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         title={t('remove_layer')}
@@ -109,22 +126,17 @@ export function LeftSidebar() {
 
           {/* Add layer */}
           <div className="px-2 py-2 border-t border-border">
-            <select
-              onChange={(e) => {
-                if (e.target.value) {
-                  addLayer(e.target.value as LayerType)
-                  e.target.value = ''
-                }
-              }}
-              defaultValue=""
-              className="w-full text-xs bg-background border border-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+            <button
+              type="button"
+              onClick={() => setShowPicker(true)}
+              className="w-full text-xs font-medium bg-background border border-border rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors"
             >
-              <option value="" disabled>{t('add_layer')}</option>
-              {LAYER_TYPES.map((lt) => (
-                <option key={lt} value={lt}>{t(LAYER_TYPE_META[lt].labelKey)}</option>
-              ))}
-            </select>
+              + {t('add_layer')}
+            </button>
           </div>
+
+          {/* Layer type picker modal */}
+          {showPicker && <LayerTypePicker onClose={() => setShowPicker(false)} />}
         </>
       )}
     </div>

@@ -139,7 +139,7 @@ export function RecipeToolbar() {
               <label className="flex items-center justify-between cursor-pointer">
                 <span className="text-xs font-medium">{t('label_auto_correct')}</span>
                 <Switch
-                  checked={portioning.autoCorrect}
+                  checked={!!portioning.autoCorrect}
                   onCheckedChange={(checked) => setPortioning((p) => ({ ...p, autoCorrect: checked }))}
                 />
               </label>

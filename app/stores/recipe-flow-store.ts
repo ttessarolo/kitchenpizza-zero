@@ -39,6 +39,7 @@ import type { ActionableWarning as RecipeWarning } from '@commons/types/recipe-g
 import type { AutoCorrectReport } from '@commons/types/auto-correct'
 import { applyWarningActionPure } from '@commons/utils/graph-mutation-engine'
 import { autoCorrectGraph } from '@commons/utils/recipe-auto-correct-manager'
+import { computePanoramica } from '@commons/utils/panoramica-manager'
 import type { BaseNodeData } from '~/components/recipe-flow/nodes/BaseNode'
 import { getNodeDuration } from '~/hooks/useGraphCalculator'
 
@@ -1374,7 +1375,76 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       }))
     },
 
-    setViewMode: (mode) => set({ viewMode: mode }),
+    setViewMode: (mode) => {
+      if (mode === 'panoramica') {
+        const s = get()
+        const mergedNodes: Node<BaseNodeData>[] = []
+        const mergedEdges: Edge[] = []
+
+        // Compute panoramica for critical path info
+        const panoramica = computePanoramica(staticProvider, s.layers, s.crossEdges)
+        const criticalNodeIds = new Set<string>()
+        for (const layer of panoramica.layers) {
+          for (const nodeId of layer.criticalPath) {
+            criticalNodeIds.add(`${layer.layerId}:${nodeId}`)
+          }
+        }
+
+        for (const layer of s.layers) {
+          if (!layer.visible) continue
+          for (const node of layer.nodes) {
+            const namespacedId = `${layer.id}:${node.id}`
+            const dur = getNodeDuration(node, s.meta.type, s.meta.subtype, DEFAULT_PORTIONING.thickness)
+            mergedNodes.push({
+              id: namespacedId,
+              type: node.type,
+              position: { x: node.position.x + layer.position * 400, y: node.position.y },
+              draggable: false,
+              connectable: false,
+              data: {
+                ...toFlowNode(node, dur, () => {}).data,
+                layerColor: layer.color,
+                isCriticalPath: criticalNodeIds.has(namespacedId),
+              },
+            })
+          }
+          for (const edge of layer.edges) {
+            mergedEdges.push({
+              id: `${layer.id}:${edge.id}`,
+              source: `${layer.id}:${edge.source}`,
+              target: `${layer.id}:${edge.target}`,
+              type: 'recipe',
+              data: edge.data,
+            })
+          }
+        }
+
+        // Add cross-layer edges with dashed style
+        for (const ce of s.crossEdges) {
+          mergedEdges.push({
+            id: ce.id,
+            source: `${ce.sourceLayerId}:${ce.sourceNodeId}`,
+            target: `${ce.targetLayerId}:${ce.targetNodeId}`,
+            type: 'recipe',
+            data: ce.data,
+            style: { strokeDasharray: '8,6', stroke: '#8b5cf6' },
+          })
+        }
+
+        set({ viewMode: mode, flowNodes: mergedNodes, flowEdges: mergedEdges })
+      } else {
+        // Restore from active layer
+        set((s) => {
+          const graph = getGraph(s)
+          const portioning = getPortioning(s)
+          return {
+            viewMode: mode,
+            flowNodes: syncFlowNodes(graph, s.meta, portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings)),
+            flowEdges: graph.edges.map(toFlowEdge),
+          }
+        })
+      }
+    },
 
     toRecipeV3: () => {
       const s = get()

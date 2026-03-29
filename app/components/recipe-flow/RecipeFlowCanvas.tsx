@@ -39,7 +39,9 @@ export function RecipeFlowCanvas() {
   const resetRecipe = useRecipeFlowStore((s) => s.resetRecipe)
   const undo = useRecipeFlowStore((s) => s.undo)
   const canUndo = useRecipeFlowStore((s) => s.canUndo)
+  const viewMode = useRecipeFlowStore((s) => s.viewMode)
   const hasNodes = useRecipeFlowStore((s) => selectGraph(s).nodes.length > 0)
+  const isPanoramica = viewMode === 'panoramica'
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmUndo, setConfirmUndo] = useState(false)
 
@@ -194,14 +196,17 @@ export function RecipeFlowCanvas() {
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        onEdgeClick={onEdgeClick}
-        onPaneClick={onPaneClick}
-        onReconnect={onReconnect}
-        edgesReconnectable
+        onNodesChange={isPanoramica ? undefined : onNodesChange}
+        onEdgesChange={isPanoramica ? undefined : onEdgesChange}
+        onConnect={isPanoramica ? undefined : onConnect}
+        onNodeClick={isPanoramica ? undefined : onNodeClick}
+        onEdgeClick={isPanoramica ? undefined : onEdgeClick}
+        onPaneClick={isPanoramica ? undefined : onPaneClick}
+        onReconnect={isPanoramica ? undefined : onReconnect}
+        edgesReconnectable={!isPanoramica}
+        nodesDraggable={!isPanoramica}
+        nodesConnectable={!isPanoramica}
+        elementsSelectable={!isPanoramica}
         nodeTypes={customNodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{ type: 'recipe' }}

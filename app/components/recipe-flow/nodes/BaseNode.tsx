@@ -21,6 +21,8 @@ export interface BaseNodeData extends Record<string, unknown> {
   inFlow?: FlowSummary[]     // what enters the node (from parents)
   outFlow?: FlowSummary[]    // what exits the node (own ingredients + inherited)
   onExpand?: (id: string) => void
+  layerColor?: string        // panoramica: layer color for visual grouping
+  isCriticalPath?: boolean   // panoramica: node is on the critical path
 }
 
 /** Generate a short preview line based on node type and data */
@@ -49,7 +51,7 @@ function getPreview(type: NodeTypeKey, d: NodeData, t: (key: string, vars?: Reco
 
 function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
   const t = useT()
-  const { nodeData, nodeType, nodeSubtype, duration, isSelected, isPeek, isError } = data
+  const { nodeData, nodeType, nodeSubtype, duration, isSelected, isPeek, isError, isCriticalPath, layerColor } = data
   const inFlow = data.inFlow ?? []
   const outFlow = data.outFlow ?? []
   const cm = COLOR_MAP[nodeType] || COLOR_MAP.dough
@@ -57,13 +59,15 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
   const subtypeEntry = typeEntry?.subtypes?.find((s) => s.key === nodeSubtype)
   const preview = getPreview(nodeType, nodeData, t)
 
-  const borderStyle = isError
-    ? { borderColor: '#dc2626', borderWidth: 3, boxShadow: '0 4px 20px rgba(220,38,38,0.2)' }
-    : isSelected
-      ? { borderColor: cm.tx, borderWidth: 3, boxShadow: `0 4px 20px ${cm.tx}30` }
-      : isPeek
-        ? { borderColor: cm.tx + '80', borderWidth: 2, borderStyle: 'dashed' as const }
-        : { borderColor: cm.tx + '40', borderWidth: 2 }
+  const borderStyle = isCriticalPath
+    ? { borderColor: '#ef4444', borderWidth: 3, boxShadow: '0 4px 20px rgba(239,68,68,0.25)' }
+    : isError
+      ? { borderColor: '#dc2626', borderWidth: 3, boxShadow: '0 4px 20px rgba(220,38,38,0.2)' }
+      : isSelected
+        ? { borderColor: cm.tx, borderWidth: 3, boxShadow: `0 4px 20px ${cm.tx}30` }
+        : isPeek
+          ? { borderColor: cm.tx + '80', borderWidth: 2, borderStyle: 'dashed' as const }
+          : { borderColor: cm.tx + '40', borderWidth: 2 }
 
   return (
     <div
@@ -73,6 +77,7 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
         backgroundImage: isError
           ? 'repeating-linear-gradient(135deg, #fef2f2, #fef2f2 8px, #fecaca 8px, #fecaca 10px)'
           : undefined,
+        borderLeft: layerColor ? `4px solid ${layerColor}` : undefined,
         ...borderStyle,
       }}
     >
