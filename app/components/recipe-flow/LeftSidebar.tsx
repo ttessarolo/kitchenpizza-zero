@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { ModeToggle } from './ModeToggle'
@@ -8,7 +8,34 @@ import { LayerTypePicker } from './LayerTypePicker'
 export function LeftSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(220)
+  const isResizing = useRef(false)
   const t = useT()
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing.current) return
+    const newWidth = Math.min(400, Math.max(200, e.clientX))
+    setSidebarWidth(newWidth)
+  }, [])
+
+  const handleMouseUp = useCallback(() => {
+    isResizing.current = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+  }, [handleMouseMove])
+
+  const handleMouseDown = useCallback(() => {
+    isResizing.current = true
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [handleMouseMove, handleMouseUp])
+
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [handleMouseMove, handleMouseUp])
   const viewMode = useRecipeFlowStore((s) => s.viewMode)
   const layers = useRecipeFlowStore((s) => s.layers)
   const activeLayerId = useRecipeFlowStore((s) => s.activeLayerId)
@@ -30,7 +57,7 @@ export function LeftSidebar() {
   }
 
   return (
-    <div className="w-[220px] shrink-0 bg-white border-r border-border overflow-y-auto flex flex-col">
+    <div className="shrink-0 bg-white border-r border-border overflow-y-auto flex flex-col relative" style={{ width: sidebarWidth }}>
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <span className="text-xs font-semibold text-[#8a7a66] uppercase tracking-wider">{t('layers')}</span>
@@ -139,6 +166,12 @@ export function LeftSidebar() {
           {showPicker && <LayerTypePicker onClose={() => setShowPicker(false)} />}
         </>
       )}
+
+      {/* Resize handle */}
+      <div
+        onMouseDown={handleMouseDown}
+        className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-primary/20 active:bg-primary/30 z-10"
+      />
     </div>
   )
 }

@@ -1384,9 +1384,10 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         // Compute panoramica for critical path info
         const panoramica = computePanoramica(staticProvider, s.layers, s.crossEdges)
         const criticalNodeIds = new Set<string>()
-        for (const layer of panoramica.layers) {
-          for (const nodeId of layer.criticalPath) {
-            criticalNodeIds.add(`${layer.layerId}:${nodeId}`)
+        const criticalLayer = panoramica.layers.find(l => l.layerId === panoramica.criticalLayerId)
+        if (criticalLayer) {
+          for (const nodeId of criticalLayer.criticalPath) {
+            criticalNodeIds.add(`${criticalLayer.layerId}:${nodeId}`)
           }
         }
 
@@ -1429,6 +1430,32 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
             data: ce.data,
             style: { strokeDasharray: '8,6', stroke: '#8b5cf6' },
           })
+        }
+
+        // Auto-layout the merged panoramica graph top-to-bottom
+        const tempNodes: RecipeNode[] = mergedNodes.map(n => ({
+          id: n.id,
+          type: n.type as NodeTypeKey,
+          subtype: null,
+          position: n.position,
+          lane: 'main',
+          data: (n.data as BaseNodeData).nodeData,
+        }))
+        const tempEdges: RecipeEdge[] = mergedEdges.map(e => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
+        }))
+        const tempGraph: RecipeGraph = {
+          nodes: tempNodes,
+          edges: tempEdges,
+          lanes: [{ id: 'main', label: 'Panoramica', isMain: true, origin: { type: 'user' as const } }],
+        }
+        const laidOut = autoLayout(tempGraph)
+        for (const laidNode of laidOut.nodes) {
+          const mNode = mergedNodes.find(n => n.id === laidNode.id)
+          if (mNode) mNode.position = laidNode.position
         }
 
         set({ viewMode: mode, flowNodes: mergedNodes, flowEdges: mergedEdges })

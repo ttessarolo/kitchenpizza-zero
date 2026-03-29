@@ -21,6 +21,7 @@ export function Recipe({ initialRecipe = DEFAULT_RECIPE }: RecipeProps) {
   const loadRecipe = useRecipeFlowStore((s) => s.loadRecipe)
   const meta = useRecipeFlowStore((s) => s.meta)
   const setMeta = useRecipeFlowStore((s) => s.setMeta)
+  const viewMode = useRecipeFlowStore((s) => s.viewMode)
 
   useEffect(() => {
     const v3 = ensureRecipeV3(initialRecipe as RecipeV1Type | RecipeV2 | RecipeV3)
@@ -60,7 +61,7 @@ export function Recipe({ initialRecipe = DEFAULT_RECIPE }: RecipeProps) {
           </div>
 
           {/* Right sidebar toolbar */}
-          <RecipeToolbar />
+          {viewMode !== 'panoramica' && <RecipeToolbar />}
         </div>
       </div>
     </ReactFlowProvider>
