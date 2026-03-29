@@ -1391,14 +1391,26 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
 // ── Convenience selectors (backward-compat for consumers) ──────
 
-/** Select the graph from the active layer (read-only view) */
+/**
+ * Select graph fields from the active layer.
+ * Use with useRecipeFlowStore(selectGraph) + useShallow to avoid infinite re-renders,
+ * OR select individual fields (s => selectGraph(s).nodes) for maximum stability.
+ */
+const EMPTY_GRAPH: RecipeGraph = { nodes: [], edges: [], lanes: [] }
+let _lastGraphLayer: RecipeLayer | undefined
+let _lastGraphResult: RecipeGraph = EMPTY_GRAPH
+
 export function selectGraph(s: RecipeFlowState): RecipeGraph {
   const layer = s.layers.find(l => l.id === s.activeLayerId) ?? s.layers[0]
-  if (!layer) return { nodes: [], edges: [], lanes: [] }
-  return { nodes: layer.nodes, edges: layer.edges, lanes: layer.lanes, viewport: layer.viewport }
+  if (!layer) return EMPTY_GRAPH
+  // Memoize: return same object if the layer ref hasn't changed
+  if (layer === _lastGraphLayer) return _lastGraphResult
+  _lastGraphLayer = layer
+  _lastGraphResult = { nodes: layer.nodes, edges: layer.edges, lanes: layer.lanes, viewport: layer.viewport }
+  return _lastGraphResult
 }
 
-/** Select portioning from the active layer (read-only view) */
+/** Select portioning from the active layer (stable reference) */
 export function selectPortioning(s: RecipeFlowState): Portioning {
   const layer = s.layers.find(l => l.id === s.activeLayerId) ?? s.layers[0]
   if (!layer) return DEFAULT_PORTIONING

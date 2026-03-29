@@ -60,11 +60,10 @@ export function LeftSidebar() {
             {layers.map((layer) => {
               const isActive = layer.id === activeLayerId
               return (
-                <button
+                <div
                   key={layer.id}
-                  type="button"
                   onClick={() => setActiveLayer(layer.id)}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors ${
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer ${
                     isActive
                       ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
                       : 'text-foreground hover:bg-muted/50'
@@ -103,7 +102,7 @@ export function LeftSidebar() {
                       </button>
                     )}
                   </div>
-                </button>
+                </div>
               )
             })}
           </div>
