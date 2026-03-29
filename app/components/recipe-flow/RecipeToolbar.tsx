@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useT } from '~/hooks/useTranslation'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { computeGraphTotals, computeGroupedIngredients, computeSchedule, computeTimeSummary } from '~/hooks/useGraphCalculator'
 import { RecipeTypeSelector } from '~/components/recipe/RecipeTypeSelector'
 import { PortioningSection } from '~/components/recipe/PortioningSection'
@@ -42,8 +42,8 @@ function AccordionSection({
 export function RecipeToolbar() {
   const [collapsed, setCollapsed] = useState(false)
   const meta = useRecipeFlowStore((s) => s.meta)
-  const portioning = useRecipeFlowStore((s) => s.portioning)
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const portioning = useRecipeFlowStore(selectPortioning)
+  const graph = useRecipeFlowStore(selectGraph)
   const ingredientGroups = useRecipeFlowStore((s) => s.ingredientGroups)
   const setMeta = useRecipeFlowStore((s) => s.setMeta)
   const scaleAllNodes = useRecipeFlowStore((s) => s.scaleAllNodes)
@@ -52,7 +52,7 @@ export function RecipeToolbar() {
   const setPortioning = useRecipeFlowStore((s) => s.setPortioning)
   const applyTypeDefaults = useRecipeFlowStore((s) => s.applyTypeDefaults)
   const generateDough = useRecipeFlowStore((s) => s.generateDough)
-  const graphEmpty = useRecipeFlowStore((s) => s.graph.nodes.length === 0)
+  const graphEmpty = useRecipeFlowStore((s) => selectGraph(s).nodes.length === 0)
   const t = useT()
 
   const currentSubtypes = (RECIPE_SUBTYPES[meta.type] || []).map((s) => ({

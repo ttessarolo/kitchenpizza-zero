@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { OvenConfig } from '@commons/types/recipe'
 import { WarningCard } from '~/components/recipe-flow/WarningCard'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 
 interface BakingAdvisoryProps {
   ovenCfg: OvenConfig
@@ -23,8 +23,8 @@ export function BakingAdvisory({
     ? storeWarnings.filter((w) => w.sourceNodeId === nodeId)
     : []
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
-  const graphNodes = useRecipeFlowStore((s) => s.graph.nodes)
-  const graphEdges = useRecipeFlowStore((s) => s.graph.edges)
+  const graphNodes = useRecipeFlowStore((s) => selectGraph(s).nodes)
+  const graphEdges = useRecipeFlowStore((s) => selectGraph(s).edges)
 
   // Check which advisory IDs already have downstream nodes tagged with advisorySourceId
   const appliedAdvisoryIds = new Set<string>()

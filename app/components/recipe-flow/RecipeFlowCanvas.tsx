@@ -14,7 +14,7 @@ import '@xyflow/react/dist/style.css'
 
 import { customNodeTypes } from './nodes'
 import { RecipeFlowEdge } from './edges/RecipeFlowEdge'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 import { NodeContextToolbar } from './NodeContextToolbar'
 import { UndoToast } from './UndoToast'
 import { EdgeCallout } from './EdgeCallout'
@@ -39,7 +39,7 @@ export function RecipeFlowCanvas() {
   const resetRecipe = useRecipeFlowStore((s) => s.resetRecipe)
   const undo = useRecipeFlowStore((s) => s.undo)
   const canUndo = useRecipeFlowStore((s) => s.canUndo)
-  const hasNodes = useRecipeFlowStore((s) => s.graph.nodes.length > 0)
+  const hasNodes = useRecipeFlowStore((s) => selectGraph(s).nodes.length > 0)
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmUndo, setConfirmUndo] = useState(false)
 

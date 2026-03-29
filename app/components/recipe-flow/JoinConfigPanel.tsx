@@ -1,4 +1,4 @@
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
 
 const JOIN_METHOD_KEYS = ['braid', 'layer', 'fold', 'enclose', 'mix', 'side_by_side', 'generic'] as const
@@ -9,7 +9,7 @@ interface JoinConfigPanelProps {
 
 export function JoinConfigPanel({ nodeId }: JoinConfigPanelProps) {
   const t = useT()
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const graph = useRecipeFlowStore(selectGraph)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)
 
   const node = graph.nodes.find((n) => n.id === nodeId)

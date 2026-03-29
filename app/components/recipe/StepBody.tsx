@@ -4,7 +4,7 @@ import type { RecipeStep, TemperatureUnit, FlourCatalogEntry, CookingConfig, Fat
 import { getDefaultConfig as getBakeDefaultConfig } from '@commons/utils/bake-manager'
 import type { ActionableWarning } from '@commons/types/recipe-graph'
 import { FAT_TYPES } from '@/local_data/fat-catalog'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius } from '@commons/utils/format'
 import { blendFlourProperties, getSaltPct, getSugarPct, getFatPct } from '@commons/utils/dough-manager'
 import { getAncestorIds, getStepTotalWeight } from '@commons/utils/recipe'
@@ -48,7 +48,7 @@ export function StepBody({ step: s }: StepBodyProps) {
     totalDough,
   } = useRecipe()
   const { ingredientGroups: ig, steps: allSteps } = recipe
-  const flourMix = useRecipeFlowStore((s) => s.portioning.flourMix)
+  const flourMix = useRecipeFlowStore((s) => selectPortioning(s).flourMix)
   const sF = s.flours.reduce((a, f) => a + f.g, 0)
   const sL = s.liquids.reduce((a, l) => a + l.g, 0)
   const sH = sF > 0 ? Math.round((sL / sF) * 100) : 0
@@ -1756,8 +1756,8 @@ function CookingAdvisory({
 }) {
   const t = useT()
   const applyWarningAction = useRecipeFlowStore((s) => s.applyWarningAction)
-  const graphNodes = useRecipeFlowStore((s) => s.graph.nodes)
-  const graphEdges = useRecipeFlowStore((s) => s.graph.edges)
+  const graphNodes = useRecipeFlowStore((s) => selectGraph(s).nodes)
+  const graphEdges = useRecipeFlowStore((s) => selectGraph(s).edges)
   const storeWarnings = useRecipeFlowStore((s) => s.warnings)
 
   // Filter store warnings for this specific node

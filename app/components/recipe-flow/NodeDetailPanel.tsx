@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useT } from '~/hooks/useTranslation'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { nodeToStep, stepToNodeData, graphToRecipeV1 } from '@commons/utils/graph-adapter'
 import { celsiusToFahrenheit } from '@commons/utils/format'
 import { computeGraphTotals } from '~/hooks/useGraphCalculator'
@@ -35,9 +35,9 @@ function SinglePanel({
   onClose: () => void
 }) {
   const t = useT()
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const graph = useRecipeFlowStore(selectGraph)
   const meta = useRecipeFlowStore((s) => s.meta)
-  const portioning = useRecipeFlowStore((s) => s.portioning)
+  const portioning = useRecipeFlowStore(selectPortioning)
   const ingredientGroups = useRecipeFlowStore((s) => s.ingredientGroups)
   const temperatureUnit = useRecipeFlowStore((s) => s.temperatureUnit)
   const ambientTemp = useRecipeFlowStore((s) => s.ambientTemp)
