@@ -15,7 +15,7 @@ export {
   blendFlourProperties,
   estimateW,
   calcYeastPct,
-  calcYeastPctClient,
+  calcDurationFromYeast,
   yeastGrams,
   calcFinalDoughTemp,
   computeSuggestedSalt,

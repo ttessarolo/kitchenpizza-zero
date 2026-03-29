@@ -140,6 +140,7 @@ export function validateFermentationCoherence(
       expectedYeastPct = Math.round(evaluateFormula(formulaBlock, {
         hours: equivalentRoomHours,
         tempC: 24, // default room temperature
+        hydration: 56, // default hydration for Formula L
       }) * 1000) / 1000
     } catch {
       // If formula not available, skip yeast comparison
@@ -217,11 +218,13 @@ export function suggestYeastPct(
   provider: ScienceProvider,
   equivalentRoomHours: number,
   tempC = 24,
+  hydration = 56,
 ): number {
   if (equivalentRoomHours <= 0) return 0
   const formulaBlock = provider.getFormula('yeast_pct')
   return Math.round(evaluateFormula(formulaBlock, {
     hours: equivalentRoomHours,
     tempC,
+    hydration,
   }) * 1000) / 1000
 }

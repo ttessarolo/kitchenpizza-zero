@@ -1,6 +1,6 @@
 /**
- * @deprecated Use DoughManager directly: import { calcYeastPct, calcYeastPctClient, yeastGrams } from './dough-manager'
+ * @deprecated Use DoughManager directly: import { calcYeastPct, calcDurationFromYeast, yeastGrams } from './dough-manager'
  * This file re-exports for backward compatibility.
  */
 
-export { calcYeastPct, calcYeastPctClient, yeastGrams } from './dough-manager'
+export { calcYeastPct, calcDurationFromYeast, yeastGrams } from './dough-manager'

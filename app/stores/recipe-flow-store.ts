@@ -18,7 +18,8 @@ import type {
   NodeTypeKey,
   NodeData,
 } from '@commons/types/recipe-graph'
-import type { RecipeMeta, Portioning, TemperatureUnit, RecipeStep } from '@commons/types/recipe'
+import type { RecipeMeta, Portioning, TemperatureUnit, RecipeStep, PortioningLocks } from '@commons/types/recipe'
+import { DEFAULT_LOCKS } from '@commons/types/recipe'
 import { autoLayout } from '~/lib/auto-layout'
 import { removeNodeFromGraph, getNodeTotalWeight } from '@commons/utils/graph-utils'
 import { rnd } from '@commons/utils/format'
@@ -29,7 +30,7 @@ import { graphToRecipeV1, stepToNodeData } from '@commons/utils/graph-adapter'
 import { computeGraphTotals, scaleNodeData } from '~/hooks/useGraphCalculator'
 import { generateDoughGraph } from '~/lib/generate-dough'
 import { RECIPE_SUBTYPES } from '@/local_data'
-import { getDoughDefaults, calcYeastPctClient, estimateBlendW } from '@commons/utils/dough-manager'
+import { getDoughDefaults, calcYeastPct, estimateBlendW } from '@commons/utils/dough-manager'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
 import { staticProvider } from '@commons/utils/science/static-science-provider'
 import type { NodeRef } from '@commons/types/recipe-graph'
@@ -118,6 +119,7 @@ interface RecipeFlowState {
   setAmbientTemp: (t: number) => void
   updateNodeCosmetic: (id: string, patch: Partial<NodeData>) => void  // title, desc — NO reconciliation
   updateNodeData: (id: string, patch: Partial<NodeData>) => void    // ingredients — WITH reconciliation
+  batchUpdateNodes: (updates: Array<{ id: string; patch: Partial<NodeData> }>) => void  // atomic multi-node update — single reconciliation
   updateNodeWithReconcile: (id: string, fn: (step: RecipeStep) => RecipeStep) => void
 
   // Edge actions
@@ -134,6 +136,8 @@ interface RecipeFlowState {
   scaleAllNodes: (newTotal: number) => void
   setGlobalHydration: (h: number) => void
   handlePortioningChangeWithScale: (np: Portioning) => void
+  toggleLock: (field: keyof import('@commons/types/recipe').PortioningLocks) => void
+  updateDoughHours: (hours: number) => void
   applyWarningAction: (warning: import('@commons/types/recipe-graph').ActionableWarning, actionIdx: number) => void
   applyAllWarningActions: () => void
   applyTypeDefaults: (typeKey: string, subtypeKey: string) => void
@@ -338,6 +342,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       ball: { weight: 250, count: 4 },
       thickness: 0.5,
       targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null, flourMix: [], autoCorrect: false, reasoningLevel: 'medium',
+      locks: { ...DEFAULT_LOCKS },
     },
     ingredientGroups: ['Impasto'],
     graph: { nodes: [], edges: [], lanes: [] },
@@ -528,6 +533,22 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       }))
     },
 
+    // Atomic multi-node update — single applyMutation → single reconciliation.
+    // Prevents stale-closure bugs when updating multiple nodes in a loop.
+    batchUpdateNodes: (updates) => {
+      applyMutation((s) => {
+        const newNodes = s.graph.nodes.map((n) => {
+          const upd = updates.find((u) => u.id === n.id)
+          if (!upd) return n
+          const finalPatch = upd.patch.baseDur !== undefined
+            ? { ...upd.patch, userOverrideDuration: true }
+            : upd.patch
+          return { ...n, data: { ...n.data, ...finalPatch } }
+        })
+        return { graph: { ...s.graph, nodes: newNodes } }
+      })
+    },
+
     // ── Reconciliation: the core update with cascading logic ─────
     // Simplified: apply v1 step mutation then let reconcileGraph handle cascading
     updateNodeWithReconcile: (id, fn) => {
@@ -545,6 +566,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
     // ── Scale all nodes uniformly ────────────────────────────────
     scaleAllNodes: (newTotal) => {
+      const locks = get().portioning.locks ?? DEFAULT_LOCKS
+      if (locks.totalDough) return // locked — no scaling
       applyMutation((s) => {
         const totals = computeGraphTotals(s.graph)
         if (totals.totalDough <= 0) return { portioning: s.portioning }
@@ -558,19 +581,18 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     },
 
     // ── Set global hydration (scale all liquids + save targetHyd) ──
+    // Routes through applyMutation so reconcileGraph runs (Phase 3d enforces totalDough lock).
     setGlobalHydration: (h) => {
-      saveSnapshot()
-      set((s) => {
-        // Always save targetHyd in portioning
+      const locks = get().portioning.locks ?? DEFAULT_LOCKS
+      if (locks.hydration) return // locked — no hydration change
+      applyMutation((s) => {
         const newPortioning = { ...s.portioning, targetHyd: h }
-
         const totals = computeGraphTotals(s.graph)
         if (totals.totalFlour <= 0 || totals.totalLiquid <= 0) {
           return { portioning: newPortioning }
         }
         const targetLiquid = (totals.totalFlour * h) / 100
         const factor = targetLiquid / totals.totalLiquid
-
         const newNodes = s.graph.nodes.map((n) => ({
           ...n,
           data: {
@@ -578,12 +600,9 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
             liquids: n.data.liquids.map((l) => ({ ...l, g: rnd(l.g * factor) })),
           },
         }))
-        const newGraph = { ...s.graph, nodes: newNodes }
-
         return {
           portioning: newPortioning,
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, newPortioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+          graph: { ...s.graph, nodes: newNodes },
         }
       })
     },
@@ -591,7 +610,16 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     // ── Portioning change with scaling ───────────────────────────
     handlePortioningChangeWithScale: (np) => {
       saveSnapshot()
+      const locks = get().portioning.locks ?? DEFAULT_LOCKS
       set((s) => {
+        // When totalDough is locked, update portioning without scaling nodes
+        if (locks.totalDough) {
+          return {
+            portioning: np,
+            flowNodes: syncFlowNodes(s.graph, s.meta, np, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+          }
+        }
+
         const newTarget = np.mode === 'tray'
           ? Math.round(np.tray.l * np.tray.w * np.thickness * np.tray.count)
           : np.ball.weight * np.ball.count
@@ -637,6 +665,43 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       set({ autoCorrectReport: result.report })
     },
 
+    // ── Toggle field lock (mutual exclusivity for duration ↔ yeastPct) ──
+    toggleLock: (field) => {
+      set((s) => {
+        const locks: PortioningLocks = { ...(s.portioning.locks ?? DEFAULT_LOCKS) }
+        locks[field] = !locks[field]
+        if (field === 'duration' && locks.duration) locks.yeastPct = false
+        if (field === 'yeastPct' && locks.yeastPct) locks.duration = false
+
+        const patch: Partial<typeof s.portioning> = { locks }
+
+        // Capture/clear the actual graph total when totalDough lock toggles
+        if (field === 'totalDough') {
+          if (locks.totalDough) {
+            const totals = computeGraphTotals(s.graph)
+            patch.lockedTotalDough = totals.totalDough > 0
+              ? totals.totalDough
+              : (s.portioning.mode === 'tray'
+                  ? Math.round(s.portioning.tray.l * s.portioning.tray.w * s.portioning.thickness * s.portioning.tray.count)
+                  : s.portioning.ball.weight * s.portioning.ball.count)
+          } else {
+            patch.lockedTotalDough = undefined
+          }
+        }
+
+        return { portioning: { ...s.portioning, ...patch } }
+      })
+    },
+
+    // ── Update doughHours WITH reconciliation ─────────────────────
+    // Unlike setPortioning, this triggers applyMutation → reconcileGraph.
+    // Critical for Phase 3c (rise node scaling when yeastPct is locked).
+    updateDoughHours: (hours) => {
+      applyMutation((s) => ({
+        portioning: { ...s.portioning, doughHours: hours },
+      }))
+    },
+
     applyTypeDefaults: (typeKey, subtypeKey) => {
       saveSnapshot()
       const subs = RECIPE_SUBTYPES[typeKey] || []
@@ -654,7 +719,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       np.saltPct = doughDefs.saltPctDefault
       np.fatPct = doughDefs.fatPctDefault
       // Calculate yeast from Formula L
-      np.yeastPct = calcYeastPctClient(doughDefs.defaultDoughHours, np.targetHyd || 60, 24, estimateBlendW(np.flourMix ?? []))
+      np.yeastPct = calcYeastPct(staticProvider, doughDefs.defaultDoughHours, np.targetHyd || 60, 24, undefined, estimateBlendW(np.flourMix ?? []))
       get().handlePortioningChangeWithScale(np)
     },
 
@@ -765,7 +830,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
           thickness: d?.thickness || 0.5,
           targetHyd: d?.hyd || 65,
           doughHours: doughDefs.defaultDoughHours,
-          yeastPct: calcYeastPctClient(doughDefs.defaultDoughHours, d?.hyd || 65, 24, estimateBlendW([])),
+          yeastPct: calcYeastPct(staticProvider, doughDefs.defaultDoughHours, d?.hyd || 65, 24, undefined, estimateBlendW([])),
           saltPct: doughDefs.saltPctDefault,
           fatPct: doughDefs.fatPctDefault,
           preImpasto: null,

@@ -23,6 +23,7 @@ import bakeDuration from '@/science/formulas/bake-duration.json'
 import composition from '@/science/formulas/composition.json'
 import doughTemp from '@/science/formulas/dough-temp.json'
 import yeastWCorrection from '@/science/formulas/yeast-w-correction.json'
+import yeastInverse from '@/science/formulas/yeast-inverse.json'
 
 // Rules
 import doughWarnings from '@/science/rules/dough-warnings.json'
@@ -51,7 +52,7 @@ import minFermentationHours from '@/science/classifications/min-fermentation-hou
 // ── Build indexes ─────────────────────────────────────────────────
 
 const allFiles = [
-  yeast, riseDuration, bakeDuration, composition, doughTemp, yeastWCorrection,
+  yeast, riseDuration, bakeDuration, composition, doughTemp, yeastWCorrection, yeastInverse,
   doughWarnings, bakingAdvisories, preBakeAdvisories, preFermentValidation, riseWarnings, fermentationCoherence,
   flours, fats, bakingProfiles, ovenConfig, riseMethods, saltsSugars,
   doughDefaults,

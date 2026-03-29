@@ -152,6 +152,21 @@ export interface Ball {
   count: number
 }
 
+export interface PortioningLocks {
+  totalDough: boolean
+  hydration: boolean
+  /** Mutually exclusive: at most one of duration/yeastPct can be true */
+  duration: boolean
+  yeastPct: boolean
+}
+
+export const DEFAULT_LOCKS: PortioningLocks = {
+  totalDough: false,
+  hydration: false,
+  duration: false,
+  yeastPct: false,
+}
+
 export interface Portioning {
   mode: PortioningMode
   tray: Tray
@@ -171,6 +186,11 @@ export interface Portioning {
   // Auto-correct settings
   autoCorrect: boolean                              // enable iterative constraint solver
   reasoningLevel: 'low' | 'medium' | 'high'        // max solver iterations: 3 / 5 / 8
+  // Field locks — locked fields are not modified by reconciliation or auto-correct
+  locks?: PortioningLocks
+  // Captured when totalDough lock is activated — the actual graph total at lock time.
+  // Phase 3d uses this instead of deriving from tray/ball dimensions.
+  lockedTotalDough?: number
 }
 
 export interface RecipeMeta {

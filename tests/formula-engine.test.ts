@@ -403,8 +403,8 @@ describe('Snapshot — Science JSON matches manager functions', () => {
     ]
 
     for (const tc of testCases) {
-      const viaManager = calcYeastPct(provider, tc.hours, tc.tempC, 'formula_l')
-      const fromJson = evaluateFormula(yeastJson as unknown as FormulaBlock, tc, 'formula_l')
+      const viaManager = calcYeastPct(provider, tc.hours, 65, tc.tempC)
+      const fromJson = evaluateFormula(yeastJson as unknown as FormulaBlock, { ...tc, hydration: 65 }, 'formula_l')
       expect(fromJson).toBeCloseTo(viaManager, 3)
     }
   })

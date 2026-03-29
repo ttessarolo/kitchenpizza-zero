@@ -18,6 +18,9 @@ import type {
 
 const parser = new Parser()
 
+// ── Custom functions for expr-eval ───────────────────────────────
+parser.functions.clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val))
+
 // ── Output post-processing ─────────────────────────────────────
 
 function applyOutput(value: number, output?: OutputSpec): number {

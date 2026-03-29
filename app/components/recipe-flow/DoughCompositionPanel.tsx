@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
-import { calcYeastPctClient } from '@commons/utils/dough-manager'
+import { calcYeastPct, calcDurationFromYeast } from '@commons/utils/dough-manager'
+import { staticProvider } from '@commons/utils/science/static-science-provider'
 import { rnd } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
 import { YEAST_TYPES } from '@/local_data'
@@ -9,30 +10,41 @@ import { ActionableWarningBox } from './ActionableWarningBox'
 import { FlourMixSelector } from './FlourMixSelector'
 import { estimateBlendW, blendFlourProperties } from '@commons/utils/flour-manager'
 import { deduplicateWarnings } from '@commons/utils/warning-dedup'
+import { DEFAULT_LOCKS } from '@commons/types/recipe'
+import { LockButton } from './LockButton'
 
 // ── Shared slider component ────────────────────────────────────
 
 function SliderRow({
   icon, label, value, min, max, step, unit, suggestion, onChange,
+  locked, onToggleLock, lockDisabled,
 }: {
   icon: string; label: string; value: number; min: number; max: number
   step: number; unit: string; suggestion?: string; onChange: (v: number) => void
+  locked?: boolean; onToggleLock?: () => void; lockDisabled?: boolean
 }) {
+  const isDisabled = locked === true
   return (
-    <div className="mb-2.5">
+    <div className={`mb-2.5 ${isDisabled ? 'opacity-60' : ''}`}>
       <div className="flex items-center justify-between text-xs mb-0.5">
-        <span className="text-muted-foreground font-medium">{icon} {label}</span>
+        <span className="text-muted-foreground font-medium flex items-center gap-1">
+          {icon} {label}
+          {onToggleLock && (
+            <LockButton locked={!!locked} onToggle={onToggleLock} disabled={lockDisabled} />
+          )}
+        </span>
         <div className="flex items-center gap-1">
           <input
             type="number" value={value} min={min} max={max} step={step}
             onChange={(e) => onChange(+e.target.value || 0)}
-            className="w-[60px] text-xs font-bold bg-white border border-border rounded px-1.5 py-0.5 outline-none text-center min-h-7"
+            disabled={isDisabled}
+            className="w-[60px] text-xs font-bold bg-white border border-border rounded px-1.5 py-0.5 outline-none text-center min-h-7 disabled:cursor-not-allowed"
           />
           <span className="text-muted-foreground text-[10px]">{unit}</span>
         </div>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(+e.target.value)} className="w-full accent-primary" />
+        onChange={(e) => onChange(+e.target.value)} disabled={isDisabled} className="w-full accent-primary disabled:cursor-not-allowed" />
       {suggestion && <div className="text-[10px] text-muted-foreground mt-0.5 italic">{suggestion}</div>}
     </div>
   )
@@ -44,7 +56,11 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
   const t = useT()
   const graph = useRecipeFlowStore((s) => s.graph)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)
+  const batchUpdateNodes = useRecipeFlowStore((s) => s.batchUpdateNodes)
   const updateNodeCosmetic = useRecipeFlowStore((s) => s.updateNodeCosmetic)
+  const locks = useRecipeFlowStore((s) => s.portioning.locks ?? DEFAULT_LOCKS)
+  const toggleLock = useRecipeFlowStore((s) => s.toggleLock)
+  const updateDoughHours = useRecipeFlowStore((s) => s.updateDoughHours)
   const [doughHoursLocal, setDoughHoursLocal] = useState<number | null>(null)
 
   const node = graph.nodes.find((n) => n.id === nodeId)
@@ -96,9 +112,11 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
     ? blendFlourProperties(allChainFlours).W
     : estimateBlendW(flourMix)
 
-  // Hours: use local state for smooth slider, fallback to estimate from yeast
-  const estFromYeast = yeastPct > 0 ? Math.max(1, Math.min(96, Math.round(100000 / (hyd * 576 * yeastPct)))) : 18
-  const doughHours = doughHoursLocal ?? estFromYeast
+  // Hours: use local state for smooth slider, fallback to inverse Formula L
+  const estFromYeast = yeastPct > 0
+    ? calcDurationFromYeast(staticProvider, yeastPct, hyd || 60, 24)
+    : 18
+  const doughHours = Math.round(doughHoursLocal ?? estFromYeast)
   // pct is ALWAYS fresh-equivalent. Convert to the node's actual yeast type.
   function setYeastPct(pct: number) {
     if (totalFlour <= 0) return
@@ -108,6 +126,12 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
     const toFresh = yt?.toFresh ?? 1
     const actualG = rnd(freshG / toFresh) // convert fresh → actual type
     updateNodeData(nodeId, { yeasts: [{ id: 0, type: yeastType, g: actualG }] })
+    // Inverse Formula L: recalculate duration (only if duration is NOT locked)
+    if (!locks.duration) {
+      const newHours = calcDurationFromYeast(staticProvider, pct, hyd || 60, 24)
+      setDoughHoursLocal(newHours)
+      updateDoughHours(newHours)
+    }
   }
 
   function setSaltPct(pct: number) {
@@ -130,52 +154,67 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
     ['yeast', 'salt', 'fat', 'hydration', 'flour', 'general', 'fermentation'].includes(w.category)
   )
 
-  // Scale ALL chain nodes proportionally when total flour changes
+  // Scale ALL chain nodes proportionally when total flour changes.
+  // Uses batchUpdateNodes for atomic update — single reconciliation pass.
   function setFlourG(newTotal: number) {
     if (newTotal <= 0 || totalFlour <= 0) return
     const ratio = newTotal / totalFlour
-    // Update each node in the chain
-    for (const cn of chainNodes) {
-      if (cn.data.flours.length === 0 && cn.data.liquids.length === 0) continue
-      updateNodeData(cn.id, {
-        flours: cn.data.flours.map((f) => ({ ...f, g: rnd(f.g * ratio) })),
-        liquids: cn.data.liquids.map((l) => ({ ...l, g: rnd(l.g * ratio) })),
-        yeasts: (cn.data.yeasts ?? []).map((y) => ({ ...y, g: rnd(y.g * ratio) })),
-        salts: (cn.data.salts ?? []).map((s) => ({ ...s, g: rnd(s.g * ratio) })),
-        fats: (cn.data.fats ?? []).map((f) => ({ ...f, g: rnd(f.g * ratio) })),
-      })
-    }
+    const updates = chainNodes
+      .filter((cn) => cn.data.flours.length > 0 || cn.data.liquids.length > 0)
+      .map((cn) => ({
+        id: cn.id,
+        patch: {
+          flours: cn.data.flours.map((f) => ({ ...f, g: rnd(f.g * ratio) })),
+          liquids: cn.data.liquids.map((l) => ({ ...l, g: rnd(l.g * ratio) })),
+          yeasts: (cn.data.yeasts ?? []).map((y) => ({ ...y, g: rnd(y.g * ratio) })),
+          salts: (cn.data.salts ?? []).map((s) => ({ ...s, g: rnd(s.g * ratio) })),
+          fats: (cn.data.fats ?? []).map((f) => ({ ...f, g: rnd(f.g * ratio) })),
+        },
+      }))
+    batchUpdateNodes(updates)
   }
 
-  // Set hydration: adjust liquids + recalculate yeast (Formula L depends on hydration)
+  // Set hydration: adjust liquids + recalculate yeast (Formula L depends on hydration).
+  // Uses batchUpdateNodes for atomic update — single reconciliation pass.
   function setHydration(newHyd: number) {
     if (totalFlour <= 0 || newHyd <= 0) return
     const targetLiquid = rnd(totalFlour * newHyd / 100)
 
-    // Update liquids
+    const updates: Array<{ id: string; patch: Partial<typeof d> }> = []
+
+    // Liquid updates
     if (totalLiquid <= 0) {
       const liquidType = d.liquids[0]?.type || 'Acqua'
-      updateNodeData(nodeId, { liquids: [{ id: 0, type: liquidType, g: targetLiquid, temp: null }] })
+      updates.push({ id: nodeId, patch: { liquids: [{ id: 0, type: liquidType, g: targetLiquid, temp: null }] } })
     } else {
       const ratio = targetLiquid / totalLiquid
       for (const cn of chainNodes) {
         if (cn.data.liquids.length === 0) continue
-        updateNodeData(cn.id, {
-          liquids: cn.data.liquids.map((l) => ({ ...l, g: rnd(l.g * ratio) })),
+        updates.push({
+          id: cn.id,
+          patch: { liquids: cn.data.liquids.map((l) => ({ ...l, g: rnd(l.g * ratio) })) },
         })
       }
     }
 
     // Recalculate yeast from Formula L (hydration changed → yeast amount changes)
-    const newYeastPct = calcYeastPctClient(doughHours, newHyd, 24, flourW) // fresh-equivalent %
+    const newYeastPct = calcYeastPct(staticProvider, doughHours, newHyd, 24, undefined, flourW) // fresh-equivalent %
     if (newYeastPct > 0 && totalFlour > 0) {
       const freshG = rnd(totalFlour * newYeastPct / 100)
       const yeastType = (d.yeasts ?? [])[0]?.type || 'fresh'
       const yt = YEAST_TYPES.find((t) => t.key === yeastType)
       const toFresh = yt?.toFresh ?? 1
       const actualG = rnd(freshG / toFresh)
-      updateNodeData(nodeId, { yeasts: [{ id: 0, type: yeastType, g: actualG }] })
+      // Merge yeast into existing patch for the same node, or add new entry
+      const existing = updates.find((u) => u.id === nodeId)
+      if (existing) {
+        existing.patch.yeasts = [{ id: 0, type: yeastType, g: actualG }]
+      } else {
+        updates.push({ id: nodeId, patch: { yeasts: [{ id: 0, type: yeastType, g: actualG }] } })
+      }
     }
+
+    batchUpdateNodes(updates)
   }
 
   return (
@@ -202,10 +241,14 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
             className="w-full text-xs font-bold bg-white border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none" />
         </div>
         <div>
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("label_hydration_pct")}</label>
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            {t("label_hydration_pct")}
+            <LockButton locked={locks.hydration} onToggle={() => toggleLock('hydration')} />
+          </label>
           <input type="number" value={hyd} min={30} max={100} step={1}
             onChange={(e) => setHydration(+e.target.value || 60)}
-            className="w-full text-xs font-bold bg-white border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none" />
+            disabled={locks.hydration}
+            className="w-full text-xs font-bold bg-white border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
         </div>
       </div>
 
@@ -216,15 +259,23 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
 
       {/* Duration — influences yeast calculation */}
       <SliderRow icon="⏱" label={t("label_rise_duration")} value={doughHours} min={1} max={96} step={1} unit={t("label_hours")}
+        locked={locks.duration} onToggleLock={() => toggleLock('duration')} lockDisabled={locks.yeastPct}
         onChange={(v) => {
           const hours = Math.round(v)
           setDoughHoursLocal(hours)
-          // Inverse Formula L: change hours → recalculate yeast
-          const newYeastPct = calcYeastPctClient(hours, hyd || 60, 24, flourW)
-          setYeastPct(Math.round(newYeastPct * 100) / 100)
+          if (locks.yeastPct) {
+            // Yeast locked: update doughHours + reconcile (Phase 3c scales rise nodes)
+            updateDoughHours(hours)
+          } else {
+            // Normal: update doughHours + recalculate yeast (triggers reconcile)
+            updateDoughHours(hours)
+            const newYeastPct = calcYeastPct(staticProvider, hours, hyd || 60, 24, undefined, flourW)
+            setYeastPct(Math.round(newYeastPct * 100) / 100)
+          }
         }} />
 
       <SliderRow icon="🍞" label={t('label_yeast')} value={yeastPct} min={0} max={3.5} step={0.01} unit="%"
+        locked={locks.yeastPct} onToggleLock={() => toggleLock('yeastPct')} lockDisabled={locks.duration}
         suggestion={`${Math.round(yeastFreshEquivG * 10) / 10}g ${t('default_yeast_name')} · ~${doughHours}h ${t('label_rise_duration').toLowerCase()}`}
         onChange={setYeastPct} />
 
@@ -245,10 +296,12 @@ function GlobalCompositionSettings() {
   const t = useT()
   const portioning = useRecipeFlowStore((s) => s.portioning)
   const setPortioning = useRecipeFlowStore((s) => s.setPortioning)
+  const locks = useRecipeFlowStore((s) => s.portioning.locks ?? DEFAULT_LOCKS)
+  const toggleLock = useRecipeFlowStore((s) => s.toggleLock)
 
   const { doughHours, yeastPct, saltPct, fatPct, targetHyd, preImpasto, preFermento, flourMix } = portioning
   const globalFlourW = estimateBlendW(flourMix ?? [])
-  const suggestedYeast = calcYeastPctClient(doughHours, targetHyd || 60, 24, globalFlourW)
+  const suggestedYeast = calcYeastPct(staticProvider, doughHours, targetHyd || 60, 24, undefined, globalFlourW)
 
   function update(patch: Partial<typeof portioning>) {
     setPortioning((p) => ({ ...p, ...patch }))
@@ -291,13 +344,26 @@ function GlobalCompositionSettings() {
       </div>
 
       <SliderRow icon="⏱" label={t('label_dough_duration')} value={doughHours} min={1} max={98} step={1} unit={t("label_hours")}
+        locked={locks.duration} onToggleLock={() => toggleLock('duration')} lockDisabled={locks.yeastPct}
         onChange={(v) => {
-          const newYeast = calcYeastPctClient(v, targetHyd || 60, 24, globalFlourW)
-          update({ doughHours: v, yeastPct: Math.round(newYeast * 1000) / 1000 })
+          if (locks.yeastPct) {
+            update({ doughHours: v })
+          } else {
+            const newYeast = calcYeastPct(staticProvider, v, targetHyd || 60, 24, undefined, globalFlourW)
+            update({ doughHours: v, yeastPct: Math.round(newYeast * 1000) / 1000 })
+          }
         }} />
       <SliderRow icon="🍞" label={t('label_yeast')} value={Math.round(yeastPct * 100) / 100} min={0} max={3.5} step={0.01} unit="%"
+        locked={locks.yeastPct} onToggleLock={() => toggleLock('yeastPct')} lockDisabled={locks.duration}
         suggestion={t('suggestion_yeast', { pct: rnd(suggestedYeast), hours: doughHours })}
-        onChange={(v) => update({ yeastPct: v })} />
+        onChange={(v) => {
+          if (locks.duration) {
+            update({ yeastPct: v })
+          } else {
+            const newHours = calcDurationFromYeast(staticProvider, v, targetHyd || 60, 24)
+            update({ yeastPct: v, doughHours: newHours })
+          }
+        }} />
       <SliderRow icon="🧂" label={t('label_salt')} value={Math.round(saltPct * 10) / 10} min={0} max={4} step={0.1} unit="%"
         onChange={(v) => update({ saltPct: v })} />
       <SliderRow icon="🫒" label={t('label_fats')} value={Math.round(fatPct * 10) / 10} min={0} max={25} step={0.5} unit="%"

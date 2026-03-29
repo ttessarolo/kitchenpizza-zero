@@ -13,7 +13,8 @@ import type {
   ActionableWarning, NodeRef, GraphMutation,
   NodeData,
 } from '@commons/types/recipe-graph'
-import type { Portioning } from '@commons/types/recipe'
+import type { Portioning, PortioningLocks } from '@commons/types/recipe'
+import { DEFAULT_LOCKS } from '@commons/types/recipe'
 
 // ── Resolve NodeRef → actual node ID ──────────────────────────
 
@@ -158,6 +159,33 @@ export function resolvePortioningPatch(
   return result
 }
 
+// ── Lock enforcement ────────────────────────────────────────
+
+const INGREDIENT_KEYS = new Set(['flours', 'liquids', 'yeasts', 'salts', 'fats', 'sugars'])
+
+/**
+ * Check if a mutation targets a locked field.
+ * Returns true if the mutation should be skipped.
+ */
+export function isLockedMutation(
+  mutation: GraphMutation,
+  locks: PortioningLocks,
+): boolean {
+  if (mutation.type === 'updatePortioning') {
+    const keys = Object.keys(mutation.patch as Record<string, unknown>)
+    if (locks.hydration && keys.includes('targetHyd')) return true
+    if (locks.duration && keys.includes('doughHours')) return true
+    if (locks.yeastPct && keys.includes('yeastPct')) return true
+  }
+  if (mutation.type === 'updateNode') {
+    const keys = Object.keys(mutation.patch as Record<string, unknown>)
+    if (locks.totalDough && keys.some((k) => INGREDIENT_KEYS.has(k))) return true
+    if (locks.hydration && keys.includes('liquids')) return true
+    if (locks.yeastPct && keys.includes('yeasts')) return true
+  }
+  return false
+}
+
 // ── Apply a single warning action → pure graph + portioning ──
 
 /**
@@ -178,7 +206,12 @@ export function applyWarningActionPure(
   let edges = [...graph.edges]
   let port = { ...portioning }
 
+  const locks = portioning.locks ?? DEFAULT_LOCKS
+
   for (const m of action.mutations) {
+    // Skip mutations that target locked fields
+    if (isLockedMutation(m, locks)) continue
+
     const targetId = 'target' in m ? resolveNodeRef(m.target as NodeRef, srcId, nodes, edges) : null
 
     switch (m.type) {

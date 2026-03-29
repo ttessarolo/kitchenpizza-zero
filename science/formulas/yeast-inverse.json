@@ -1,0 +1,22 @@
+{
+  "type": "formula",
+  "id": "yeast_duration_inverse",
+  "ref": "[C] Cap. 44 — Formula L (inverse): D = K / (H × T² × L)",
+  "_meta": {
+    "section": "dough",
+    "displayName": "meta.formula.yeast_duration_inverse.name",
+    "description": "meta.formula.yeast_duration_inverse.desc",
+    "tags": ["yeast", "duration", "inverse", "formula-l", "casucci"],
+    "lastModified": "2026-03-29",
+    "author": "system"
+  },
+  "expression": "K / (hydration * tempC^2 * yeastPct)",
+  "constants": { "K": 100000 },
+  "inputs": ["yeastPct", "hydration", "tempC"],
+  "output": { "name": "hours", "unit": "h", "round": 0, "min": 1, "max": 98 },
+  "validation": {
+    "yeastPct": { "min": 0.001, "max": 5 },
+    "hydration": { "min": 30, "max": 100 },
+    "tempC": { "min": 1, "max": 45 }
+  }
+}

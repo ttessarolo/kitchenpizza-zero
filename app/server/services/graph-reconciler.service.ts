@@ -55,6 +55,9 @@ import { RISE_METHODS, YEAST_TYPES, FLOUR_CATALOG } from '../../../local_data'
 
 import { validateFermentationCoherence } from '@commons/utils/fermentation-coherence-manager'
 import type { ScienceProvider } from '@commons/utils/science/science-provider'
+import { DEFAULT_LOCKS } from '@commons/types/recipe'
+import { isLockedMutation } from '@commons/utils/graph-mutation-engine'
+import { scaleNodeData } from '@commons/utils/portioning-manager'
 
 // ── Result type ─────────────────────────────────────────────
 
@@ -169,12 +172,13 @@ export function reconcileGraph(
 
   // ── Phase 1: Pre-ferment reconciliation ──────────────────────
   // Convert to v1 for existing utility functions
+  const locks = portioning.locks ?? DEFAULT_LOCKS
   const target = portioning.mode === 'tray'
     ? Math.round(portioning.tray.l * portioning.tray.w * portioning.thickness * portioning.tray.count)
     : portioning.ball.weight * portioning.ball.count
 
   for (const n of nodes) {
-    if (n.type === 'pre_ferment' && n.data.preFermentCfg) {
+    if (n.type === 'pre_ferment' && n.data.preFermentCfg && !locks.totalDough) {
       // Recalculate pre-ferment ingredients from config
       const step = nodeToStep(n, edges)
       const recalced = recalcPreFermentIngredients(step, target)
@@ -255,8 +259,8 @@ export function reconcileGraph(
       }
     }
 
-    // ── Rise: recalculate duration if not user-overridden ──
-    if (nodeRef.type === 'rise' && !nodeRef.data.userOverrideDuration) {
+    // ── Rise: recalculate duration if not user-overridden and not locked ──
+    if (nodeRef.type === 'rise' && !nodeRef.data.userOverrideDuration && !locks.duration) {
       const upstreamDough = findUpstreamDough(nodeRef.id, nodes, edges)
       if (upstreamDough) {
         const props = doughPropsCache.get(upstreamDough.id)
@@ -419,9 +423,91 @@ export function reconcileGraph(
     }
   }
 
-  // Phase 3 REMOVED: portioning is the user's source of truth.
+  // ── Phase 3: Lock enforcement — restore locked values ──────────
+  // After all reconciliation, enforce locks by scaling ingredients to maintain
+  // the locked global values. Order matters: hydration → yeast → totalDough.
+  if (nodes.length > 0) {
+    // 3a: Hydration lock — scale all liquids to maintain targetHyd
+    if (locks.hydration) {
+      const lt = computeTotals({ ...graph, nodes, edges })
+      if (lt.totalFlour > 0) {
+        const targetLiquid = lt.totalFlour * portioning.targetHyd / 100
+        if (lt.totalLiquid > 0 && Math.abs(lt.totalLiquid - targetLiquid) > 0.5) {
+          const factor = targetLiquid / lt.totalLiquid
+          for (const n of nodes) {
+            if (n.data.liquids.length > 0) {
+              n.data = {
+                ...n.data,
+                liquids: n.data.liquids.map((l) => ({ ...l, g: rnd(l.g * factor) })),
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 3b: Yeast % lock — scale all yeasts to maintain portioning.yeastPct (fresh-equivalent)
+    if (locks.yeastPct) {
+      const yt = computeTotals({ ...graph, nodes, edges })
+      if (yt.totalFlour > 0) {
+        // portioning.yeastPct is fresh-equivalent %. Convert current node yeasts to fresh-equiv total.
+        const currentFreshEquiv = nodes.reduce((a, n) =>
+          a + (n.data.yeasts ?? []).reduce((s, y) => {
+            const yType = YEAST_TYPES.find((t) => t.key === y.type)
+            return s + y.g * (yType?.toFresh ?? 1)
+          }, 0), 0)
+        const targetFreshEquiv = yt.totalFlour * portioning.yeastPct / 100
+        if (currentFreshEquiv > 0 && Math.abs(currentFreshEquiv - targetFreshEquiv) > 0.01) {
+          const factor = targetFreshEquiv / currentFreshEquiv
+          for (const n of nodes) {
+            if ((n.data.yeasts ?? []).length > 0) {
+              n.data = {
+                ...n.data,
+                yeasts: (n.data.yeasts ?? []).map((y) => ({ ...y, g: rnd(y.g * factor) })),
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 3c: Duration target — when yeastPct is locked and doughHours changed,
+    // scale rise nodes proportionally to match the desired total fermentation time
+    if (locks.yeastPct && !locks.duration) {
+      const riseNodes = nodes.filter((n) => n.type === 'rise' && !n.data.userOverrideDuration)
+      if (riseNodes.length > 0) {
+        const currentTotalRiseMin = riseNodes.reduce((a, n) => a + n.data.baseDur, 0)
+        const targetTotalRiseMin = portioning.doughHours * 60
+        if (currentTotalRiseMin > 0 && Math.abs(currentTotalRiseMin - targetTotalRiseMin) > 5) {
+          const factor = targetTotalRiseMin / currentTotalRiseMin
+          for (const n of riseNodes) {
+            n.data = { ...n.data, baseDur: Math.max(15, Math.round(n.data.baseDur * factor)) }
+          }
+        }
+      }
+    }
+
+    // 3d: Total dough lock — scale all ingredients to maintain target weight.
+    // Uses lockedTotalDough (captured at lock time) with fallback to portioning-derived target.
+    if (locks.totalDough) {
+      const dt = computeTotals({ ...graph, nodes, edges })
+      const lockTarget = portioning.lockedTotalDough
+        ?? (portioning.mode === 'tray'
+          ? Math.round(portioning.tray.l * portioning.tray.w * portioning.thickness * portioning.tray.count)
+          : portioning.ball.weight * portioning.ball.count)
+      if (dt.totalDough > 0 && Math.abs(dt.totalDough - lockTarget) > 1) {
+        const factor = lockTarget / dt.totalDough
+        for (const n of nodes) {
+          if (DOUGH_NODE_TYPES.has(n.type)) {
+            n.data = scaleNodeData(n.data, factor)
+          }
+        }
+      }
+    }
+  }
+
+  // Phase 3 (old): portioning is the user's source of truth.
   // The reconciler does NOT overwrite portioning.thickness or ball.weight.
-  // Only explicit user actions (scaleAllNodes, handlePortioningChangeWithScale) change portioning.
   const totals = computeTotals({ ...graph, nodes, edges })
   const newPortioning = { ...portioning }
 
@@ -468,6 +554,18 @@ export function reconcileGraph(
       messageKey: 'autolisi_preferment_hyd',
       messageVars: { hydration: effectiveHyd },
     })
+  }
+
+  // ── Post-process: strip actions that target locked fields ──────
+  for (const w of warnings) {
+    if (!w.actions?.length) continue
+    w.actions = w.actions
+      .map((a) => ({
+        ...a,
+        mutations: a.mutations.filter((m) => !isLockedMutation(m, locks)),
+      }))
+      .filter((a) => a.mutations.length > 0)
+    if (w.actions.length === 0) w.actions = undefined
   }
 
   return {

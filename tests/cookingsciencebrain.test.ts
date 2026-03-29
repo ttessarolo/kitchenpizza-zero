@@ -45,28 +45,28 @@ describe('CookingScienceBrain — calcYeastPct', () => {
 
   for (const tc of testCases) {
     it(`hours=${tc.hours}, tempC=${tc.tempC} produces reasonable result`, () => {
-      const result = calcYeastPct(provider, tc.hours, tc.tempC, 'formula_l')
+      const result = calcYeastPct(provider, tc.hours, 65, tc.tempC)
       expect(result).toBeGreaterThan(0)
       expect(result).toBeLessThan(50) // reasonable upper bound
     })
   }
 
   it('shorter hours = more yeast', () => {
-    const short = calcYeastPct(provider, 4, 24)
-    const long = calcYeastPct(provider, 18, 24)
+    const short = calcYeastPct(provider, 4, 65, 24)
+    const long = calcYeastPct(provider, 18, 65, 24)
     expect(short).toBeGreaterThan(long)
   })
 
   it('higher temp = less yeast', () => {
-    const cold = calcYeastPct(provider, 18, 18)
-    const warm = calcYeastPct(provider, 18, 28)
+    const cold = calcYeastPct(provider, 18, 65, 18)
+    const warm = calcYeastPct(provider, 18, 65, 28)
     expect(cold).toBeGreaterThan(warm)
   })
 
   it('returns 0 for invalid inputs', () => {
-    expect(calcYeastPct(provider, 0, 24)).toBe(0)
-    expect(calcYeastPct(provider, -1, 24)).toBe(0)
-    expect(calcYeastPct(provider, 18, 0)).toBe(0)
+    expect(calcYeastPct(provider, 0, 65, 24)).toBe(0)
+    expect(calcYeastPct(provider, -1, 65, 24)).toBe(0)
+    expect(calcYeastPct(provider, 18, 65, 0)).toBe(0)
   })
 })
 

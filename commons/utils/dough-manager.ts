@@ -45,25 +45,22 @@ import { evaluateRules, type RuleResult } from './science/rule-engine'
 /**
  * Calculate fresh yeast percentage on flour based on desired rise duration.
  *
- * Uses the ScienceProvider to read the formula from /science/ JSON.
+ * Uses the ScienceProvider (works both server and client via staticProvider).
  * Default variant is Casucci Formula L (Cap. 44):
- *   % = K / (REF_HYD * tempC² * hours)
- *
- * If a variantKey is specified, uses that formula variant.
- *
- * Valid for: 1-98h, tempC > 0.
+ *   L = K / (hydration × tempC² × hours)
  *
  * @returns yeast % on flour (e.g. 0.22 means 0.22%)
  */
 export function calcYeastPct(
   provider: ScienceProvider,
   hours: number,
+  hydration = 56,
   tempC = 24,
   variantKey?: string,
   flourW?: number,
 ): number {
   if (hours <= 0 || tempC <= 0) return 0
-  const base = evaluateFormula(provider.getFormula('yeast_pct'), { hours, tempC }, variantKey)
+  const base = evaluateFormula(provider.getFormula('yeast_pct'), { hours, tempC, hydration }, variantKey)
   if (flourW && flourW > 0) {
     const correction = evaluateFormula(provider.getFormula('yeast_w_correction'), { W: flourW })
     return Math.round(base * correction * 1000) / 1000
@@ -72,28 +69,24 @@ export function calcYeastPct(
 }
 
 /**
- * Client-safe yeast calculation — hardcoded Formula L (no ScienceProvider needed).
- * Use this for interactive UI sliders where instant feedback is needed.
- * For server-side calculations, prefer calcYeastPct(provider, ...).
+ * Inverse Formula L — calculate rise duration (hours) from yeast percentage.
  *
- * [C] Cap. 44 — Formula L: K / (hydration * tempC² * hours)
- * Default hydration 56%, default tempC 24°C.
+ * Uses the ScienceProvider (works both server and client via staticProvider).
+ * [C] Cap. 44: D = K / (hydration × tempC² × yeastPct)
+ *
+ * Note: yeastPct input is the effective value (already W-corrected from forward formula).
+ * No W correction needed on the inverse — it would be mathematically redundant.
+ *
+ * @returns duration in hours (clamped 1-98, rounded to integer)
  */
-export function calcYeastPctClient(
-  hours: number,
+export function calcDurationFromYeast(
+  provider: ScienceProvider,
+  yeastPct: number,
   hydration = 56,
   tempC = 24,
-  flourW?: number,
 ): number {
-  if (hours <= 0 || tempC <= 0) return 0
-  const K = 100000
-  const raw = K / (hydration * tempC * tempC * hours)
-  let result = Math.round(raw * 1000) / 1000
-  if (flourW && flourW > 0) {
-    const correction = Math.max(0.6, Math.min(2.0, 280 / flourW))
-    result = Math.round(result * correction * 1000) / 1000
-  }
-  return result
+  if (yeastPct <= 0 || tempC <= 0 || hydration <= 0) return 18
+  return evaluateFormula(provider.getFormula('yeast_duration_inverse'), { yeastPct, hydration, tempC })
 }
 
 /** Convert yeast percentage to grams given flour weight. */

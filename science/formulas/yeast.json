@@ -15,8 +15,8 @@
       "key": "formula_l",
       "nameKey": "variant.yeast.formula_l",
       "descriptionKey": "variant.yeast.formula_l.desc",
-      "expression": "K / (REF_HYD * tempC^2 * hours)",
-      "constants": { "K": 100000, "REF_HYD": 56 },
+      "expression": "K / (hydration * tempC^2 * hours)",
+      "constants": { "K": 100000 },
       "applicability": { "minHours": 1, "maxHours": 48, "minTemp": 18, "maxTemp": 30 },
       "default": true
     },
@@ -29,7 +29,7 @@
       "applicability": { "minHours": 24, "maxHours": 98, "minTemp": 2, "maxTemp": 45 }
     }
   ],
-  "inputs": ["hours", "tempC"],
+  "inputs": ["hours", "tempC", "hydration"],
   "output": { "name": "yeastPct", "unit": "%", "round": 3 },
   "validation": {
     "hours": { "min": 0.1, "max": 98 },

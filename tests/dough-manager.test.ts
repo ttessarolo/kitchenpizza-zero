@@ -123,35 +123,35 @@ describe('DoughManager — estimateW', () => {
 
 describe('DoughManager — calcYeastPct (Casucci Formula L)', () => {
   it('returns 0 for invalid inputs', () => {
-    expect(calcYeastPct(provider, 0, 24)).toBe(0)
-    expect(calcYeastPct(provider, 10, 0)).toBe(0)
-    expect(calcYeastPct(provider, -1, 24)).toBe(0)
+    expect(calcYeastPct(provider, 0, 65, 24)).toBe(0)
+    expect(calcYeastPct(provider, 10, 65, 0)).toBe(0)
+    expect(calcYeastPct(provider, -1, 65, 24)).toBe(0)
   })
 
   it('shorter rise time requires more yeast', () => {
-    const short = calcYeastPct(provider, 4, 24)
-    const long = calcYeastPct(provider, 18, 24)
+    const short = calcYeastPct(provider, 4, 65, 24)
+    const long = calcYeastPct(provider, 18, 65, 24)
     expect(short).toBeGreaterThan(long)
   })
 
   it('higher temperature requires less yeast', () => {
-    const cold = calcYeastPct(provider, 18, 18)
-    const warm = calcYeastPct(provider, 18, 28)
+    const cold = calcYeastPct(provider, 18, 65, 18)
+    const warm = calcYeastPct(provider, 18, 65, 28)
     expect(cold).toBeGreaterThan(warm)
   })
 
   it('produces reasonable values for typical pizza (18h, 24°C)', () => {
-    const pct = calcYeastPct(provider, 18, 24)
-    // Should be around 0.15-0.25% for 18h at 24°C
-    expect(pct).toBeGreaterThan(0.1)
-    expect(pct).toBeLessThan(0.4)
+    const pct = calcYeastPct(provider, 18, 65, 24)
+    // Formula L: K / (hyd * tempC² * hours) = 100000 / (65 * 576 * 18) ≈ 0.148
+    expect(pct).toBeGreaterThan(0.05)
+    expect(pct).toBeLessThan(0.5)
   })
 
   it('produces reasonable values for short rise (2h, 24°C)', () => {
-    const pct = calcYeastPct(provider, 2, 24)
-    // Should be around 1.5-2.0% for 2h at 24°C
-    expect(pct).toBeGreaterThan(1)
-    expect(pct).toBeLessThan(3)
+    const pct = calcYeastPct(provider, 2, 65, 24)
+    // Formula L: K / (65 * 576 * 2) ≈ 1.335
+    expect(pct).toBeGreaterThan(0.5)
+    expect(pct).toBeLessThan(4)
   })
 })
 

@@ -11,19 +11,19 @@ export function RecipeHeader({ meta, onNameChange, onAuthorChange }: RecipeHeade
   const typeIcon = RECIPE_TYPES.find((t) => t.key === meta.type)?.icon || '🍞'
 
   return (
-    <div className="bg-gradient-to-br from-[#d4a574] via-[#c4956a] to-[#b8845a] px-6 pt-8 pb-6 text-center">
-      <div className="text-4xl mb-0.5">{typeIcon}</div>
+    <div className="bg-gradient-to-r from-[#d4a574] via-[#c4956a] to-[#b8845a] px-4 py-2.5 flex items-center gap-3">
+      <span className="text-lg leading-none">{typeIcon}</span>
       <input
         value={meta.name}
         onChange={(e) => onNameChange(e.target.value)}
-        className="text-[clamp(18px,5vw,26px)] font-bold text-white bg-transparent border-none outline-none text-center w-full font-display"
+        className="text-sm font-bold text-white bg-transparent border-none outline-none font-display min-w-0 flex-1"
       />
-      <div className="text-xs text-white/70 mt-0.5">
-        di{' '}
+      <div className="text-xs text-white/70 flex items-center gap-1 shrink-0">
+        <span>di</span>
         <input
           value={meta.author}
           onChange={(e) => onAuthorChange(e.target.value)}
-          className="text-xs text-white/90 bg-transparent border-none border-b border-dashed border-white/40 outline-none text-center w-[140px]"
+          className="text-xs text-white/90 bg-transparent border-none border-b border-dashed border-white/40 outline-none w-[100px]"
         />
       </div>
     </div>

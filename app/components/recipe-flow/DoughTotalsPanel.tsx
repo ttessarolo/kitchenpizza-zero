@@ -1,15 +1,19 @@
+import { useState, useEffect } from 'react'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { computeGraphTotals } from '~/hooks/useGraphCalculator'
 import { rnd } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
+import { DEFAULT_LOCKS } from '@commons/types/recipe'
+import { LockButton } from './LockButton'
 
 export function DoughTotalsPanel() {
   const portioning = useRecipeFlowStore((s) => s.portioning)
   const graph = useRecipeFlowStore((s) => s.graph)
   const scaleAllNodes = useRecipeFlowStore((s) => s.scaleAllNodes)
-  const setGlobalHydration = useRecipeFlowStore((s) => s.setGlobalHydration)
+  const toggleLock = useRecipeFlowStore((s) => s.toggleLock)
   const t = useT()
 
+  const locks = portioning.locks ?? DEFAULT_LOCKS
   const totals = computeGraphTotals(graph)
   const hasIngredients = totals.totalDough > 0
 
@@ -17,8 +21,24 @@ export function DoughTotalsPanel() {
     ? Math.round(portioning.thickness * portioning.tray.l * portioning.tray.w * portioning.tray.count)
     : portioning.ball.weight * portioning.ball.count
 
-  const displayTotal = hasIngredients ? totals.totalDough : portioningTarget
+  const displayTotal = locks.totalDough && portioning.lockedTotalDough
+    ? portioning.lockedTotalDough
+    : (hasIngredients ? totals.totalDough : portioningTarget)
   const displayHyd = hasIngredients ? totals.currentHydration : portioning.targetHyd
+
+  // Local state for total input — commit only on blur/Enter to avoid
+  // intermediate keystroke values that zero out small ingredients via rnd()
+  const [localTotal, setLocalTotal] = useState(String(Math.round(displayTotal)))
+  useEffect(() => {
+    setLocalTotal(String(Math.round(displayTotal)))
+  }, [displayTotal])
+
+  function commitTotal() {
+    const v = Math.max(50, +localTotal || 50)
+    if (v !== Math.round(displayTotal)) {
+      scaleAllNodes(v)
+    }
+  }
 
   const hyd = displayHyd / 100
   const { yeastPct, saltPct, fatPct } = portioning
@@ -35,14 +55,21 @@ export function DoughTotalsPanel() {
       <div className="flex justify-between items-center text-xs">
         <span className="text-muted-foreground font-medium">{t('label_total_dough')}</span>
         <div className="flex items-center gap-1">
-          <input type="number" value={Math.round(displayTotal)} step={10} min={50} onChange={(e) => scaleAllNodes(+e.target.value || 50)} className="w-[70px] text-sm font-bold bg-white border-[1.5px] border-border rounded-md px-1.5 py-0.5 outline-none text-center min-h-9" />
+          <LockButton locked={locks.totalDough} onToggle={() => toggleLock('totalDough')} />
+          <input
+            type="number" value={localTotal} step={10} min={50}
+            onChange={(e) => setLocalTotal(e.target.value)}
+            onBlur={commitTotal}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+            disabled={locks.totalDough}
+            className="w-[70px] text-sm font-bold bg-white border-[1.5px] border-border rounded-md px-1.5 py-0.5 outline-none text-center min-h-9 disabled:opacity-50 disabled:cursor-not-allowed"
+          />
           <span className="text-muted-foreground">g</span>
         </div>
       </div>
       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
         <span>{t('label_hydration')}:</span>
-        <input type="number" value={displayHyd} step={1} onChange={(e) => setGlobalHydration(+e.target.value || 0)} className="w-[50px] text-xs font-bold text-accent bg-white border border-border rounded px-1.5 py-px outline-none text-center min-h-7" />
-        <span>%</span>
+        <span className="font-bold text-accent">{displayHyd}%</span>
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-xs">
         <div className="flex justify-between"><span className="text-muted-foreground">{t('label_flours')}</span><span className="font-bold text-foreground">{rnd(estFlour)}g</span></div>

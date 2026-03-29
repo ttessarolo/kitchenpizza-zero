@@ -31,7 +31,8 @@ import type {
   AutoCorrectResult,
 } from '@commons/types/auto-correct'
 import { reconcileGraph } from '../../app/server/services/graph-reconciler.service'
-import { applyWarningActionPure } from './graph-mutation-engine'
+import { applyWarningActionPure, isLockedMutation } from './graph-mutation-engine'
+import { DEFAULT_LOCKS } from '@commons/types/recipe'
 
 // ── Warning Tier Classification ─────────────────────────────────
 
@@ -137,7 +138,15 @@ export function autoCorrectGraph(
 
   for (let round = 1; round <= maxRounds; round++) {
     const result = reconcileGraph(currentGraph, currentPortioning, meta, provider)
+    const locks = currentPortioning.locks ?? DEFAULT_LOCKS
     const actionable = getActionableCanonical(result.warnings, skippedIds)
+      .filter((w) => {
+        if (!w.actions?.length) return true
+        // Keep if at least one action has non-locked mutations
+        return w.actions.some((a) =>
+          a.mutations.some((m) => !isLockedMutation(m, locks)),
+        )
+      })
 
     if (actionable.length === 0) break
 
