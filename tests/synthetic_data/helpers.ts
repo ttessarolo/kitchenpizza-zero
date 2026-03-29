@@ -216,3 +216,61 @@ export function makeDoughNodeWithFlour(id: string, flourType = 'gt_00_deb', gram
     },
   })
 }
+
+// ── Multi-layer (v3) test helpers ───────────────────────────────
+
+import type { RecipeV3, RecipeLayer, CrossLayerEdge, MasterConfig, LayerType } from '@commons/types/recipe-layers'
+
+/** Create a minimal RecipeLayer */
+export function makeLayer(overrides: Partial<RecipeLayer> & { id: string; type: LayerType }): RecipeLayer {
+  const defaultConfigs: Record<LayerType, MasterConfig> = {
+    impasto: { type: 'impasto', config: makeDefaultPortioning() },
+    sauce: { type: 'sauce', config: { sauceType: 'sugo' as const, targetVolume: 500, targetConsistency: 'medium' as const, serving: 4, shelfLife: 3 } },
+    prep: { type: 'prep', config: { prepType: 'verdure' as const, servings: 4, yield: 500 } },
+    ferment: { type: 'ferment', config: { fermentType: 'lattofermentazione' as const, saltPercentage: 2.5, targetPH: 4.0, temperature: 20, duration: 72, vessel: 'jar' } },
+    pastry: { type: 'pastry', config: { pastryType: 'crema' as const, targetWeight: 500, servings: 4, temperatureNotes: '' } },
+  }
+  return {
+    name: overrides.type.charAt(0).toUpperCase() + overrides.type.slice(1),
+    color: '#F59E0B',
+    icon: '\u{1F35E}',
+    position: 0,
+    visible: true,
+    locked: false,
+    masterConfig: defaultConfigs[overrides.type],
+    nodes: [],
+    edges: [],
+    lanes: [{ id: 'main', label: 'Main', isMain: true, origin: { type: 'user' as const } }],
+    ...overrides,
+  }
+}
+
+/** Create a minimal CrossLayerEdge */
+export function makeCrossEdge(
+  sourceLayerId: string,
+  sourceNodeId: string,
+  targetLayerId: string,
+  targetNodeId: string,
+  overrides: Partial<CrossLayerEdge> = {},
+): CrossLayerEdge {
+  return {
+    id: `xedge_${sourceLayerId}_${sourceNodeId}__${targetLayerId}_${targetNodeId}`,
+    sourceLayerId,
+    sourceNodeId,
+    targetLayerId,
+    targetNodeId,
+    data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
+    ...overrides,
+  }
+}
+
+/** Create a minimal RecipeV3 wrapping layers */
+export function makeRecipeV3(layers: RecipeLayer[], crossEdges: CrossLayerEdge[] = []): RecipeV3 {
+  return {
+    version: 3,
+    meta: { name: 'Test', author: 'Test', type: 'pane', subtype: 'pane_comune', locale: 'it' },
+    ingredientGroups: ['Impasto'],
+    layers,
+    crossEdges,
+  }
+}
