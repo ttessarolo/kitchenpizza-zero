@@ -4,10 +4,21 @@ import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { ModeToggle } from './ModeToggle'
 import { PanoramicaSummaryPanel } from './PanoramicaSummaryPanel'
 import { LayerTypePicker } from './LayerTypePicker'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '~/components/ui/alert-dialog'
 
 export function LeftSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
+  const [deleteLayerId, setDeleteLayerId] = useState<string | null>(null)
   const [sidebarWidth, setSidebarWidth] = useState(220)
   const isResizing = useRef(false)
   const t = useT()
@@ -154,9 +165,7 @@ export function LeftSidebar() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          if (window.confirm(t('confirm_remove_layer'))) {
-                            removeLayer(layer.id)
-                          }
+                          setDeleteLayerId(layer.id)
                         }}
                         className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         title={t('remove_layer')}
@@ -191,6 +200,32 @@ export function LeftSidebar() {
         onMouseDown={handleMouseDown}
         className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-primary/20 active:bg-primary/30 z-10"
       />
+
+      {/* Delete layer confirmation dialog */}
+      <AlertDialog open={deleteLayerId !== null} onOpenChange={(open) => { if (!open) setDeleteLayerId(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('remove_layer')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('confirm_remove_layer')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteLayerId(null)}>
+              {t('cancel') || 'Annulla'}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteLayerId) removeLayer(deleteLayerId)
+                setDeleteLayerId(null)
+              }}
+            >
+              {t('remove_layer')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

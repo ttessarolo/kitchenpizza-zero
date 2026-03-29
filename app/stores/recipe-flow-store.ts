@@ -395,6 +395,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const dur = getNodeDuration(node, s.meta.type, s.meta.subtype, portioning.thickness)
         const fn = toFlowNode(node, dur, () => {})
         fn.id = `${layer.id}:${node.id}`
+        fn.position = { x: node.position.x + layer.position * 400, y: node.position.y }
         fn.draggable = false
         fn.connectable = false
         fn.selectable = false
