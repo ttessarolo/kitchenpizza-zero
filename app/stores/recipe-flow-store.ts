@@ -167,7 +167,9 @@ interface RecipeFlowState {
 
   // Layer CRUD
   setActiveLayer: (layerId: string) => void
-  addLayer: (type: LayerType, name?: string) => void
+  addLayer: (type: LayerType, subtype: string, variant: string, name?: string) => void
+  updateLayerSubtype: (layerId: string, subtype: string, variant: string) => void
+  updateLayerVariant: (layerId: string, variant: string) => void
   removeLayer: (layerId: string) => void
   duplicateLayer: (layerId: string) => void
   updateLayer: (layerId: string, patch: Partial<Pick<RecipeLayer, 'name' | 'color' | 'icon' | 'visible' | 'locked' | 'position'>>) => void
@@ -1140,6 +1142,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const freshLayer: RecipeLayer = {
           id: freshLayerId,
           type: 'impasto',
+          subtype: 'pane',
+          variant: 'pane_comune',
           name: 'Impasto',
           color: LAYER_TYPE_META.impasto.defaultColor,
           icon: LAYER_TYPE_META.impasto.icon,
@@ -1386,7 +1390,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       })
     },
 
-    addLayer: (type, name) => {
+    addLayer: (type, subtype, variant, name) => {
       saveSnapshot()
       set((s) => {
         const meta = LAYER_TYPE_META[type]
@@ -1394,13 +1398,15 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const newLayer: RecipeLayer = {
           id: layerId,
           type,
+          subtype,
+          variant,
           name: name ?? meta.labelKey,
           color: meta.defaultColor,
           icon: meta.icon,
           position: s.layers.length,
           visible: true,
           locked: false,
-          masterConfig: getDefaultMasterConfig(type),
+          masterConfig: getDefaultMasterConfig(type, subtype),
           nodes: [],
           edges: [],
           lanes: [],
@@ -1409,6 +1415,43 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
           layers: [...s.layers, newLayer],
         }
       })
+    },
+
+    updateLayerSubtype: (layerId, subtype, variant) => {
+      saveSnapshot()
+      set((s) => {
+        const layers = s.layers.map((l) => {
+          if (l.id !== layerId) return l
+          const updated = { ...l, subtype, variant }
+          // Sync the *Type field inside masterConfig.config
+          switch (updated.masterConfig.type) {
+            case 'sauce':
+              updated.masterConfig = { type: 'sauce', config: { ...updated.masterConfig.config, sauceType: subtype } }
+              break
+            case 'prep':
+              updated.masterConfig = { type: 'prep', config: { ...updated.masterConfig.config, prepType: subtype } }
+              break
+            case 'ferment':
+              updated.masterConfig = { type: 'ferment', config: { ...updated.masterConfig.config, fermentType: subtype } }
+              break
+            case 'pastry':
+              updated.masterConfig = { type: 'pastry', config: { ...updated.masterConfig.config, pastryType: subtype } }
+              break
+            case 'impasto':
+              // For impasto, subtype maps to meta.type (pane, pizza, etc.)
+              break
+          }
+          return updated
+        })
+        return { layers }
+      })
+    },
+
+    updateLayerVariant: (layerId, variant) => {
+      saveSnapshot()
+      set((s) => ({
+        layers: s.layers.map((l) => l.id === layerId ? { ...l, variant } : l),
+      }))
     },
 
     removeLayer: (layerId) => {

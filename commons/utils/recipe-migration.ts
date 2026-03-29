@@ -182,6 +182,8 @@ export function migrateRecipeV2toV3(old: RecipeV2): RecipeV3 {
   const layer: RecipeLayer = {
     id: 'layer_impasto_0',
     type: 'impasto',
+    subtype: old.meta.type || 'pane',
+    variant: old.meta.subtype || 'pane_comune',
     name: old.meta.name || 'Impasto',
     color: '#F59E0B',
     icon: '\u{1F35E}',
@@ -220,9 +222,92 @@ export function isRecipeV3(recipe: unknown): recipe is RecipeV3 {
 
 /**
  * Ensure a recipe is in v3 format. Migrates from v1 or v2 if needed.
+ * Also backfills missing `subtype` on layers.
  */
 export function ensureRecipeV3(recipe: Recipe | RecipeV2 | RecipeV3): RecipeV3 {
-  if (isRecipeV3(recipe)) return recipe
+  if (isRecipeV3(recipe)) return ensureLayerSubtypes(recipe)
   const v2 = ensureRecipeV2(recipe as Recipe | RecipeV2)
   return migrateRecipeV2toV3(v2)
+}
+
+// ── Subtype backfill ─────────────────────────────────────────────
+
+/** Map known config *Type values to valid subtype keys. */
+const SUBTYPE_FALLBACKS: Record<string, Record<string, string>> = {
+  sauce: { tomato: 'sugo', sugo: 'sugo', emulsion: 'emulsione', emulsione: 'emulsione', pesto: 'pesto', cream: 'crema', crema: 'crema', ragu: 'ragu', bechamel: 'besciamella', besciamella: 'besciamella' },
+  prep: { generic: 'generic', topping: 'topping', filling: 'filling', garnish: 'garnish', base: 'base', marinade: 'marinade' },
+  ferment: { lacto: 'lattofermentazione', lattofermentazione: 'lattofermentazione', salamoia: 'salamoia', kombucha: 'kombucha', kefir: 'kefir', miso: 'miso', kimchi: 'kimchi' },
+  pastry: { cream: 'crema', crema: 'crema', chocolate: 'cioccolato', cioccolato: 'cioccolato', meringue: 'meringa', meringa: 'meringa', mousse: 'mousse', glaze: 'glassa', glassa: 'glassa', generic: 'generic' },
+}
+
+const DEFAULT_SUBTYPES: Record<string, string> = {
+  impasto: 'pane',
+  sauce: 'sugo',
+  prep: 'generic',
+  ferment: 'lattofermentazione',
+  pastry: 'crema',
+}
+
+const DEFAULT_VARIANTS: Record<string, string> = {
+  impasto: 'pane_comune',
+  sauce: 'pomodoro_fresco',
+  prep: 'prep_generic',
+  ferment: 'crauti',
+  pastry: 'pasticcera',
+}
+
+/**
+ * Backfill `subtype` and `variant` on V3 layers that don't have them.
+ * Derives from masterConfig.*Type fields where possible.
+ */
+export function ensureLayerSubtypes(recipe: RecipeV3): RecipeV3 {
+  let changed = false
+  const layers = recipe.layers.map((l) => {
+    const needsSubtype = !l.subtype
+    const needsVariant = !l.variant
+    if (!needsSubtype && !needsVariant) return l
+    changed = true
+    let subtype = l.subtype
+    let variant = l.variant
+
+    if (needsSubtype) {
+      switch (l.masterConfig.type) {
+        case 'impasto':
+          subtype = recipe.meta.type || 'pane'
+          break
+        case 'sauce': {
+          const raw = l.masterConfig.config.sauceType
+          subtype = SUBTYPE_FALLBACKS.sauce[raw] ?? DEFAULT_SUBTYPES.sauce
+          break
+        }
+        case 'prep': {
+          const raw = l.masterConfig.config.prepType
+          subtype = SUBTYPE_FALLBACKS.prep[raw] ?? DEFAULT_SUBTYPES.prep
+          break
+        }
+        case 'ferment': {
+          const raw = l.masterConfig.config.fermentType
+          subtype = SUBTYPE_FALLBACKS.ferment[raw] ?? DEFAULT_SUBTYPES.ferment
+          break
+        }
+        case 'pastry': {
+          const raw = l.masterConfig.config.pastryType
+          subtype = SUBTYPE_FALLBACKS.pastry[raw] ?? DEFAULT_SUBTYPES.pastry
+          break
+        }
+      }
+    }
+
+    if (needsVariant) {
+      if (l.masterConfig.type === 'impasto') {
+        variant = recipe.meta.subtype || DEFAULT_VARIANTS.impasto
+      } else {
+        variant = DEFAULT_VARIANTS[l.type] ?? ''
+      }
+    }
+
+    return { ...l, subtype, variant }
+  })
+
+  return changed ? { ...recipe, layers } : recipe
 }

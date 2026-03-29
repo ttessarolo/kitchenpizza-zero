@@ -38,3 +38,12 @@ export function isNodeTypeAllowed(layerType: LayerType, nodeType: NodeTypeKey): 
 export function getAllowedNodeTypes(layerType: LayerType): NodeTypeKey[] {
   return [...LAYER_PALETTES[layerType]]
 }
+
+/**
+ * Get the node palette for a layer type + subtype combo.
+ * Currently returns the type-level palette for all subtypes.
+ * Future: per-subtype overrides via LAYER_SUBTYPE_PALETTE_OVERRIDES.
+ */
+export function getLayerPalette(layerType: LayerType, _subtype?: string): ReadonlySet<NodeTypeKey> {
+  return LAYER_PALETTES[layerType]
+}

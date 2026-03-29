@@ -5,12 +5,29 @@
  * meringue ratio calculation, and warnings via ScienceProvider.
  */
 
+import type { PastryMasterConfig } from '@commons/types/recipe-layers'
 import type { ScienceProvider } from './science/science-provider'
 import { evaluateRules } from './science/rule-engine'
 import type { RuleResult } from './science/rule-engine'
 import { evaluateClassification } from './science/formula-engine'
 
 // ── Constants ────────────────────────────────────────────────
+
+// ── Per-subtype defaults (from science/catalogs/pastry-types.json) ──
+
+const PASTRY_SUBTYPE_DEFAULTS: Record<string, Partial<PastryMasterConfig>> = {
+  cioccolato: { targetWeight: 300, servings: 6, temperatureNotes: '' },
+  crema: { targetWeight: 500, servings: 6, temperatureNotes: '' },
+  meringa: { targetWeight: 200, servings: 8, temperatureNotes: '' },
+  mousse: { targetWeight: 400, servings: 6, temperatureNotes: '' },
+  glassa: { targetWeight: 250, servings: 8, temperatureNotes: '' },
+  generic: { targetWeight: 500, servings: 6, temperatureNotes: '' },
+}
+
+/** Returns sensible defaults for a pastry subtype. */
+export function getDefaults(subtype: string): Partial<PastryMasterConfig> {
+  return PASTRY_SUBTYPE_DEFAULTS[subtype] ?? {}
+}
 
 /** Tempering ranges per chocolate type: [melt, coolMin, coolMax, workMin, workMax] */
 const TEMPER_RANGES: Record<string, { workMin: number; workMax: number }> = {

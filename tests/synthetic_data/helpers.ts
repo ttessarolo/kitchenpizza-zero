@@ -230,8 +230,24 @@ export function makeLayer(overrides: Partial<RecipeLayer> & { id: string; type: 
     ferment: { type: 'ferment', config: { fermentType: 'lattofermentazione' as const, saltPercentage: 2.5, targetPH: 4.0, temperature: 20, duration: 72, vessel: 'jar' } },
     pastry: { type: 'pastry', config: { pastryType: 'crema' as const, targetWeight: 500, servings: 4, temperatureNotes: '' } },
   }
+  const defaultSubtypes: Record<LayerType, string> = {
+    impasto: 'pane',
+    sauce: 'sugo',
+    prep: 'generic',
+    ferment: 'lattofermentazione',
+    pastry: 'crema',
+  }
+  const defaultVariants: Record<LayerType, string> = {
+    impasto: 'pane_comune',
+    sauce: 'pomodoro_fresco',
+    prep: 'prep_generic',
+    ferment: 'crauti',
+    pastry: 'pasticcera',
+  }
   return {
     name: overrides.type.charAt(0).toUpperCase() + overrides.type.slice(1),
+    subtype: defaultSubtypes[overrides.type],
+    variant: defaultVariants[overrides.type],
     color: '#F59E0B',
     icon: '\u{1F35E}',
     position: 0,

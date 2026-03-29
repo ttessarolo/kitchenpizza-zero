@@ -15,6 +15,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '~/components/ui/alert-dialog'
 import { fmtDuration } from '@commons/utils/format'
+import { LAYER_TYPE_META } from '@commons/constants/layer-defaults'
+import { getSubtypeLabelKey } from '@commons/constants/layer-subtypes'
 import { calcFinalDoughTemp } from '@commons/utils/dough-manager'
 import { WarningCard } from './WarningCard'
 import { ActionableWarningBox } from './ActionableWarningBox'
@@ -235,12 +237,18 @@ function SinglePanel({
           </button>
         </div>
         {nodeLayer && (
-          <div className="flex justify-end mt-1">
+          <div className="flex justify-end items-center gap-1.5 mt-1">
             <span
               className="text-[9px] font-semibold px-2 py-0.5 rounded-full text-white"
               style={{ backgroundColor: nodeLayer.color }}
             >
               {nodeLayer.name}
+            </span>
+            <span
+              className="text-[9px] font-medium px-2 py-0.5 rounded-full border"
+              style={{ borderColor: nodeLayer.color + '60', color: nodeLayer.color }}
+            >
+              {t(LAYER_TYPE_META[nodeLayer.type].labelKey)} / {t(getSubtypeLabelKey(nodeLayer.type, nodeLayer.subtype))}
             </span>
           </div>
         )}

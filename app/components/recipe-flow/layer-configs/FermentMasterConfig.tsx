@@ -1,14 +1,16 @@
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import type { FermentMasterConfig as FermentCfg } from '@commons/types/recipe-layers'
+import { LayerSubtypeSelector } from './LayerSubtypeSelector'
 
-const FERMENT_TYPES = ['lacto', 'alcoholic', 'acetic', 'mixed', 'other'] as const
 const VESSEL_TYPES = ['jar', 'crock', 'bucket', 'barrel', 'bag', 'other'] as const
 
 export function FermentMasterConfig() {
   const t = useT()
   const layers = useRecipeFlowStore((s) => s.layers)
   const activeLayerId = useRecipeFlowStore((s) => s.activeLayerId)
+  const updateLayerSubtype = useRecipeFlowStore((s) => s.updateLayerSubtype)
+  const updateLayerVariant = useRecipeFlowStore((s) => s.updateLayerVariant)
 
   const layer = layers.find((l) => l.id === activeLayerId)
   if (!layer || layer.masterConfig.type !== 'ferment') return null
@@ -27,13 +29,13 @@ export function FermentMasterConfig() {
 
   return (
     <div className="space-y-3">
-      <div>
-        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">{t('ferment_type')}</label>
-        <select value={cfg.fermentType} onChange={(e) => update({ fermentType: e.target.value })}
-          className="w-full text-xs bg-background border border-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary">
-          {FERMENT_TYPES.map((ft) => <option key={ft} value={ft}>{t(`ferment_type_${ft}`)}</option>)}
-        </select>
-      </div>
+      <LayerSubtypeSelector
+        layerType="ferment"
+        currentSubtype={layer.subtype}
+        currentVariant={layer.variant}
+        onSubtypeChange={(subtype, variant) => updateLayerSubtype(layer.id, subtype, variant)}
+        onVariantChange={(variant) => updateLayerVariant(layer.id, variant)}
+      />
       <div>
         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">{t('salt_percentage')}</label>
         <div className="flex items-center gap-1.5">

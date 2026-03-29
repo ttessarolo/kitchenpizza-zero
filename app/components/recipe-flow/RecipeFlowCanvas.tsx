@@ -5,6 +5,7 @@ import {
   Background,
   Controls,
   MiniMap,
+  useReactFlow,
   type EdgeTypes,
   type NodeMouseHandler,
   type EdgeMouseHandler,
@@ -44,8 +45,15 @@ export function RecipeFlowCanvas() {
   const viewMode = useRecipeFlowStore((s) => s.viewMode)
   const hasNodes = useRecipeFlowStore((s) => selectGraph(s).nodes.length > 0)
   const isPanoramica = viewMode === 'panoramica'
+  const { fitView } = useReactFlow()
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmUndo, setConfirmUndo] = useState(false)
+
+  // Re-center viewport when switching between layer/panoramica
+  useEffect(() => {
+    const timer = setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50)
+    return () => clearTimeout(timer)
+  }, [viewMode, fitView])
 
   // CTRL+Z / CMD+Z keyboard shortcut
   useEffect(() => {

@@ -60,7 +60,7 @@ export const LAYER_TYPES: readonly LayerType[] = [
  * Impasto defaults match the canonical test portioning values
  * (see tests/synthetic_data/helpers.ts makeDefaultPortioning).
  */
-export function getDefaultMasterConfig(layerType: LayerType): MasterConfig {
+export function getDefaultMasterConfig(layerType: LayerType, subtype?: string): MasterConfig {
   switch (layerType) {
     case 'impasto':
       return {
@@ -86,7 +86,7 @@ export function getDefaultMasterConfig(layerType: LayerType): MasterConfig {
       return {
         type: 'sauce',
         config: {
-          sauceType: 'tomato',
+          sauceType: subtype ?? 'sugo',
           targetVolume: 500,
           targetConsistency: 'medium',
           serving: 4,
@@ -97,7 +97,7 @@ export function getDefaultMasterConfig(layerType: LayerType): MasterConfig {
       return {
         type: 'prep',
         config: {
-          prepType: 'generic',
+          prepType: subtype ?? 'generic',
           servings: 4,
           yield: 500,
         },
@@ -106,7 +106,7 @@ export function getDefaultMasterConfig(layerType: LayerType): MasterConfig {
       return {
         type: 'ferment',
         config: {
-          fermentType: 'lacto',
+          fermentType: subtype ?? 'lattofermentazione',
           saltPercentage: 2.5,
           targetPH: 4.0,
           temperature: 22,
@@ -118,7 +118,7 @@ export function getDefaultMasterConfig(layerType: LayerType): MasterConfig {
       return {
         type: 'pastry',
         config: {
-          pastryType: 'cream',
+          pastryType: subtype ?? 'crema',
           targetWeight: 500,
           servings: 6,
           temperatureNotes: '',

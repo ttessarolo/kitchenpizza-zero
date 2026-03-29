@@ -1,14 +1,16 @@
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import type { SauceMasterConfig as SauceCfg } from '@commons/types/recipe-layers'
+import { LayerSubtypeSelector } from './LayerSubtypeSelector'
 
-const SAUCE_TYPES = ['tomato', 'pesto', 'emulsion', 'marinade', 'reduction', 'glaze', 'other'] as const
 const CONSISTENCIES = ['thin', 'medium', 'thick'] as const
 
 export function SauceMasterConfig() {
   const t = useT()
   const layers = useRecipeFlowStore((s) => s.layers)
   const activeLayerId = useRecipeFlowStore((s) => s.activeLayerId)
+  const updateLayerSubtype = useRecipeFlowStore((s) => s.updateLayerSubtype)
+  const updateLayerVariant = useRecipeFlowStore((s) => s.updateLayerVariant)
 
   const layer = layers.find((l) => l.id === activeLayerId)
   if (!layer || layer.masterConfig.type !== 'sauce') return null
@@ -27,13 +29,13 @@ export function SauceMasterConfig() {
 
   return (
     <div className="space-y-3">
-      <div>
-        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">{t('sauce_type')}</label>
-        <select value={cfg.sauceType} onChange={(e) => update({ sauceType: e.target.value })}
-          className="w-full text-xs bg-background border border-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary">
-          {SAUCE_TYPES.map((st) => <option key={st} value={st}>{t(`sauce_type_${st}`)}</option>)}
-        </select>
-      </div>
+      <LayerSubtypeSelector
+        layerType="sauce"
+        currentSubtype={layer.subtype}
+        currentVariant={layer.variant}
+        onSubtypeChange={(subtype, variant) => updateLayerSubtype(layer.id, subtype, variant)}
+        onVariantChange={(variant) => updateLayerVariant(layer.id, variant)}
+      />
       <div>
         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">{t('target_volume')}</label>
         <div className="flex items-center gap-1.5">

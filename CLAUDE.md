@@ -19,6 +19,12 @@ Mai stringhe hardcoded in JSX, titoli, placeholder, tooltip, bottoni, dialog, la
 Questo vale per OGNI file: componenti, dialog, toast, alert, tooltip.
 Se crei un nuovo testo, aggiungi SEMPRE la chiave in `commons/i18n/it/*.json` E `commons/i18n/en/*.json`.
 
+**Questo include anche i Manager e Science:**
+- I warning dei Manager restituiscono `messageKey` + `messageVars`, MAI testo risolto
+- I blocchi Science (`/science/rules/*.json`) usano `messageKey`, MAI stringhe dirette
+- Ogni `messageKey` deve esistere in ENTRAMBI `en` e `it`
+- L'app deve poter funzionare in QUALSIASI lingua — ogni messaggio deve essere traducibile
+
 ---
 
 ## Monorepo Structure
@@ -185,8 +191,10 @@ Se crei un nuovo testo, aggiungi SEMPRE la chiave in `commons/i18n/it/*.json` E 
 <!-- Detailed architecture: oRPC, Zustand, Clerk, Neon, Sentry, i18n, deploy, testing (sections 1-14) -->
 <!-- → CLAUDE_PRJ_KNOWLEDGE/architecture.md -->
 
-<!-- Manager pattern, inventory, dependency hierarchy, how to create a new one -->
-<!-- → CLAUDE_PRJ_KNOWLEDGE/managers.md -->
+<!-- Manager directory: individual docs per manager, how-to guide, scaffold status -->
+<!-- → CLAUDE_PRJ_KNOWLEDGE/managers/index.md (start here) -->
+<!-- When creating or modifying a manager, UPDATE its doc in CLAUDE_PRJ_KNOWLEDGE/managers/{name}-manager.md -->
+<!-- When creating a NEW manager, follow CLAUDE_PRJ_KNOWLEDGE/managers/how-to-create-new-manager.md -->
 
 <!-- RecipeAutoCorrectManager: iterative constraint solver, priority tiers, mutation engine -->
 <!-- → CLAUDE_PRJ_KNOWLEDGE/auto-correct.md -->

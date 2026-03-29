@@ -23,6 +23,8 @@ export const RECIPE_ML_FUNGHI: RecipeV3 = {
     {
       id: 'layer_impasto',
       type: 'impasto',
+      subtype: 'pizza',
+      variant: 'napoletana',
       name: 'Impasto con Poolish',
       color: '#F59E0B',
       icon: '\u{1F35E}',
@@ -167,6 +169,8 @@ export const RECIPE_ML_FUNGHI: RecipeV3 = {
     {
       id: 'layer_sugo',
       type: 'sauce',
+      subtype: 'sugo',
+      variant: 'pomodoro_fresco',
       name: 'Sugo pomodoro',
       color: '#EF4444',
       icon: '\u{1F345}',
@@ -253,6 +257,8 @@ export const RECIPE_ML_FUNGHI: RecipeV3 = {
     {
       id: 'layer_funghi',
       type: 'prep',
+      subtype: 'topping',
+      variant: 'verdure',
       name: 'Preparazione Funghi',
       color: '#78716C',
       icon: '\u{1F344}',
@@ -359,6 +365,8 @@ export const RECIPE_ML_FUNGHI: RecipeV3 = {
     {
       id: 'layer_assembly',
       type: 'prep',
+      subtype: 'base',
+      variant: 'assemblaggio',
       name: 'Assemblaggio e Cottura',
       color: '#8B5CF6',
       icon: '\u{1F355}',

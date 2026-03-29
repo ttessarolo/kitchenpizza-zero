@@ -11,17 +11,20 @@ import { DoughTotalsPanel } from './DoughTotalsPanel'
 import { LayerColorPicker } from './LayerColorPicker'
 import { LayerMasterConfig } from './layer-configs/LayerMasterConfig'
 import { RECIPE_SUBTYPES } from '@/local_data'
+import { LAYER_TYPE_META } from '@commons/constants/layer-defaults'
 import { Switch } from '~/components/ui/switch'
 
 function AccordionSection({
   title,
   icon,
   defaultOpen = true,
+  badge,
   children,
 }: {
   title: string
   icon: string
   defaultOpen?: boolean
+  badge?: React.ReactNode
   children: React.ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -34,6 +37,7 @@ function AccordionSection({
       >
         <span>{icon}</span>
         <span className="flex-1 text-left">{title}</span>
+        {badge}
         <span className={`text-[10px] transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
       </button>
       {open && <div className="px-3 pb-3">{children}</div>}
@@ -58,6 +62,8 @@ export function RecipeToolbar() {
   const activeLayerId = useRecipeFlowStore((s) => s.activeLayerId)
   const activeLayer = useRecipeFlowStore((s) => s.layers.find(l => l.id === s.activeLayerId))
   const updateLayer = useRecipeFlowStore((s) => s.updateLayer)
+  const updateLayerSubtype = useRecipeFlowStore((s) => s.updateLayerSubtype)
+  const updateLayerVariant = useRecipeFlowStore((s) => s.updateLayerVariant)
   const activeLayerType = useRecipeFlowStore((s) => {
     const layer = s.layers.find((l) => l.id === s.activeLayerId)
     return layer?.masterConfig.type ?? 'impasto'
@@ -122,7 +128,18 @@ export function RecipeToolbar() {
       </div>
 
       {/* Layer identity — always visible */}
-      <AccordionSection title={t('layer_section_title')} icon="🏷️">
+      <AccordionSection
+        title={t('layer_section_title')}
+        icon="🏷️"
+        badge={activeLayer ? (
+          <span
+            className="text-[9px] font-semibold normal-case tracking-normal px-2 py-0.5 rounded-full text-white"
+            style={{ backgroundColor: activeLayer.color }}
+          >
+            {t(LAYER_TYPE_META[activeLayer.type].labelKey)}
+          </span>
+        ) : undefined}
+      >
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -151,10 +168,12 @@ export function RecipeToolbar() {
               currentSubtypes={currentSubtypes}
               onTypeChange={(typeKey, subtypeKey) => {
                 setMeta((m) => ({ ...m, type: typeKey, subtype: subtypeKey }))
+                if (activeLayerId) updateLayerSubtype(activeLayerId, typeKey, subtypeKey)
                 if (subtypeKey) applyTypeDefaults(typeKey, subtypeKey)
               }}
               onSubtypeChange={(subtypeKey) => {
                 setMeta((m) => ({ ...m, subtype: subtypeKey }))
+                if (activeLayerId) updateLayerVariant(activeLayerId, subtypeKey)
                 applyTypeDefaults(meta.type, subtypeKey)
               }}
             />

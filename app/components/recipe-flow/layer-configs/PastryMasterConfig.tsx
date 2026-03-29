@@ -1,13 +1,14 @@
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import type { PastryMasterConfig as PastryCfg } from '@commons/types/recipe-layers'
-
-const PASTRY_TYPES = ['cream', 'custard', 'ganache', 'mousse', 'meringue', 'glaze', 'other'] as const
+import { LayerSubtypeSelector } from './LayerSubtypeSelector'
 
 export function PastryMasterConfig() {
   const t = useT()
   const layers = useRecipeFlowStore((s) => s.layers)
   const activeLayerId = useRecipeFlowStore((s) => s.activeLayerId)
+  const updateLayerSubtype = useRecipeFlowStore((s) => s.updateLayerSubtype)
+  const updateLayerVariant = useRecipeFlowStore((s) => s.updateLayerVariant)
 
   const layer = layers.find((l) => l.id === activeLayerId)
   if (!layer || layer.masterConfig.type !== 'pastry') return null
@@ -26,13 +27,13 @@ export function PastryMasterConfig() {
 
   return (
     <div className="space-y-3">
-      <div>
-        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">{t('pastry_type')}</label>
-        <select value={cfg.pastryType} onChange={(e) => update({ pastryType: e.target.value })}
-          className="w-full text-xs bg-background border border-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary">
-          {PASTRY_TYPES.map((pt) => <option key={pt} value={pt}>{t(`pastry_type_${pt}`)}</option>)}
-        </select>
-      </div>
+      <LayerSubtypeSelector
+        layerType="pastry"
+        currentSubtype={layer.subtype}
+        currentVariant={layer.variant}
+        onSubtypeChange={(subtype, variant) => updateLayerSubtype(layer.id, subtype, variant)}
+        onVariantChange={(variant) => updateLayerVariant(layer.id, variant)}
+      />
       <div>
         <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">{t('target_weight')}</label>
         <div className="flex items-center gap-1.5">

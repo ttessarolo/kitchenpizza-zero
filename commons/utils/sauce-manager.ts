@@ -5,6 +5,7 @@
  * All formulas come from ScienceProvider JSON when available.
  */
 
+import type { SauceMasterConfig } from '@commons/types/recipe-layers'
 import type { ScienceProvider } from './science/science-provider'
 import { evaluateRules } from './science/rule-engine'
 import type { RuleResult } from './science/rule-engine'
@@ -17,6 +18,22 @@ const DEFAULT_EVAP_RATE = 0.15
 
 /** Lid reduces evaporation by ~60%. */
 const LID_FACTOR = 0.4
+
+// ── Per-subtype defaults (from science/catalogs/sauce-types.json) ──
+
+const SAUCE_SUBTYPE_DEFAULTS: Record<string, Partial<SauceMasterConfig>> = {
+  sugo: { targetVolume: 500, targetConsistency: 'medium', shelfLife: 3 },
+  emulsione: { targetVolume: 300, targetConsistency: 'thin', shelfLife: 2 },
+  pesto: { targetVolume: 250, targetConsistency: 'thick', shelfLife: 5 },
+  crema: { targetVolume: 400, targetConsistency: 'medium', shelfLife: 2 },
+  ragu: { targetVolume: 600, targetConsistency: 'thick', shelfLife: 4 },
+  besciamella: { targetVolume: 500, targetConsistency: 'medium', shelfLife: 2 },
+}
+
+/** Returns sensible defaults for a sauce subtype. */
+export function getDefaults(subtype: string): Partial<SauceMasterConfig> {
+  return SAUCE_SUBTYPE_DEFAULTS[subtype] ?? {}
+}
 
 // ── 1. calcReductionVolume ───────────────────────────────────
 

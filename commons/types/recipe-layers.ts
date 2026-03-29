@@ -70,6 +70,8 @@ export type MasterConfig =
 export interface RecipeLayer {
   id: string
   type: LayerType
+  subtype: string
+  variant: string
   name: string
   color: string
   icon: string

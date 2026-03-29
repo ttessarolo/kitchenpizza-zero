@@ -22,6 +22,8 @@ export const RECIPE_ML_MARGHERITA: RecipeV3 = {
     {
       id: 'layer_impasto',
       type: 'impasto',
+      subtype: 'pizza',
+      variant: 'napoletana',
       name: 'Impasto',
       color: '#F59E0B',
       icon: '\u{1F35E}',
@@ -135,6 +137,8 @@ export const RECIPE_ML_MARGHERITA: RecipeV3 = {
     {
       id: 'layer_sugo',
       type: 'sauce',
+      subtype: 'sugo',
+      variant: 'pomodoro_fresco',
       name: 'Sugo pomodoro',
       color: '#EF4444',
       icon: '\u{1F345}',
@@ -216,6 +220,8 @@ export const RECIPE_ML_MARGHERITA: RecipeV3 = {
     {
       id: 'layer_assembly',
       type: 'prep',
+      subtype: 'base',
+      variant: 'assemblaggio',
       name: 'Assemblaggio',
       color: '#8B5CF6',
       icon: '\u{1F355}',
