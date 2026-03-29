@@ -8,6 +8,7 @@ import { IngredientsOverview } from '~/components/recipe/IngredientsOverview'
 import { TimeSummary } from '~/components/recipe/TimeSummary'
 import { DoughCompositionPanel } from './DoughCompositionPanel'
 import { DoughTotalsPanel } from './DoughTotalsPanel'
+import { LayerMasterConfig } from './layer-configs/LayerMasterConfig'
 import { RECIPE_SUBTYPES } from '@/local_data'
 import { Switch } from '~/components/ui/switch'
 
@@ -53,6 +54,10 @@ export function RecipeToolbar() {
   const applyTypeDefaults = useRecipeFlowStore((s) => s.applyTypeDefaults)
   const generateDough = useRecipeFlowStore((s) => s.generateDough)
   const graphEmpty = useRecipeFlowStore((s) => selectGraph(s).nodes.length === 0)
+  const activeLayerType = useRecipeFlowStore((s) => {
+    const layer = s.layers.find((l) => l.id === s.activeLayerId)
+    return layer?.masterConfig.type ?? 'impasto'
+  })
   const t = useT()
 
   const currentSubtypes = (RECIPE_SUBTYPES[meta.type] || []).map((s) => ({
@@ -112,109 +117,117 @@ export function RecipeToolbar() {
         </button>
       </div>
 
-      {/* 1. Tipologia */}
-      <AccordionSection title={t('section_type')} icon="📋">
-        <RecipeTypeSelector
-          meta={meta}
-          currentSubtypes={currentSubtypes}
-          onTypeChange={(typeKey, subtypeKey) => {
-            setMeta((m) => ({ ...m, type: typeKey, subtype: subtypeKey }))
-            if (subtypeKey) applyTypeDefaults(typeKey, subtypeKey)
-          }}
-          onSubtypeChange={(subtypeKey) => {
-            setMeta((m) => ({ ...m, subtype: subtypeKey }))
-            applyTypeDefaults(meta.type, subtypeKey)
-          }}
-        />
-
-        {/* Auto-correct settings */}
-        <div className="mt-3 space-y-2">
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-xs font-medium">{t('label_auto_correct')}</span>
-            <Switch
-              checked={portioning.autoCorrect}
-              onCheckedChange={(checked) => setPortioning((p) => ({ ...p, autoCorrect: checked }))}
+      {activeLayerType === 'impasto' ? (
+        <>
+          {/* 1. Tipologia */}
+          <AccordionSection title={t('section_type')} icon="📋">
+            <RecipeTypeSelector
+              meta={meta}
+              currentSubtypes={currentSubtypes}
+              onTypeChange={(typeKey, subtypeKey) => {
+                setMeta((m) => ({ ...m, type: typeKey, subtype: subtypeKey }))
+                if (subtypeKey) applyTypeDefaults(typeKey, subtypeKey)
+              }}
+              onSubtypeChange={(subtypeKey) => {
+                setMeta((m) => ({ ...m, subtype: subtypeKey }))
+                applyTypeDefaults(meta.type, subtypeKey)
+              }}
             />
-          </label>
-          {portioning.autoCorrect && (
-            <div>
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_reasoning_level')}</label>
-              <select
-                value={portioning.reasoningLevel}
-                onChange={(e) => setPortioning((p) => ({ ...p, reasoningLevel: e.target.value as 'low' | 'medium' | 'high' }))}
-                className="w-full text-xs border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none"
-              >
-                <option value="low">{t('reasoning_low')}</option>
-                <option value="medium">{t('reasoning_medium')}</option>
-                <option value="high">{t('reasoning_high')}</option>
-              </select>
+
+            {/* Auto-correct settings */}
+            <div className="mt-3 space-y-2">
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-xs font-medium">{t('label_auto_correct')}</span>
+                <Switch
+                  checked={portioning.autoCorrect}
+                  onCheckedChange={(checked) => setPortioning((p) => ({ ...p, autoCorrect: checked }))}
+                />
+              </label>
+              {portioning.autoCorrect && (
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_reasoning_level')}</label>
+                  <select
+                    value={portioning.reasoningLevel}
+                    onChange={(e) => setPortioning((p) => ({ ...p, reasoningLevel: e.target.value as 'low' | 'medium' | 'high' }))}
+                    className="w-full text-xs border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none"
+                  >
+                    <option value="low">{t('reasoning_low')}</option>
+                    <option value="medium">{t('reasoning_medium')}</option>
+                    <option value="high">{t('reasoning_high')}</option>
+                  </select>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </AccordionSection>
+          </AccordionSection>
 
-      {/* 1b. Dettagli ricetta */}
-      <AccordionSection title={t('section_recipe_details')} icon="📝">
-        <div className="space-y-2">
-          <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_recipe_name')}</label>
-            <input
-              type="text"
-              value={meta.name}
-              onChange={(e) => setMeta((m) => ({ ...m, name: e.target.value }))}
-              placeholder={t('label_recipe_name_placeholder')}
-              className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-primary"
+          {/* 1b. Dettagli ricetta */}
+          <AccordionSection title={t('section_recipe_details')} icon="📝">
+            <div className="space-y-2">
+              <div>
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_recipe_name')}</label>
+                <input
+                  type="text"
+                  value={meta.name}
+                  onChange={(e) => setMeta((m) => ({ ...m, name: e.target.value }))}
+                  placeholder={t('label_recipe_name_placeholder')}
+                  className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_author')}</label>
+                <input
+                  type="text"
+                  value={meta.author}
+                  onChange={(e) => setMeta((m) => ({ ...m, author: e.target.value }))}
+                  placeholder={t('label_author_placeholder')}
+                  className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+          </AccordionSection>
+
+          {/* 2. Porzionatura */}
+          <AccordionSection title={t('section_portioning')} icon="📐">
+            <PortioningSection
+              hideHeader
+              hideTotals
+              portioning={portioning}
+              totalDough={displayTotalDough}
+              totalFlour={estimatedFlour}
+              totalLiquid={estimatedLiquid}
+              currentHydration={displayHydration}
+              trayTotalDough={
+                portioning.mode === 'tray'
+                  ? Math.round(portioning.thickness * portioning.tray.l * portioning.tray.w * portioning.tray.count)
+                  : 0
+              }
+              onPortioningChange={(np) => handlePortioningChangeWithScale(np)}
+              onUpdatePortioning={(fn) => {
+                const newP = fn(portioning)
+                handlePortioningChangeWithScale(newP)
+              }}
+              onScaleAll={scaleAllNodes}
+              onSetHydration={setGlobalHydration}
             />
-          </div>
-          <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_author')}</label>
-            <input
-              type="text"
-              value={meta.author}
-              onChange={(e) => setMeta((m) => ({ ...m, author: e.target.value }))}
-              placeholder={t('label_author_placeholder')}
-              className="w-full text-sm border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-primary"
-            />
-          </div>
-        </div>
-      </AccordionSection>
+          </AccordionSection>
 
-      {/* 2. Porzionatura */}
-      <AccordionSection title={t('section_portioning')} icon="📐">
-        <PortioningSection
-          hideHeader
-          hideTotals
-          portioning={portioning}
-          totalDough={displayTotalDough}
-          totalFlour={estimatedFlour}
-          totalLiquid={estimatedLiquid}
-          currentHydration={displayHydration}
-          trayTotalDough={
-            portioning.mode === 'tray'
-              ? Math.round(portioning.thickness * portioning.tray.l * portioning.tray.w * portioning.tray.count)
-              : 0
-          }
-          onPortioningChange={(np) => handlePortioningChangeWithScale(np)}
-          onUpdatePortioning={(fn) => {
-            const newP = fn(portioning)
-            handlePortioningChangeWithScale(newP)
-          }}
-          onScaleAll={scaleAllNodes}
-          onSetHydration={setGlobalHydration}
-        />
-      </AccordionSection>
+          {/* 3. Composizione impasto */}
+          <AccordionSection title={t('section_composition')} icon="🧪">
+            <DoughCompositionPanel />
+          </AccordionSection>
 
-      {/* 3. Composizione impasto */}
-      <AccordionSection title={t('section_composition')} icon="🧪">
-        <DoughCompositionPanel />
-      </AccordionSection>
+          {/* 4. Totale impasto */}
+          <AccordionSection title={t('section_dough_total')} icon="📊">
+            <DoughTotalsPanel />
+          </AccordionSection>
+        </>
+      ) : (
+        <AccordionSection title={t('section_configuration')} icon="⚙️">
+          <LayerMasterConfig />
+        </AccordionSection>
+      )}
 
-      {/* 4. Totale impasto */}
-      <AccordionSection title={t('section_dough_total')} icon="📊">
-        <DoughTotalsPanel />
-      </AccordionSection>
-
-      {/* 5. Ingredienti */}
+      {/* 5. Ingredienti — all layer types */}
       <AccordionSection title={t('section_ingredients')} icon="🧈">
         {hasIngredients ? (
           <IngredientsOverview
@@ -234,13 +247,13 @@ export function RecipeToolbar() {
         )}
       </AccordionSection>
 
-      {/* 6. Tempi */}
+      {/* 6. Tempi — all layer types */}
       <AccordionSection title={t('section_times')} icon="⏱️">
         <TimeSummary timeSummary={timeSummary} hideHeader />
       </AccordionSection>
 
-      {/* Genera Impasto — only for empty graphs */}
-      {graphEmpty && (
+      {/* Genera Impasto — only for empty graphs on impasto layer */}
+      {activeLayerType === 'impasto' && graphEmpty && (
         <div className="p-3 border-t border-border">
           <button
             type="button"
