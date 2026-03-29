@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { computeGraphTotals } from '~/hooks/useGraphCalculator'
 import { rnd } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
@@ -7,8 +7,8 @@ import { DEFAULT_LOCKS } from '@commons/types/recipe'
 import { LockButton } from './LockButton'
 
 export function DoughTotalsPanel() {
-  const portioning = useRecipeFlowStore((s) => s.portioning)
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const portioning = useRecipeFlowStore(selectPortioning)
+  const graph = useRecipeFlowStore(selectGraph)
   const scaleAllNodes = useRecipeFlowStore((s) => s.scaleAllNodes)
   const toggleLock = useRecipeFlowStore((s) => s.toggleLock)
   const t = useT()

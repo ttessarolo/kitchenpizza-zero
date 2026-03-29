@@ -1,0 +1,20 @@
+{
+  "type": "formula",
+  "id": "sauce_reduction_volume",
+  "ref": "Sauce reduction: volume loss based on duration, surface area, and lid usage",
+  "_meta": {
+    "section": "sauce",
+    "displayName": "meta.formula.sauce_reduction_volume.name",
+    "description": "meta.formula.sauce_reduction_volume.desc",
+    "tags": ["sauce", "reduction", "volume", "formula"],
+    "lastModified": "2026-03-29",
+    "author": "system"
+  },
+  "expression": "startVolume * (1 - clamp(cookDuration * evapRate * lidFactor / 100, 0, 0.8))",
+  "constants": {
+    "evapRate": 0.15,
+    "lidFactor": 1.0
+  },
+  "inputs": ["startVolume", "cookDuration", "lidFactor"],
+  "output": { "name": "finalVolume", "unit": "ml", "round": 0, "min": 0 }
+}

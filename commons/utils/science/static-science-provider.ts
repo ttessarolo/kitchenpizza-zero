@@ -24,6 +24,8 @@ import composition from '@/science/formulas/composition.json'
 import doughTemp from '@/science/formulas/dough-temp.json'
 import yeastWCorrection from '@/science/formulas/yeast-w-correction.json'
 import yeastInverse from '@/science/formulas/yeast-inverse.json'
+import sauceReduction from '@/science/formulas/sauce-reduction.json'
+import fermentDuration from '@/science/formulas/ferment-duration.json'
 
 // Rules
 import doughWarnings from '@/science/rules/dough-warnings.json'
@@ -32,6 +34,10 @@ import preBakeAdvisories from '@/science/rules/pre-bake-advisories.json'
 import preFermentValidation from '@/science/rules/pre-ferment-validation.json'
 import riseWarnings from '@/science/rules/rise-warnings.json'
 import fermentationCoherence from '@/science/rules/fermentation-coherence.json'
+import sauceWarnings from '@/science/rules/sauce-warnings.json'
+import fermentWarnings from '@/science/rules/ferment-warnings.json'
+import pastryWarnings from '@/science/rules/pastry-warnings.json'
+import prepWarnings from '@/science/rules/prep-warnings.json'
 
 // Catalogs
 import flours from '@/science/catalogs/flours.json'
@@ -40,6 +46,9 @@ import bakingProfiles from '@/science/catalogs/baking-profiles.json'
 import ovenConfig from '@/science/catalogs/oven-config.json'
 import riseMethods from '@/science/catalogs/rise-methods.json'
 import saltsSugars from '@/science/catalogs/salts-sugars.json'
+import sauceTypes from '@/science/catalogs/sauce-types.json'
+import fermentTypes from '@/science/catalogs/ferment-types.json'
+import pastryTypes from '@/science/catalogs/pastry-types.json'
 
 // Defaults
 import doughDefaults from '@/science/defaults/dough.json'
@@ -48,15 +57,20 @@ import doughDefaults from '@/science/defaults/dough.json'
 import flourStrength from '@/science/classifications/flour-strength.json'
 import riseCapacity from '@/science/classifications/rise-capacity.json'
 import minFermentationHours from '@/science/classifications/min-fermentation-hours.json'
+import pastryTemper from '@/science/classifications/pastry-temper.json'
 
 // ── Build indexes ─────────────────────────────────────────────────
 
 const allFiles = [
   yeast, riseDuration, bakeDuration, composition, doughTemp, yeastWCorrection, yeastInverse,
+  sauceReduction, fermentDuration,
   doughWarnings, bakingAdvisories, preBakeAdvisories, preFermentValidation, riseWarnings, fermentationCoherence,
+  sauceWarnings, fermentWarnings, pastryWarnings, prepWarnings,
   flours, fats, bakingProfiles, ovenConfig, riseMethods, saltsSugars,
+  sauceTypes, fermentTypes, pastryTypes,
   doughDefaults,
   flourStrength, riseCapacity, minFermentationHours,
+  pastryTemper,
 ]
 
 const blocks = new Map<string, ScienceBlock>()

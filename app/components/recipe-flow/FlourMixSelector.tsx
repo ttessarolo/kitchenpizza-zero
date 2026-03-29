@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
 import { FLOUR_CATALOG, FLOUR_GROUPS } from '@/local_data/flour-catalog'
 import { estimateBlendW, blendFlourProperties } from '@commons/utils/flour-manager'
@@ -13,9 +13,9 @@ const catalog = FLOUR_CATALOG as unknown as FlourCatalogEntry[]
 export function FlourMixSelector() {
   const t = useT()
   const [open, setOpen] = useState(false)
-  const flourMix = useRecipeFlowStore((s) => s.portioning.flourMix ?? [])
+  const flourMix = useRecipeFlowStore((s) => selectPortioning(s).flourMix ?? [])
   const setPortioning = useRecipeFlowStore((s) => s.setPortioning)
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const graph = useRecipeFlowStore(selectGraph)
 
   // Compute W: use real blend from graph nodes if available, else estimate from keys
   const doughNode = graph.nodes.find((n) => n.type === 'dough')

@@ -1,0 +1,70 @@
+[
+  {
+    "type": "rule",
+    "id": "ferment_salt_too_low",
+    "_meta": { "section": "ferment", "displayName": "meta.rule.ferment_salt_too_low.name", "description": "meta.rule.ferment_salt_too_low.desc", "tags": ["ferment", "salt", "botulism", "error"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "ferment",
+    "severity": "error",
+    "messageKey": "warning.ferment_salt_too_low",
+    "messageVars": ["saltPercentage", "fermentType"],
+    "conditions": [
+      { "field": "saltPercentage", "op": "lt", "value": 2 },
+      { "field": "fermentType", "op": "eq", "value": "lattofermentazione" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.set_min_ferment_salt",
+        "mutations": [{ "type": "updateNode", "patch": { "saltPercentage": 2 } }]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "ferment_salt_too_high",
+    "_meta": { "section": "ferment", "displayName": "meta.rule.ferment_salt_too_high.name", "description": "meta.rule.ferment_salt_too_high.desc", "tags": ["ferment", "salt", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "ferment",
+    "severity": "warning",
+    "messageKey": "warning.ferment_salt_too_high",
+    "messageVars": ["saltPercentage"],
+    "conditions": [
+      { "field": "saltPercentage", "op": "gt", "value": 5 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "ferment_temp_too_high",
+    "_meta": { "section": "ferment", "displayName": "meta.rule.ferment_temp_too_high.name", "description": "meta.rule.ferment_temp_too_high.desc", "tags": ["ferment", "temperature", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "ferment",
+    "severity": "warning",
+    "messageKey": "warning.ferment_temp_too_high",
+    "messageVars": ["temperature"],
+    "conditions": [
+      { "field": "temperature", "op": "gt", "value": 30 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "ferment_temp_too_low",
+    "_meta": { "section": "ferment", "displayName": "meta.rule.ferment_temp_too_low.name", "description": "meta.rule.ferment_temp_too_low.desc", "tags": ["ferment", "temperature", "info"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "ferment",
+    "severity": "info",
+    "messageKey": "warning.ferment_temp_too_low",
+    "messageVars": ["temperature"],
+    "conditions": [
+      { "field": "temperature", "op": "lt", "value": 15 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "ferment_ph_not_reached",
+    "_meta": { "section": "ferment", "displayName": "meta.rule.ferment_ph_not_reached.name", "description": "meta.rule.ferment_ph_not_reached.desc", "tags": ["ferment", "pH", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "ferment",
+    "severity": "warning",
+    "messageKey": "warning.ferment_ph_not_reached",
+    "messageVars": ["currentPH", "daysSinceStart"],
+    "conditions": [
+      { "field": "currentPH", "op": "gt", "value": 4.6 },
+      { "field": "daysSinceStart", "op": "gt", "value": 2 }
+    ]
+  }
+]

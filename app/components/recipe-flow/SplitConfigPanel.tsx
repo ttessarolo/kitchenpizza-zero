@@ -1,5 +1,5 @@
 import { useT } from '~/hooks/useTranslation'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 import { getParentIds } from '@commons/utils/graph-utils'
 import type { SplitOutput } from '@commons/types/recipe-graph'
 
@@ -9,7 +9,7 @@ interface SplitConfigPanelProps {
 
 export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
   const t = useT()
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const graph = useRecipeFlowStore(selectGraph)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)
 
   const node = graph.nodes.find((n) => n.id === nodeId)

@@ -34,11 +34,41 @@ export type NodeTypeKey =
   | 'pre_bake'
   | 'bake'
   | 'done'
-  // New
   | 'post_bake'
   | 'prep'
   | 'split'
   | 'join'
+  // Multi-layer shared
+  | 'ingredient'
+  | 'cook'
+  | 'mix'
+  // Sauce layer
+  | 'blend'
+  | 'emulsify'
+  | 'strain'
+  | 'season'
+  // Prep layer
+  | 'wash'
+  | 'cut'
+  | 'peel'
+  | 'grate'
+  | 'stuff'
+  | 'assemble'
+  | 'plate'
+  | 'garnish'
+  // Ferment layer
+  | 'brine'
+  | 'inoculate'
+  | 'ferment_node'
+  | 'check'
+  | 'store'
+  // Pastry layer
+  | 'whip'
+  | 'temper'
+  | 'fold'
+  | 'chill'
+  | 'mold'
+  | 'glaze'
 
 // ── Prep-specific enums ─────────────────────────────────────────
 
@@ -334,3 +364,18 @@ export interface DedupedWarning extends ActionableWarning {
   count: number
   affectedNodeIds: string[]
 }
+
+// ── Layer types (v3) re-exports ──────────────────────────────────
+
+export type {
+  LayerType,
+  ImpastoMasterConfig,
+  SauceMasterConfig,
+  PrepMasterConfig,
+  FermentMasterConfig,
+  PastryMasterConfig,
+  MasterConfig,
+  RecipeLayer,
+  CrossLayerEdge,
+  RecipeV3,
+} from './recipe-layers'

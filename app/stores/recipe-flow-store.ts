@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import {
   applyNodeChanges,
   applyEdgeChanges,
-  addEdge,
   type OnNodesChange,
   type OnEdgesChange,
   type OnConnect,
@@ -14,12 +13,14 @@ import type {
   RecipeGraph,
   RecipeNode,
   RecipeEdge,
-  LaneDefinition,
   NodeTypeKey,
   NodeData,
 } from '@commons/types/recipe-graph'
 import type { RecipeMeta, Portioning, TemperatureUnit, RecipeStep, PortioningLocks } from '@commons/types/recipe'
 import { DEFAULT_LOCKS } from '@commons/types/recipe'
+import type { RecipeV3, RecipeLayer, CrossLayerEdge, LayerType } from '@commons/types/recipe-layers'
+import { getDefaultMasterConfig, LAYER_TYPE_META } from '@commons/constants/layer-defaults'
+import { ensureRecipeV3 } from '@commons/utils/recipe-migration'
 import { autoLayout } from '~/lib/auto-layout'
 import { removeNodeFromGraph, getNodeTotalWeight } from '@commons/utils/graph-utils'
 import { rnd } from '@commons/utils/format'
@@ -33,13 +34,25 @@ import { RECIPE_SUBTYPES } from '@/local_data'
 import { getDoughDefaults, calcYeastPct, estimateBlendW } from '@commons/utils/dough-manager'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
 import { staticProvider } from '@commons/utils/science/static-science-provider'
-import type { NodeRef } from '@commons/types/recipe-graph'
 import type { ActionableWarning as RecipeWarning } from '@commons/types/recipe-graph'
 import type { AutoCorrectReport } from '@commons/types/auto-correct'
 import { applyWarningActionPure } from '@commons/utils/graph-mutation-engine'
 import { autoCorrectGraph } from '@commons/utils/recipe-auto-correct-manager'
+import { computePanoramica } from '@commons/utils/panoramica-manager'
 import type { BaseNodeData } from '~/components/recipe-flow/nodes/BaseNode'
 import { getNodeDuration } from '~/hooks/useGraphCalculator'
+
+// ── Default portioning (fallback for non-impasto layers) ────────
+
+const DEFAULT_PORTIONING: Portioning = {
+  mode: 'ball',
+  tray: { preset: 't', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
+  ball: { weight: 250, count: 4 },
+  thickness: 0.5,
+  targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3,
+  preImpasto: null, preFermento: null, flourMix: [],
+  autoCorrect: false, reasoningLevel: 'medium',
+}
 
 // ── Convert RecipeNode to React Flow Node ───────────────────────
 
@@ -79,12 +92,16 @@ function toFlowEdge(e: RecipeEdge): Edge {
 interface RecipeFlowState {
   // Raw recipe data
   meta: RecipeMeta
-  portioning: Portioning
   ingredientGroups: string[]
-  graph: RecipeGraph
-  lanes: LaneDefinition[]
 
-  // React Flow nodes/edges (derived from graph)
+  // Multi-layer (SOURCE OF TRUTH)
+  layers: RecipeLayer[]
+  activeLayerId: string
+  crossEdges: CrossLayerEdge[]
+  viewMode: 'layer' | 'panoramica'
+  inactiveLayerOpacity: number
+
+  // React Flow nodes/edges (derived from active layer)
   flowNodes: Node<BaseNodeData>[]
   flowEdges: Edge[]
 
@@ -93,7 +110,7 @@ interface RecipeFlowState {
   expandedNodeId: string | null
   peekNodeIds: string[]              // max 2 — CTRL+click panels
   lastAddedNodeId: string | null     // for undo toast
-  undoSnapshot: { graph: RecipeGraph; portioning: Portioning } | null
+  undoSnapshot: { layers: RecipeLayer[]; crossEdges: CrossLayerEdge[]; meta: RecipeMeta } | null
   temperatureUnit: TemperatureUnit
   ambientTemp: number
 
@@ -103,7 +120,7 @@ interface RecipeFlowState {
   onConnect: OnConnect
 
   // Actions
-  loadRecipe: (recipe: RecipeV2) => void
+  loadRecipe: (recipe: RecipeV2 | RecipeV3) => void
   setMeta: (fn: (m: RecipeMeta) => RecipeMeta) => void
   setPortioning: (fn: (p: Portioning) => Portioning) => void
   selectNode: (id: string | null) => void
@@ -147,7 +164,19 @@ interface RecipeFlowState {
   addNode: (afterNodeId: string, type: NodeTypeKey, subtype?: string | null) => void
   removeNode: (id: string) => void
   runAutoLayout: () => void
-  toRecipeV2: () => RecipeV2
+
+  // Layer CRUD
+  setActiveLayer: (layerId: string) => void
+  addLayer: (type: LayerType, name?: string) => void
+  removeLayer: (layerId: string) => void
+  duplicateLayer: (layerId: string) => void
+  updateLayer: (layerId: string, patch: Partial<Pick<RecipeLayer, 'name' | 'color' | 'icon' | 'visible' | 'locked' | 'position'>>) => void
+  reorderLayers: (orderedIds: string[]) => void
+  addCrossEdge: (source: { layerId: string; nodeId: string }, target: { layerId: string; nodeId: string }) => void
+  removeCrossEdge: (edgeId: string) => void
+  setViewMode: (mode: 'layer' | 'panoramica') => void
+  setInactiveLayerOpacity: (opacity: number) => void
+  toRecipeV3: () => RecipeV3
 }
 
 // ── Helper: sync flow nodes from graph ──────────────────────────
@@ -281,13 +310,159 @@ function syncFlowNodes(
 // ── Create store ────────────────────────────────────────────────
 
 export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
+  // ── Internal helpers (layers-first data access) ─────────────
+
+  /** Get the active layer from state */
+  function getActiveLayer(s: RecipeFlowState): RecipeLayer {
+    return s.layers.find(l => l.id === s.activeLayerId) ?? s.layers[0]
+  }
+
+  /** Get graph from active layer */
+  function getGraph(s: RecipeFlowState): RecipeGraph {
+    const layer = getActiveLayer(s)
+    if (!layer) return { nodes: [], edges: [], lanes: [] }
+    return { nodes: layer.nodes, edges: layer.edges, lanes: layer.lanes, viewport: layer.viewport }
+  }
+
+  /** Get portioning from active layer (impasto only, fallback for non-impasto) */
+  function getPortioning(s: RecipeFlowState): Portioning {
+    const layer = getActiveLayer(s)
+    if (!layer) return DEFAULT_PORTIONING
+    if (layer.masterConfig.type === 'impasto') return layer.masterConfig.config
+    return DEFAULT_PORTIONING
+  }
+
+  /** Return new layers[] with the active layer replaced by a patched version */
+  function withActiveLayerUpdate(s: RecipeFlowState, patch: Partial<RecipeLayer>): RecipeLayer[] {
+    return s.layers.map(l => l.id === s.activeLayerId ? { ...l, ...patch } : l)
+  }
+
+  /** Return new layers[] with the active layer's graph updated */
+  function withGraphUpdate(s: RecipeFlowState, graph: RecipeGraph): RecipeLayer[] {
+    return s.layers.map(l => {
+      if (l.id !== s.activeLayerId) return l
+      return { ...l, nodes: graph.nodes, edges: graph.edges, lanes: graph.lanes }
+    })
+  }
+
+  /** Return new layers[] with the active layer's portioning updated (impasto only) */
+  function withPortioningUpdate(s: RecipeFlowState, portioning: Portioning): RecipeLayer[] {
+    return s.layers.map(l => {
+      if (l.id !== s.activeLayerId) return l
+      if (l.masterConfig.type !== 'impasto') return l
+      return { ...l, masterConfig: { type: 'impasto', config: portioning } }
+    })
+  }
+
+  /** Return new layers[] with both graph and portioning updated for active layer */
+  function withReconcileResult(
+    s: RecipeFlowState,
+    result: { graph: RecipeGraph; portioning: Portioning },
+  ): RecipeLayer[] {
+    return s.layers.map(l => {
+      if (l.id !== s.activeLayerId) return l
+      const updated: RecipeLayer = { ...l, nodes: result.graph.nodes, edges: result.graph.edges, lanes: result.graph.lanes }
+      if (l.masterConfig.type === 'impasto') {
+        updated.masterConfig = { type: 'impasto', config: result.portioning }
+      }
+      return updated
+    })
+  }
+
+  /** Build flowNodes/flowEdges for ALL visible layers (active at 1.0, inactive dimmed) */
+  function rebuildAllFlowNodes(s: RecipeFlowState): { flowNodes: Node<BaseNodeData>[]; flowEdges: Edge[] } {
+    const activeLayer = getActiveLayer(s)
+    if (!activeLayer) return { flowNodes: [], flowEdges: [] }
+
+    const graph = getGraph(s)
+    const portioning = getPortioning(s)
+
+    // Active layer: full interactivity
+    const activeFlowNodes = syncFlowNodes(
+      graph, s.meta, portioning, onExpandHandler,
+      s.expandedNodeId, s.peekNodeIds,
+      buildCriticalWarningNodeIds(s.warnings ?? [])
+    )
+    const activeFlowEdges = graph.edges.map(toFlowEdge)
+
+    // Apply the same positional offset to the active layer so switching layers doesn't shift layout
+    const activeLayerOffset = activeLayer.position * 400
+    for (const fn of activeFlowNodes) {
+      fn.position = { x: fn.position.x + activeLayerOffset, y: fn.position.y }
+      // If active layer is locked, disable drag and connect
+      if (activeLayer.locked) {
+        fn.draggable = false
+        fn.connectable = false
+        fn.data = { ...fn.data, layerLocked: true }
+      }
+    }
+
+    // Inactive visible layers: dimmed, non-interactive, namespaced IDs
+    const dimmedNodes: Node<BaseNodeData>[] = []
+    const dimmedEdges: Edge[] = []
+
+    for (const layer of s.layers) {
+      if (layer.id === s.activeLayerId || !layer.visible) continue
+      for (const node of layer.nodes) {
+        const dur = getNodeDuration(node, s.meta.type, s.meta.subtype, portioning.thickness)
+        const fn = toFlowNode(node, dur, () => {})
+        fn.id = `${layer.id}:${node.id}`
+        fn.position = { x: node.position.x + layer.position * 400, y: node.position.y }
+        fn.draggable = false
+        fn.connectable = false
+        fn.selectable = false
+        fn.style = { ...fn.style, opacity: s.inactiveLayerOpacity }
+        fn.data = { ...fn.data, layerColor: layer.color, layerLocked: layer.locked }
+        dimmedNodes.push(fn)
+      }
+      for (const edge of layer.edges) {
+        const fe = toFlowEdge(edge)
+        fe.id = `${layer.id}:${edge.id}`
+        fe.source = `${layer.id}:${edge.source}`
+        fe.target = `${layer.id}:${edge.target}`
+        fe.style = { ...fe.style, opacity: s.inactiveLayerOpacity * 0.7 }
+        fe.selectable = false
+        dimmedEdges.push(fe)
+      }
+    }
+
+    // Cross-layer edges (dashed purple)
+    const crossFlowEdges: Edge[] = []
+    for (const ce of s.crossEdges) {
+      // Resolve source/target IDs: if the node belongs to the active layer, use bare ID; else use namespaced
+      const sourceFlowId = ce.sourceLayerId === s.activeLayerId
+        ? ce.sourceNodeId
+        : `${ce.sourceLayerId}:${ce.sourceNodeId}`
+      const targetFlowId = ce.targetLayerId === s.activeLayerId
+        ? ce.targetNodeId
+        : `${ce.targetLayerId}:${ce.targetNodeId}`
+
+      crossFlowEdges.push({
+        id: ce.id,
+        source: sourceFlowId,
+        target: targetFlowId,
+        type: 'recipe',
+        data: ce.data,
+        style: { strokeDasharray: '8,6', stroke: '#8b5cf6', strokeWidth: 2 },
+      })
+    }
+
+    return {
+      flowNodes: [...dimmedNodes, ...activeFlowNodes],
+      flowEdges: [...dimmedEdges, ...activeFlowEdges, ...crossFlowEdges],
+    }
+  }
+
+  // ── Snapshot / Mutation engine ──────────────────────────────
+
   /** Save current state as undo snapshot before any mutation */
   function saveSnapshot() {
     const s = get()
     set({
       undoSnapshot: {
-        graph: JSON.parse(JSON.stringify(s.graph)),
-        portioning: JSON.parse(JSON.stringify(s.portioning)),
+        layers: JSON.parse(JSON.stringify(s.layers)),
+        crossEdges: JSON.parse(JSON.stringify(s.crossEdges)),
+        meta: JSON.parse(JSON.stringify(s.meta)),
       },
       canUndo: true,
     })
@@ -300,12 +475,15 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
    * Uses staticProvider (browser-compatible, bundled at build-time) for
    * Science-based warnings and calculations.
    */
-  function applyMutation(fn: (s: RecipeFlowState) => { graph?: RecipeGraph; portioning?: Portioning; meta?: RecipeMeta }) {
+  function applyMutation(fn: (view: { graph: RecipeGraph; portioning: Portioning; meta: RecipeMeta; ingredientGroups: string[] }) => { graph?: RecipeGraph; portioning?: Portioning; meta?: RecipeMeta }) {
     saveSnapshot()
     set((s) => {
-      const partial = fn(s)
-      const newGraph = partial.graph ?? s.graph
-      const newPortioning = partial.portioning ?? s.portioning
+      const graph = getGraph(s)
+      const portioning = getPortioning(s)
+      const view = { graph, portioning, meta: s.meta, ingredientGroups: s.ingredientGroups }
+      const partial = fn(view)
+      const newGraph = partial.graph ?? graph
+      const newPortioning = partial.portioning ?? portioning
       const newMeta = partial.meta ?? s.meta
 
       // Run reconciliation engine WITH Science provider (sync, browser-safe)
@@ -319,13 +497,19 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         }
       }
 
+      const newLayers = withReconcileResult(s, result)
+
       return {
-        graph: result.graph,
-        portioning: result.portioning,
+        layers: newLayers,
         warnings: result.warnings,
         ingredientGroups: updatedGroups,
-        flowNodes: syncFlowNodes(result.graph, newMeta, result.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(result.warnings)),
-        flowEdges: result.graph.edges.map(toFlowEdge),
+        ...rebuildAllFlowNodes({
+          ...s,
+          layers: newLayers,
+          warnings: result.warnings,
+          meta: newMeta,
+          ingredientGroups: updatedGroups,
+        }),
       }
     })
   }
@@ -336,17 +520,12 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
   return {
     meta: { name: '', author: '', type: 'pane', subtype: 'pane_comune', locale: 'it' },
-    portioning: {
-      mode: 'ball',
-      tray: { preset: 't', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
-      ball: { weight: 250, count: 4 },
-      thickness: 0.5,
-      targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3, preImpasto: null, preFermento: null, flourMix: [], autoCorrect: false, reasoningLevel: 'medium',
-      locks: { ...DEFAULT_LOCKS },
-    },
     ingredientGroups: ['Impasto'],
-    graph: { nodes: [], edges: [], lanes: [] },
-    lanes: [],
+    layers: [],
+    activeLayerId: '',
+    crossEdges: [],
+    viewMode: 'layer' as const,
+    inactiveLayerOpacity: 0.5,
     flowNodes: [],
     flowEdges: [],
     selectedNodeId: null,
@@ -365,14 +544,18 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     onNodesChange: (changes) => {
       set((s) => {
         const updated = applyNodeChanges(changes, s.flowNodes)
-        // Sync positions back to graph
-        const newNodes = s.graph.nodes.map((n) => {
-          const fn = updated.find((u) => u.id === n.id)
-          return fn ? { ...n, position: fn.position } : n
+        const layer = getActiveLayer(s)
+        if (!layer) return { flowNodes: updated as Node<BaseNodeData>[] }
+        // Only sync positions for active layer nodes (no : in ID)
+        // Subtract the active layer offset so stored positions remain canonical
+        const offset = layer.position * 400
+        const newNodes = layer.nodes.map((n) => {
+          const fn = updated.find((u) => u.id === n.id) // bare ID, no namespace
+          return fn ? { ...n, position: { x: fn.position.x - offset, y: fn.position.y } } : n
         })
         return {
           flowNodes: updated as Node<BaseNodeData>[],
-          graph: { ...s.graph, nodes: newNodes },
+          layers: withActiveLayerUpdate(s, { nodes: newNodes }),
         }
       })
     },
@@ -383,52 +566,117 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
     onConnect: (connection) => {
       set((s) => {
+        const sourceId = connection.source!
+        const targetId = connection.target!
+        const sourceIsNamespaced = sourceId.includes(':')
+        const targetIsNamespaced = targetId.includes(':')
+
+        // Reject connections involving locked layers
+        const activeLayer = getActiveLayer(s)
+        if (activeLayer?.locked) return s
+
+        // If either end is namespaced, this is a cross-layer connection
+        if (sourceIsNamespaced || targetIsNamespaced) {
+          const sourceLayerId = sourceIsNamespaced ? sourceId.split(':')[0] : s.activeLayerId
+          const sourceNodeId = sourceIsNamespaced ? sourceId.split(':').slice(1).join(':') : sourceId
+          const targetLayerId = targetIsNamespaced ? targetId.split(':')[0] : s.activeLayerId
+          const targetNodeId = targetIsNamespaced ? targetId.split(':').slice(1).join(':') : targetId
+
+          // Reject if source or target layer is locked
+          const srcLayer = s.layers.find(l => l.id === sourceLayerId)
+          const tgtLayer = s.layers.find(l => l.id === targetLayerId)
+          if (srcLayer?.locked || tgtLayer?.locked) return s
+
+          // Don't create intra-layer edges via this path
+          if (sourceLayerId === targetLayerId) return s
+
+          const ceId = `xedge_${sourceLayerId}_${sourceNodeId}__${targetLayerId}_${targetNodeId}`
+          if (s.crossEdges.some(e => e.id === ceId)) return s
+
+          const newCrossEdge = {
+            id: ceId,
+            sourceLayerId,
+            sourceNodeId,
+            targetLayerId,
+            targetNodeId,
+            data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
+          }
+          const newCrossEdges = [...s.crossEdges, newCrossEdge]
+          return {
+            crossEdges: newCrossEdges,
+            ...rebuildAllFlowNodes({ ...s, crossEdges: newCrossEdges }),
+          }
+        }
+
+        // Intra-layer edge (existing logic)
+        const graph = getGraph(s)
         const newEdge: RecipeEdge = {
-          id: `e_${connection.source}__${connection.target}`,
-          source: connection.source!,
-          target: connection.target!,
+          id: `e_${sourceId}__${targetId}`,
+          source: sourceId,
+          target: targetId,
           sourceHandle: connection.sourceHandle,
           targetHandle: connection.targetHandle,
           data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
         }
-        const newGraph = { ...s.graph, edges: [...s.graph.edges, newEdge] }
+        const newGraph = { ...graph, edges: [...graph.edges, newEdge] }
+        const newLayers = withGraphUpdate(s, newGraph)
         return {
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
-          flowEdges: addEdge(
-            { ...connection, type: 'recipe', data: newEdge.data },
-            s.flowEdges,
-          ),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
       })
     },
 
     loadRecipe: (recipe) => {
+      const v3 = ensureRecipeV3(recipe as RecipeV2 | RecipeV3)
+      const activeLayer = v3.layers[0]
+      if (!activeLayer) return
+
+      const graph: RecipeGraph = { nodes: activeLayer.nodes, edges: activeLayer.edges, lanes: activeLayer.lanes }
+      const portioning = activeLayer.masterConfig.type === 'impasto'
+        ? activeLayer.masterConfig.config
+        : DEFAULT_PORTIONING
+
       // Init reconcile: convert to v1, reconcile pre-ferments, map back
-      const v1 = graphToRecipeV1(recipe.graph, recipe.meta, recipe.portioning, recipe.ingredientGroups)
+      const v1 = graphToRecipeV1(graph, v3.meta, portioning, v3.ingredientGroups)
       const reconciled = reconcilePreFerments(v1)
-      // Map reconciled steps back to graph nodes
-      const reconciledNodes = recipe.graph.nodes.map((n) => {
+      const reconciledNodes = graph.nodes.map((n) => {
         const step = reconciled.steps.find((st) => st.id === n.id)
         if (!step) return n
         return { ...n, data: { ...n.data, ...stepToNodeData(step) } }
       })
-      const graph = { ...recipe.graph, nodes: reconciledNodes }
+      const reconciledGraph: RecipeGraph = { ...graph, nodes: reconciledNodes }
 
-      // Run full reconciliation with Science provider for initial warnings
-      const result = reconcileGraph(graph, recipe.portioning, recipe.meta, staticProvider)
+      const result = reconcileGraph(reconciledGraph, portioning, v3.meta, staticProvider)
 
-      set({
-        meta: recipe.meta,
-        portioning: result.portioning,
-        ingredientGroups: recipe.ingredientGroups,
-        graph: result.graph,
-        lanes: result.graph.lanes,
+      // Update first layer with reconciled data
+      const updatedLayers = v3.layers.map((l, i) => {
+        if (i !== 0) return l
+        const updated: RecipeLayer = { ...l, nodes: result.graph.nodes, edges: result.graph.edges, lanes: result.graph.lanes }
+        if (l.masterConfig.type === 'impasto') {
+          updated.masterConfig = { type: 'impasto' as const, config: result.portioning }
+        }
+        return updated
+      })
+
+      const loadState: RecipeFlowState = {
+        ...get(),
+        meta: v3.meta,
+        ingredientGroups: v3.ingredientGroups,
+        layers: updatedLayers,
+        activeLayerId: activeLayer.id,
+        crossEdges: v3.crossEdges,
+        viewMode: 'layer',
         warnings: result.warnings,
-        flowNodes: syncFlowNodes(result.graph, recipe.meta, result.portioning, onExpandHandler, null, [], buildCriticalWarningNodeIds(result.warnings)),
-        flowEdges: result.graph.edges.map(toFlowEdge),
         selectedNodeId: null,
         expandedNodeId: null,
+        peekNodeIds: [],
+        flowNodes: [],
+        flowEdges: [],
+      }
+      set({
+        ...loadState,
+        ...rebuildAllFlowNodes(loadState),
       })
     },
 
@@ -436,10 +684,12 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
     setPortioning: (fn) => {
       set((s) => {
-        const newP = fn(s.portioning)
+        const portioning = getPortioning(s)
+        const newP = fn(portioning)
+        const newLayers = withPortioningUpdate(s, newP)
         return {
-          portioning: newP,
-          flowNodes: syncFlowNodes(s.graph, s.meta, newP, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
       })
     },
@@ -452,7 +702,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         expandedNodeId: newExpanded,
         peekNodeIds: [],
         lastAddedNodeId: null,
-        flowNodes: syncFlowNodes(s.graph, s.meta, s.portioning, onExpandHandler, newExpanded, [], buildCriticalWarningNodeIds(s.warnings ?? [])),
+        ...rebuildAllFlowNodes({ ...s, expandedNodeId: newExpanded, peekNodeIds: [] }),
       }
     }),
 
@@ -465,7 +715,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       return {
         peekNodeIds: newPeek,
         lastAddedNodeId: null,
-        flowNodes: syncFlowNodes(s.graph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, newPeek, buildCriticalWarningNodeIds(s.warnings ?? [])),
+        ...rebuildAllFlowNodes({ ...s, peekNodeIds: newPeek }),
       }
     }),
 
@@ -487,17 +737,29 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     undo: () => {
       const { undoSnapshot } = get()
       if (!undoSnapshot) return
-      set((s) => ({
-        graph: undoSnapshot.graph,
-        portioning: undoSnapshot.portioning,
-        flowNodes: syncFlowNodes(undoSnapshot.graph, s.meta, undoSnapshot.portioning, onExpandHandler, null, [], buildCriticalWarningNodeIds(s.warnings ?? [])),
-        flowEdges: undoSnapshot.graph.edges.map(toFlowEdge),
-        undoSnapshot: null,
-        canUndo: false,
-        expandedNodeId: null,
-        peekNodeIds: [],
-        lastAddedNodeId: null,
-      }))
+      set((s) => {
+        const layer = undoSnapshot.layers.find(l => l.id === s.activeLayerId) ?? undoSnapshot.layers[0]
+        if (!layer) return { undoSnapshot: null, canUndo: false }
+        const undoState: RecipeFlowState = {
+          ...s,
+          layers: undoSnapshot.layers,
+          crossEdges: undoSnapshot.crossEdges,
+          meta: undoSnapshot.meta,
+          expandedNodeId: null,
+          peekNodeIds: [],
+        }
+        return {
+          layers: undoSnapshot.layers,
+          crossEdges: undoSnapshot.crossEdges,
+          meta: undoSnapshot.meta,
+          ...rebuildAllFlowNodes(undoState),
+          undoSnapshot: null,
+          canUndo: false,
+          expandedNodeId: null,
+          peekNodeIds: [],
+          lastAddedNodeId: null,
+        }
+      })
     },
 
     setTemperatureUnit: (u) => set({ temperatureUnit: u }),
@@ -506,13 +768,15 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     // Cosmetic update — title, desc, position — NO reconciliation
     updateNodeCosmetic: (id, patch) => {
       set((s) => {
-        const newNodes = s.graph.nodes.map((n) =>
+        const layer = getActiveLayer(s)
+        if (!layer) return s
+        const newNodes = layer.nodes.map((n) =>
           n.id === id ? { ...n, data: { ...n.data, ...patch } } : n,
         )
-        const newGraph = { ...s.graph, nodes: newNodes }
+        const newLayers = withActiveLayerUpdate(s, { nodes: newNodes })
         return {
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
       })
     },
@@ -523,10 +787,10 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         ? { ...patch, userOverrideDuration: true }
         : patch
 
-      applyMutation((s) => ({
+      applyMutation((view) => ({
         graph: {
-          ...s.graph,
-          nodes: s.graph.nodes.map((n) =>
+          ...view.graph,
+          nodes: view.graph.nodes.map((n) =>
             n.id === id ? { ...n, data: { ...n.data, ...finalPatch } } : n,
           ),
         },
@@ -536,8 +800,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     // Atomic multi-node update — single applyMutation → single reconciliation.
     // Prevents stale-closure bugs when updating multiple nodes in a loop.
     batchUpdateNodes: (updates) => {
-      applyMutation((s) => {
-        const newNodes = s.graph.nodes.map((n) => {
+      applyMutation((view) => {
+        const newNodes = view.graph.nodes.map((n) => {
           const upd = updates.find((u) => u.id === n.id)
           if (!upd) return n
           const finalPatch = upd.patch.baseDur !== undefined
@@ -545,55 +809,57 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
             : upd.patch
           return { ...n, data: { ...n.data, ...finalPatch } }
         })
-        return { graph: { ...s.graph, nodes: newNodes } }
+        return { graph: { ...view.graph, nodes: newNodes } }
       })
     },
 
     // ── Reconciliation: the core update with cascading logic ─────
     // Simplified: apply v1 step mutation then let reconcileGraph handle cascading
     updateNodeWithReconcile: (id, fn) => {
-      applyMutation((s) => {
-        const recipe = graphToRecipeV1(s.graph, s.meta, s.portioning, s.ingredientGroups)
+      applyMutation((view) => {
+        const recipe = graphToRecipeV1(view.graph, view.meta, view.portioning, view.ingredientGroups)
         const newSteps = recipe.steps.map((st) => (st.id === id ? fn(st) : st))
-        const newNodes = s.graph.nodes.map((n) => {
+        const newNodes = view.graph.nodes.map((n) => {
           const step = newSteps.find((st) => st.id === n.id)
           if (!step) return n
           return { ...n, subtype: step.subtype, data: { ...n.data, ...stepToNodeData(step) } }
         })
-        return { graph: { ...s.graph, nodes: newNodes } }
+        return { graph: { ...view.graph, nodes: newNodes } }
       })
     },
 
     // ── Scale all nodes uniformly ────────────────────────────────
     scaleAllNodes: (newTotal) => {
-      const locks = get().portioning.locks ?? DEFAULT_LOCKS
+      const portioning = getPortioning(get())
+      const locks = portioning.locks ?? DEFAULT_LOCKS
       if (locks.totalDough) return // locked — no scaling
-      applyMutation((s) => {
-        const totals = computeGraphTotals(s.graph)
-        if (totals.totalDough <= 0) return { portioning: s.portioning }
+      applyMutation((view) => {
+        const totals = computeGraphTotals(view.graph)
+        if (totals.totalDough <= 0) return { portioning: view.portioning }
         const factor = newTotal / totals.totalDough
-        const newNodes = s.graph.nodes.map((n) => ({
+        const newNodes = view.graph.nodes.map((n) => ({
           ...n,
           data: scaleNodeData(n.data, factor),
         }))
-        return { graph: { ...s.graph, nodes: newNodes } }
+        return { graph: { ...view.graph, nodes: newNodes } }
       })
     },
 
     // ── Set global hydration (scale all liquids + save targetHyd) ──
     // Routes through applyMutation so reconcileGraph runs (Phase 3d enforces totalDough lock).
     setGlobalHydration: (h) => {
-      const locks = get().portioning.locks ?? DEFAULT_LOCKS
+      const portioning = getPortioning(get())
+      const locks = portioning.locks ?? DEFAULT_LOCKS
       if (locks.hydration) return // locked — no hydration change
-      applyMutation((s) => {
-        const newPortioning = { ...s.portioning, targetHyd: h }
-        const totals = computeGraphTotals(s.graph)
+      applyMutation((view) => {
+        const newPortioning = { ...view.portioning, targetHyd: h }
+        const totals = computeGraphTotals(view.graph)
         if (totals.totalFlour <= 0 || totals.totalLiquid <= 0) {
           return { portioning: newPortioning }
         }
         const targetLiquid = (totals.totalFlour * h) / 100
         const factor = targetLiquid / totals.totalLiquid
-        const newNodes = s.graph.nodes.map((n) => ({
+        const newNodes = view.graph.nodes.map((n) => ({
           ...n,
           data: {
             ...n.data,
@@ -602,7 +868,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         }))
         return {
           portioning: newPortioning,
-          graph: { ...s.graph, nodes: newNodes },
+          graph: { ...view.graph, nodes: newNodes },
         }
       })
     },
@@ -610,13 +876,16 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     // ── Portioning change with scaling ───────────────────────────
     handlePortioningChangeWithScale: (np) => {
       saveSnapshot()
-      const locks = get().portioning.locks ?? DEFAULT_LOCKS
+      const portioning = getPortioning(get())
+      const locks = portioning.locks ?? DEFAULT_LOCKS
       set((s) => {
+        const graph = getGraph(s)
         // When totalDough is locked, update portioning without scaling nodes
         if (locks.totalDough) {
+          const newLayers = withPortioningUpdate(s, np)
           return {
-            portioning: np,
-            flowNodes: syncFlowNodes(s.graph, s.meta, np, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+            layers: newLayers,
+            ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
           }
         }
 
@@ -624,20 +893,32 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
           ? Math.round(np.tray.l * np.tray.w * np.thickness * np.tray.count)
           : np.ball.weight * np.ball.count
 
-        const totals = computeGraphTotals(s.graph)
-        if (totals.totalDough <= 0) return { ...s, portioning: np }
+        const totals = computeGraphTotals(graph)
+        if (totals.totalDough <= 0) {
+          return {
+            layers: withPortioningUpdate(s, np),
+          }
+        }
 
         const factor = newTarget / totals.totalDough
-        const newNodes = s.graph.nodes.map((n) => ({
+        const newNodes = graph.nodes.map((n) => ({
           ...n,
           data: scaleNodeData(n.data, factor),
         }))
-        const newGraph = { ...s.graph, nodes: newNodes }
+        const newGraph: RecipeGraph = { ...graph, nodes: newNodes }
 
+        // Update both graph (scaled nodes) and portioning
+        const newLayers = s.layers.map(l => {
+          if (l.id !== s.activeLayerId) return l
+          const updated: RecipeLayer = { ...l, nodes: newGraph.nodes, edges: newGraph.edges, lanes: newGraph.lanes }
+          if (l.masterConfig.type === 'impasto') {
+            updated.masterConfig = { type: 'impasto', config: np }
+          }
+          return updated
+        })
         return {
-          portioning: np,
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, np, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
       })
     },
@@ -645,8 +926,10 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     // ── Execute warning action via pure mutation engine ──────────
     applyWarningAction: (warning, actionIdx) => {
       const s = get()
+      const graph = getGraph(s)
+      const portioning = getPortioning(s)
       const { graph: newGraph, portioning: newPort } = applyWarningActionPure(
-        warning, actionIdx, s.graph, s.portioning,
+        warning, actionIdx, graph, portioning,
       )
       applyMutation(() => ({ graph: newGraph, portioning: newPort }))
     },
@@ -654,9 +937,11 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     // ── Apply all warnings via iterative auto-correct solver ──────
     applyAllWarningActions: () => {
       const s = get()
+      const graph = getGraph(s)
+      const portioning = getPortioning(s)
       const result = autoCorrectGraph(
-        staticProvider, s.graph, s.portioning, s.meta,
-        { autoCorrect: true, reasoningLevel: s.portioning.reasoningLevel },
+        staticProvider, graph, portioning, s.meta,
+        { autoCorrect: true, reasoningLevel: portioning.reasoningLevel },
       )
       applyMutation(() => ({
         graph: result.graph,
@@ -665,31 +950,33 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       set({ autoCorrectReport: result.report })
     },
 
-    // ── Toggle field lock (mutual exclusivity for duration ↔ yeastPct) ──
+    // ── Toggle field lock (mutual exclusivity for duration <-> yeastPct) ──
     toggleLock: (field) => {
       set((s) => {
-        const locks: PortioningLocks = { ...(s.portioning.locks ?? DEFAULT_LOCKS) }
+        const portioning = getPortioning(s)
+        const graph = getGraph(s)
+        const locks: PortioningLocks = { ...(portioning.locks ?? DEFAULT_LOCKS) }
         locks[field] = !locks[field]
         if (field === 'duration' && locks.duration) locks.yeastPct = false
         if (field === 'yeastPct' && locks.yeastPct) locks.duration = false
 
-        const patch: Partial<typeof s.portioning> = { locks }
+        const patch: Partial<Portioning> = { locks }
 
         // Capture/clear the actual graph total when totalDough lock toggles
         if (field === 'totalDough') {
           if (locks.totalDough) {
-            const totals = computeGraphTotals(s.graph)
+            const totals = computeGraphTotals(graph)
             patch.lockedTotalDough = totals.totalDough > 0
               ? totals.totalDough
-              : (s.portioning.mode === 'tray'
-                  ? Math.round(s.portioning.tray.l * s.portioning.tray.w * s.portioning.thickness * s.portioning.tray.count)
-                  : s.portioning.ball.weight * s.portioning.ball.count)
+              : (portioning.mode === 'tray'
+                  ? Math.round(portioning.tray.l * portioning.tray.w * portioning.thickness * portioning.tray.count)
+                  : portioning.ball.weight * portioning.ball.count)
           } else {
             patch.lockedTotalDough = undefined
           }
         }
 
-        return { portioning: { ...s.portioning, ...patch } }
+        return { layers: withPortioningUpdate(s, { ...portioning, ...patch }) }
       })
     },
 
@@ -697,8 +984,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     // Unlike setPortioning, this triggers applyMutation → reconcileGraph.
     // Critical for Phase 3c (rise node scaling when yeastPct is locked).
     updateDoughHours: (hours) => {
-      applyMutation((s) => ({
-        portioning: { ...s.portioning, doughHours: hours },
+      applyMutation((view) => ({
+        portioning: { ...view.portioning, doughHours: hours },
       }))
     },
 
@@ -709,7 +996,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       if (!sub) return
       const d = sub.defaults
       const s = get()
-      const np = { ...s.portioning, mode: d.mode } as Portioning
+      const currentP = getPortioning(s)
+      const np = { ...currentP, mode: d.mode } as Portioning
       if (d.thickness) np.thickness = d.thickness
       if (d.ballG) np.ball = { ...np.ball, weight: d.ballG }
       if (d.hyd) np.targetHyd = d.hyd
@@ -729,13 +1017,15 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     updateEdgeData: (edgeId, patch) => {
       saveSnapshot()
       set((s) => {
-        const newEdges = s.graph.edges.map((e) =>
+        const graph = getGraph(s)
+        const newEdges = graph.edges.map((e) =>
           e.id === edgeId ? { ...e, data: { ...e.data, ...patch } } : e,
         )
-        const newGraph = { ...s.graph, edges: newEdges }
+        const newGraph: RecipeGraph = { ...graph, edges: newEdges }
+        const newLayers = withGraphUpdate(s, newGraph)
         return {
-          graph: newGraph,
-          flowEdges: newGraph.edges.map(toFlowEdge),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
       })
     },
@@ -743,12 +1033,13 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     removeEdge: (edgeId) => {
       saveSnapshot()
       set((s) => {
-        const newEdges = s.graph.edges.filter((e) => e.id !== edgeId)
-        const newGraph = { ...s.graph, edges: newEdges }
+        const graph = getGraph(s)
+        const newEdges = graph.edges.filter((e) => e.id !== edgeId)
+        const newGraph: RecipeGraph = { ...graph, edges: newEdges }
+        const newLayers = withGraphUpdate(s, newGraph)
         return {
-          graph: newGraph,
-          flowEdges: newGraph.edges.map(toFlowEdge),
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
           selectedEdgeId: s.selectedEdgeId === edgeId ? null : s.selectedEdgeId,
           edgeCalloutPos: null,
         }
@@ -758,18 +1049,19 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     addDep: (nodeId, parentId) => {
       saveSnapshot()
       set((s) => {
-        if (s.graph.edges.some((e) => e.source === parentId && e.target === nodeId)) return s
+        const graph = getGraph(s)
+        if (graph.edges.some((e) => e.source === parentId && e.target === nodeId)) return s
         const newEdge: RecipeEdge = {
           id: `e_${parentId}__${nodeId}`,
           source: parentId,
           target: nodeId,
           data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
         }
-        const newGraph = { ...s.graph, edges: [...s.graph.edges, newEdge] }
+        const newGraph: RecipeGraph = { ...graph, edges: [...graph.edges, newEdge] }
+        const newLayers = withGraphUpdate(s, newGraph)
         return {
-          graph: newGraph,
-          flowEdges: newGraph.edges.map(toFlowEdge),
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
       })
     },
@@ -777,27 +1069,30 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     removeDep: (nodeId, parentId) => {
       saveSnapshot()
       set((s) => {
-        const newEdges = s.graph.edges.filter(
+        const graph = getGraph(s)
+        const newEdges = graph.edges.filter(
           (e) => !(e.source === parentId && e.target === nodeId),
         )
-        const newGraph = { ...s.graph, edges: newEdges }
+        const newGraph: RecipeGraph = { ...graph, edges: newEdges }
         // Also clear sourcePrep if it pointed to removed parent
         const newNodes = newGraph.nodes.map((n) =>
           n.id === nodeId && n.data.sourcePrep === parentId
             ? { ...n, data: { ...n.data, sourcePrep: null } }
             : n,
         )
+        const finalGraph: RecipeGraph = { ...newGraph, nodes: newNodes }
+        const newLayers = withGraphUpdate(s, finalGraph)
         return {
-          graph: { ...newGraph, nodes: newNodes },
-          flowEdges: newGraph.edges.map(toFlowEdge),
-          flowNodes: syncFlowNodes({ ...newGraph, nodes: newNodes }, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
       })
     },
 
     updateDep: (nodeId, parentId, field, value) => {
       set((s) => {
-        const newEdges = s.graph.edges.map((e) => {
+        const graph = getGraph(s)
+        const newEdges = graph.edges.map((e) => {
           if (e.source !== parentId || e.target !== nodeId) return e
           return {
             ...e,
@@ -807,10 +1102,11 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
             },
           }
         })
-        const newGraph = { ...s.graph, edges: newEdges }
+        const newGraph: RecipeGraph = { ...graph, edges: newEdges }
+        const newLayers = withGraphUpdate(s, newGraph)
         return {
-          graph: newGraph,
-          flowEdges: newGraph.edges.map(toFlowEdge),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
       })
     },
@@ -840,10 +1136,26 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
           reasoningLevel: 'medium',
         }
 
-        const emptyGraph: RecipeGraph = { nodes: [], edges: [], lanes: [] }
+        const freshLayerId = `layer_impasto_${Date.now().toString(36)}`
+        const freshLayer: RecipeLayer = {
+          id: freshLayerId,
+          type: 'impasto',
+          name: 'Impasto',
+          color: LAYER_TYPE_META.impasto.defaultColor,
+          icon: LAYER_TYPE_META.impasto.icon,
+          position: 0,
+          visible: true,
+          locked: false,
+          masterConfig: { type: 'impasto', config: np },
+          nodes: [],
+          edges: [],
+          lanes: [],
+        }
+
         return {
-          portioning: np,
-          graph: emptyGraph,
+          layers: [freshLayer],
+          activeLayerId: freshLayerId,
+          crossEdges: [],
           flowNodes: [],
           flowEdges: [],
           expandedNodeId: null,
@@ -858,18 +1170,19 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     generateDough: () => {
       saveSnapshot()
       set((s) => {
-        const portioningTarget = s.portioning.mode === 'tray'
-          ? Math.round(s.portioning.thickness * s.portioning.tray.l * s.portioning.tray.w * s.portioning.tray.count)
-          : s.portioning.ball.weight * s.portioning.ball.count
+        const portioning = getPortioning(s)
+        const portioningTarget = portioning.mode === 'tray'
+          ? Math.round(portioning.thickness * portioning.tray.l * portioning.tray.w * portioning.tray.count)
+          : portioning.ball.weight * portioning.ball.count
         const graph = generateDoughGraph({
           meta: s.meta,
-          portioning: s.portioning,
+          portioning,
           totalDough: portioningTarget,
         })
+        const newLayers = withGraphUpdate(s, graph)
         return {
-          graph,
-          flowNodes: syncFlowNodes(graph, s.meta, s.portioning, onExpandHandler, null, [], buildCriticalWarningNodeIds(s.warnings ?? [])),
-          flowEdges: graph.edges.map(toFlowEdge),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers, expandedNodeId: null, peekNodeIds: [] }),
           expandedNodeId: null,
           peekNodeIds: [],
         }
@@ -880,6 +1193,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     addRootNode: (type, subtype = null) => {
       saveSnapshot()
       set((s) => {
+        const graph = getGraph(s)
         const newId = `${type}_${Date.now().toString(36)}`
         const newNode: RecipeNode = {
           id: newId,
@@ -905,9 +1219,9 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         }
 
         // Auto-add "done" node if not present
-        const hasDone = s.graph.nodes.some((n) => n.type === 'done')
-        const newNodes = [...s.graph.nodes, newNode]
-        const newEdges = [...s.graph.edges]
+        const hasDone = graph.nodes.some((n) => n.type === 'done')
+        const newNodes = [...graph.nodes, newNode]
+        const newEdges = [...graph.edges]
 
         if (!hasDone) {
           const doneId = `done_${Date.now().toString(36)}`
@@ -935,12 +1249,12 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
           })
         }
 
-        const newGraph = autoLayout({ ...s.graph, nodes: newNodes, edges: newEdges })
+        const newGraph = autoLayout({ ...graph, nodes: newNodes, edges: newEdges })
+        const newLayers = withGraphUpdate(s, newGraph)
 
         return {
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
-          flowEdges: newGraph.edges.map(toFlowEdge),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
           lastAddedNodeId: newId,
         }
       })
@@ -949,10 +1263,11 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     addNode: (afterNodeId, type, subtype = null) => {
       saveSnapshot()
       set((s) => {
+        const graph = getGraph(s)
         const newId = `${type}_${Date.now().toString(36)}`
-        const afterNode = s.graph.nodes.find((n) => n.id === afterNodeId)
+        const afterNode = graph.nodes.find((n) => n.id === afterNodeId)
         // Build default node data — split nodes get splitOutputs
-        const defaultData: any = {
+        const defaultData: NodeData = {
           title: '',
           desc: '',
           group: afterNode?.data.group ?? s.ingredientGroups[0] ?? 'Impasto',
@@ -1003,8 +1318,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         }
 
         // Re-route edges that went from afterNode to its children → go through newNode
-        const outEdges = s.graph.edges.filter((e) => e.source === afterNodeId)
-        const keptEdges = s.graph.edges.filter((e) => e.source !== afterNodeId)
+        const outEdges = graph.edges.filter((e) => e.source === afterNodeId)
+        const keptEdges = graph.edges.filter((e) => e.source !== afterNodeId)
         const reroutedEdges = outEdges.map((e) => ({
           ...e,
           id: `e_${newId}__${e.target}`,
@@ -1012,15 +1327,15 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         }))
 
         const newGraph = autoLayout({
-          ...s.graph,
-          nodes: [...s.graph.nodes, newNode],
+          ...graph,
+          nodes: [...graph.nodes, newNode],
           edges: [...keptEdges, newEdge, ...reroutedEdges],
         })
+        const newLayers = withGraphUpdate(s, newGraph)
 
         return {
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
-          flowEdges: newGraph.edges.map(toFlowEdge),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
           lastAddedNodeId: newId,
         }
       })
@@ -1029,12 +1344,14 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     removeNode: (id) => {
       saveSnapshot()
       set((s) => {
-        const newGraph = autoLayout(removeNodeFromGraph(id, s.graph))
+        const graph = getGraph(s)
+        const newGraph = autoLayout(removeNodeFromGraph(id, graph))
+        const newLayers = withGraphUpdate(s, newGraph)
+        const newExpanded = s.expandedNodeId === id ? null : s.expandedNodeId
         return {
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
-          flowEdges: newGraph.edges.map(toFlowEdge),
-          expandedNodeId: s.expandedNodeId === id ? null : s.expandedNodeId,
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers, expandedNodeId: newExpanded }),
+          expandedNodeId: newExpanded,
           selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
         }
       })
@@ -1042,23 +1359,299 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
     runAutoLayout: () => {
       set((s) => {
-        const newGraph = autoLayout(s.graph)
+        const graph = getGraph(s)
+        const newGraph = autoLayout(graph)
+        const newLayers = withGraphUpdate(s, newGraph)
         return {
-          graph: newGraph,
-          flowNodes: syncFlowNodes(newGraph, s.meta, s.portioning, onExpandHandler, s.expandedNodeId, s.peekNodeIds, buildCriticalWarningNodeIds(s.warnings ?? [])),
+          layers: newLayers,
+          ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
       })
     },
 
-    toRecipeV2: () => {
+    // ── Layer CRUD ────────────────────────────────────────────────
+
+    setActiveLayer: (layerId) => {
+      set((s) => {
+        const layer = s.layers.find(l => l.id === layerId)
+        if (!layer) return s
+        return {
+          activeLayerId: layerId,
+          ...rebuildAllFlowNodes({ ...s, activeLayerId: layerId, expandedNodeId: null, peekNodeIds: [] }),
+          expandedNodeId: null,
+          peekNodeIds: [],
+          selectedNodeId: null,
+          selectedEdgeId: null,
+        }
+      })
+    },
+
+    addLayer: (type, name) => {
+      saveSnapshot()
+      set((s) => {
+        const meta = LAYER_TYPE_META[type]
+        const layerId = `layer_${type}_${Date.now().toString(36)}`
+        const newLayer: RecipeLayer = {
+          id: layerId,
+          type,
+          name: name ?? meta.labelKey,
+          color: meta.defaultColor,
+          icon: meta.icon,
+          position: s.layers.length,
+          visible: true,
+          locked: false,
+          masterConfig: getDefaultMasterConfig(type),
+          nodes: [],
+          edges: [],
+          lanes: [],
+        }
+        return {
+          layers: [...s.layers, newLayer],
+        }
+      })
+    },
+
+    removeLayer: (layerId) => {
+      saveSnapshot()
+      set((s) => {
+        const filtered = s.layers.filter(l => l.id !== layerId)
+        if (filtered.length === 0) return s // Never remove the last layer
+        const newActiveId = s.activeLayerId === layerId
+          ? filtered[0].id
+          : s.activeLayerId
+
+        // Remove cross-edges referencing this layer
+        const newCrossEdges = s.crossEdges.filter(
+          e => e.sourceLayerId !== layerId && e.targetLayerId !== layerId,
+        )
+
+        // If active layer changed, rebuild flow
+        if (newActiveId !== s.activeLayerId) {
+          return {
+            layers: filtered,
+            activeLayerId: newActiveId,
+            crossEdges: newCrossEdges,
+            ...rebuildAllFlowNodes({ ...s, layers: filtered, activeLayerId: newActiveId, expandedNodeId: null, peekNodeIds: [] }),
+            expandedNodeId: null,
+            peekNodeIds: [],
+          }
+        }
+        return {
+          layers: filtered,
+          crossEdges: newCrossEdges,
+        }
+      })
+    },
+
+    duplicateLayer: (layerId) => {
+      saveSnapshot()
+      set((s) => {
+        const source = s.layers.find(l => l.id === layerId)
+        if (!source) return s
+        const newId = `layer_${source.type}_${Date.now().toString(36)}`
+        const duplicate: RecipeLayer = {
+          ...JSON.parse(JSON.stringify(source)),
+          id: newId,
+          name: `${source.name} (copy)`,
+          position: s.layers.length,
+        }
+        return {
+          layers: [...s.layers, duplicate],
+        }
+      })
+    },
+
+    updateLayer: (layerId, patch) => {
+      set((s) => {
+        const newLayers = s.layers.map(l => l.id === layerId ? { ...l, ...patch } : l)
+        // If visibility changed, rebuild flow to show/hide inactive layer
+        if ('visible' in patch) {
+          return {
+            layers: newLayers,
+            ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
+          }
+        }
+        return { layers: newLayers }
+      })
+    },
+
+    reorderLayers: (orderedIds) => {
+      set((s) => {
+        const reordered = orderedIds
+          .map((id, i) => {
+            const layer = s.layers.find(l => l.id === id)
+            return layer ? { ...layer, position: i } : null
+          })
+          .filter((l): l is RecipeLayer => l !== null)
+        return { layers: reordered }
+      })
+    },
+
+    addCrossEdge: (source, target) => {
+      saveSnapshot()
+      set((s) => {
+        const edgeId = `xe_${source.layerId}_${source.nodeId}__${target.layerId}_${target.nodeId}`
+        // Prevent duplicates
+        if (s.crossEdges.some(e => e.id === edgeId)) return s
+        const newEdge: CrossLayerEdge = {
+          id: edgeId,
+          sourceLayerId: source.layerId,
+          sourceNodeId: source.nodeId,
+          targetLayerId: target.layerId,
+          targetNodeId: target.nodeId,
+          data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
+        }
+        return {
+          crossEdges: [...s.crossEdges, newEdge],
+        }
+      })
+    },
+
+    removeCrossEdge: (edgeId) => {
+      saveSnapshot()
+      set((s) => ({
+        crossEdges: s.crossEdges.filter(e => e.id !== edgeId),
+      }))
+    },
+
+    setViewMode: (mode) => {
+      if (mode === 'panoramica') {
+        const s = get()
+        const mergedNodes: Node<BaseNodeData>[] = []
+        const mergedEdges: Edge[] = []
+
+        // Compute panoramica for critical path info
+        const panoramica = computePanoramica(staticProvider, s.layers, s.crossEdges)
+        const criticalNodeIds = new Set<string>()
+        const criticalLayer = panoramica.layers.find(l => l.layerId === panoramica.criticalLayerId)
+        if (criticalLayer) {
+          for (const nodeId of criticalLayer.criticalPath) {
+            criticalNodeIds.add(`${criticalLayer.layerId}:${nodeId}`)
+          }
+        }
+
+        for (const layer of s.layers) {
+          if (!layer.visible) continue
+          for (const node of layer.nodes) {
+            const namespacedId = `${layer.id}:${node.id}`
+            const dur = getNodeDuration(node, s.meta.type, s.meta.subtype, DEFAULT_PORTIONING.thickness)
+            mergedNodes.push({
+              id: namespacedId,
+              type: node.type,
+              position: { x: node.position.x + layer.position * 400, y: node.position.y },
+              draggable: false,
+              connectable: false,
+              data: {
+                ...toFlowNode(node, dur, () => {}).data,
+                layerColor: layer.color,
+                isCriticalPath: criticalNodeIds.has(namespacedId),
+              },
+            })
+          }
+          for (const edge of layer.edges) {
+            mergedEdges.push({
+              id: `${layer.id}:${edge.id}`,
+              source: `${layer.id}:${edge.source}`,
+              target: `${layer.id}:${edge.target}`,
+              type: 'recipe',
+              data: edge.data,
+            })
+          }
+        }
+
+        // Add cross-layer edges with dashed style
+        for (const ce of s.crossEdges) {
+          mergedEdges.push({
+            id: ce.id,
+            source: `${ce.sourceLayerId}:${ce.sourceNodeId}`,
+            target: `${ce.targetLayerId}:${ce.targetNodeId}`,
+            type: 'recipe',
+            data: ce.data,
+            style: { strokeDasharray: '8,6', stroke: '#8b5cf6' },
+          })
+        }
+
+        // Auto-layout the merged panoramica graph top-to-bottom
+        const tempNodes: RecipeNode[] = mergedNodes.map(n => ({
+          id: n.id,
+          type: n.type as NodeTypeKey,
+          subtype: null,
+          position: n.position,
+          lane: 'main',
+          data: (n.data as BaseNodeData).nodeData,
+        }))
+        const tempEdges: RecipeEdge[] = mergedEdges.map(e => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
+        }))
+        const tempGraph: RecipeGraph = {
+          nodes: tempNodes,
+          edges: tempEdges,
+          lanes: [{ id: 'main', label: 'Panoramica', isMain: true, origin: { type: 'user' as const } }],
+        }
+        const laidOut = autoLayout(tempGraph)
+        for (const laidNode of laidOut.nodes) {
+          const mNode = mergedNodes.find(n => n.id === laidNode.id)
+          if (mNode) mNode.position = laidNode.position
+        }
+
+        set({ viewMode: mode, flowNodes: mergedNodes, flowEdges: mergedEdges })
+      } else {
+        // Restore from active layer
+        set((s) => ({
+          viewMode: mode,
+          ...rebuildAllFlowNodes(s),
+        }))
+      }
+    },
+
+    setInactiveLayerOpacity: (opacity) => {
+      set((s) => {
+        const newState = { ...s, inactiveLayerOpacity: opacity }
+        return { inactiveLayerOpacity: opacity, ...rebuildAllFlowNodes(newState) }
+      })
+    },
+
+    toRecipeV3: () => {
       const s = get()
       return {
-        version: 2 as const,
+        version: 3 as const,
         meta: s.meta,
-        portioning: s.portioning,
         ingredientGroups: s.ingredientGroups,
-        graph: s.graph,
+        layers: s.layers,
+        crossEdges: s.crossEdges,
       }
     },
   }
 })
+
+// ── Convenience selectors (backward-compat for consumers) ──────
+
+/**
+ * Select graph fields from the active layer.
+ * Use with useRecipeFlowStore(selectGraph) + useShallow to avoid infinite re-renders,
+ * OR select individual fields (s => selectGraph(s).nodes) for maximum stability.
+ */
+const EMPTY_GRAPH: RecipeGraph = { nodes: [], edges: [], lanes: [] }
+let _lastGraphLayer: RecipeLayer | undefined
+let _lastGraphResult: RecipeGraph = EMPTY_GRAPH
+
+export function selectGraph(s: RecipeFlowState): RecipeGraph {
+  const layer = s.layers.find(l => l.id === s.activeLayerId) ?? s.layers[0]
+  if (!layer) return EMPTY_GRAPH
+  // Memoize: return same object if the layer ref hasn't changed
+  if (layer === _lastGraphLayer) return _lastGraphResult
+  _lastGraphLayer = layer
+  _lastGraphResult = { nodes: layer.nodes, edges: layer.edges, lanes: layer.lanes, viewport: layer.viewport }
+  return _lastGraphResult
+}
+
+/** Select portioning from the active layer (stable reference) */
+export function selectPortioning(s: RecipeFlowState): Portioning {
+  const layer = s.layers.find(l => l.id === s.activeLayerId) ?? s.layers[0]
+  if (!layer) return DEFAULT_PORTIONING
+  if (layer.masterConfig.type === 'impasto') return layer.masterConfig.config
+  return DEFAULT_PORTIONING
+}

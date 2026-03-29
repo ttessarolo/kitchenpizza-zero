@@ -61,6 +61,35 @@ export type {
   ScheduledNode,
 } from './types/recipe-graph'
 
+// Layer types (v3)
+export type {
+  LayerType,
+  ImpastoMasterConfig,
+  SauceMasterConfig,
+  PrepMasterConfig,
+  FermentMasterConfig,
+  PastryMasterConfig,
+  MasterConfig,
+  RecipeLayer,
+  CrossLayerEdge,
+  RecipeV3,
+} from './types/recipe-layers'
+
+// Layer constants
+export {
+  LAYER_PALETTES,
+  isNodeTypeAllowed,
+  getAllowedNodeTypes,
+} from './constants/layer-palettes'
+
+export {
+  LAYER_TYPE_META,
+  LAYER_TYPES,
+  getDefaultMasterConfig,
+} from './constants/layer-defaults'
+
+export type { LayerTypeMeta } from './constants/layer-defaults'
+
 // Store
 export type { AppState } from './store/types'
 export type { UiSlice } from './store/slices/ui'

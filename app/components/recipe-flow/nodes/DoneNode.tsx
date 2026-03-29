@@ -1,16 +1,16 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import { fmtDuration } from '@commons/utils/format'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
 import { computeSchedule } from '~/hooks/useGraphCalculator'
 import type { BaseNodeData } from './BaseNode'
 
 function DoneNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
   const t = useT()
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const graph = useRecipeFlowStore(selectGraph)
   const meta = useRecipeFlowStore((s) => s.meta)
-  const portioning = useRecipeFlowStore((s) => s.portioning)
+  const portioning = useRecipeFlowStore(selectPortioning)
 
   const { span } = computeSchedule(graph, meta.type, meta.subtype, portioning.thickness)
 

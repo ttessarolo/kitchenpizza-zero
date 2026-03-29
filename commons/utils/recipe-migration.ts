@@ -12,6 +12,7 @@ import type {
   NodeData,
   SplitOutput,
 } from '@commons/types/recipe-graph'
+import type { RecipeV3, RecipeLayer } from '@commons/types/recipe-layers'
 
 /**
  * Convert a single RecipeStep to a RecipeNode.
@@ -169,4 +170,59 @@ export function ensureRecipeV2(recipe: Recipe | RecipeV2): RecipeV2 {
     return recipe as RecipeV2
   }
   return migrateRecipeV1toV2(recipe as Recipe)
+}
+
+// ── V2 → V3 migration ──────────────────────────────────────────
+
+/**
+ * Migrate a RecipeV2 to RecipeV3 (multi-layer).
+ * Wraps the single graph + portioning into layers[0] with type 'impasto'.
+ */
+export function migrateRecipeV2toV3(old: RecipeV2): RecipeV3 {
+  const layer: RecipeLayer = {
+    id: 'layer_impasto_0',
+    type: 'impasto',
+    name: old.meta.name || 'Impasto',
+    color: '#F59E0B',
+    icon: '\u{1F35E}',
+    position: 0,
+    visible: true,
+    locked: false,
+    masterConfig: { type: 'impasto', config: old.portioning },
+    nodes: old.graph.nodes,
+    edges: old.graph.edges,
+    lanes: old.graph.lanes,
+    viewport: old.graph.viewport,
+  }
+
+  return {
+    version: 3,
+    meta: old.meta,
+    ingredientGroups: old.ingredientGroups,
+    layers: [layer],
+    crossEdges: [],
+  }
+}
+
+/**
+ * Check if a recipe is v3 (has layers[]).
+ */
+export function isRecipeV3(recipe: unknown): recipe is RecipeV3 {
+  return (
+    typeof recipe === 'object' &&
+    recipe !== null &&
+    'version' in recipe &&
+    (recipe as RecipeV3).version === 3 &&
+    'layers' in recipe &&
+    Array.isArray((recipe as RecipeV3).layers)
+  )
+}
+
+/**
+ * Ensure a recipe is in v3 format. Migrates from v1 or v2 if needed.
+ */
+export function ensureRecipeV3(recipe: Recipe | RecipeV2 | RecipeV3): RecipeV3 {
+  if (isRecipeV3(recipe)) return recipe
+  const v2 = ensureRecipeV2(recipe as Recipe | RecipeV2)
+  return migrateRecipeV2toV3(v2)
 }

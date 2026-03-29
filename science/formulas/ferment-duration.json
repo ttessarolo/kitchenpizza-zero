@@ -1,0 +1,23 @@
+{
+  "type": "piecewise",
+  "id": "ferment_duration_by_temp",
+  "ref": "Lacto-fermentation duration depends on ambient temperature",
+  "_meta": {
+    "section": "ferment",
+    "displayName": "meta.piecewise.ferment_duration_by_temp.name",
+    "description": "meta.piecewise.ferment_duration_by_temp.desc",
+    "tags": ["ferment", "duration", "temperature", "piecewise"],
+    "lastModified": "2026-03-29",
+    "author": "system"
+  },
+  "input": "tempC",
+  "segments": [
+    { "lt": 10, "value": { "minDays": 14, "maxDays": 28 } },
+    { "lt": 15, "value": { "minDays": 7, "maxDays": 14 } },
+    { "lt": 20, "value": { "minDays": 5, "maxDays": 10 } },
+    { "lt": 25, "value": { "minDays": 3, "maxDays": 7 } },
+    { "lt": 30, "value": { "minDays": 2, "maxDays": 5 } }
+  ],
+  "default": { "minDays": 1, "maxDays": 3 },
+  "output": { "name": "fermentDuration", "unit": "days" }
+}

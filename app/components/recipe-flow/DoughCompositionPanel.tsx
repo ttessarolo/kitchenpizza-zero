@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { calcYeastPct, calcDurationFromYeast } from '@commons/utils/dough-manager'
 import { staticProvider } from '@commons/utils/science/static-science-provider'
 import { rnd } from '@commons/utils/format'
@@ -54,11 +54,11 @@ function SliderRow({
 
 function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) {
   const t = useT()
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const graph = useRecipeFlowStore(selectGraph)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)
   const batchUpdateNodes = useRecipeFlowStore((s) => s.batchUpdateNodes)
   const updateNodeCosmetic = useRecipeFlowStore((s) => s.updateNodeCosmetic)
-  const locks = useRecipeFlowStore((s) => s.portioning.locks ?? DEFAULT_LOCKS)
+  const locks = useRecipeFlowStore((s) => selectPortioning(s).locks ?? DEFAULT_LOCKS)
   const toggleLock = useRecipeFlowStore((s) => s.toggleLock)
   const updateDoughHours = useRecipeFlowStore((s) => s.updateDoughHours)
   const [doughHoursLocal, setDoughHoursLocal] = useState<number | null>(null)
@@ -106,7 +106,7 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
   const hyd = totalFlour > 0 ? Math.round(totalLiquid / totalFlour * 100) : 0
 
   // Flour mix W for yeast correction
-  const flourMix = useRecipeFlowStore((s) => s.portioning.flourMix ?? [])
+  const flourMix = useRecipeFlowStore((s) => selectPortioning(s).flourMix ?? [])
   const allChainFlours = chainNodes.flatMap((n) => n.data.flours)
   const flourW = allChainFlours.length > 0 && allChainFlours.some((f) => f.g > 0)
     ? blendFlourProperties(allChainFlours).W
@@ -294,9 +294,9 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
 
 function GlobalCompositionSettings() {
   const t = useT()
-  const portioning = useRecipeFlowStore((s) => s.portioning)
+  const portioning = useRecipeFlowStore(selectPortioning)
   const setPortioning = useRecipeFlowStore((s) => s.setPortioning)
-  const locks = useRecipeFlowStore((s) => s.portioning.locks ?? DEFAULT_LOCKS)
+  const locks = useRecipeFlowStore((s) => selectPortioning(s).locks ?? DEFAULT_LOCKS)
   const toggleLock = useRecipeFlowStore((s) => s.toggleLock)
 
   const { doughHours, yeastPct, saltPct, fatPct, targetHyd, preImpasto, preFermento, flourMix } = portioning
@@ -433,7 +433,7 @@ function WarningSection({ warnings }: { warnings: import('@commons/types/recipe-
 // ── Main panel: single dough or global ───────────────────────────
 
 export function DoughCompositionPanel() {
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const graph = useRecipeFlowStore(selectGraph)
   const doughNodes = graph.nodes.filter((n) => n.type === 'dough')
 
   if (doughNodes.length === 0) {

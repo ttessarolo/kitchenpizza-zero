@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
 import { STEP_TYPES } from '@/local_data'
 import type { NodeTypeKey } from '@commons/types/recipe-graph'
@@ -11,7 +11,7 @@ export function NodeContextToolbar() {
   const addNode = useRecipeFlowStore((s) => s.addNode)
   const addRootNode = useRecipeFlowStore((s) => s.addRootNode)
   const runAutoLayout = useRecipeFlowStore((s) => s.runAutoLayout)
-  const graphEmpty = useRecipeFlowStore((s) => s.graph.nodes.length === 0)
+  const graphEmpty = useRecipeFlowStore((s) => selectGraph(s).nodes.length === 0)
 
   if (graphEmpty) return null
 
@@ -36,7 +36,7 @@ export function NodeContextToolbar() {
                     if (selectedNodeId) {
                       addNode(selectedNodeId, st.key as NodeTypeKey, sub)
                     } else {
-                      const graph = useRecipeFlowStore.getState().graph
+                      const graph = selectGraph(useRecipeFlowStore.getState())
                       const lastNonDone = [...graph.nodes].reverse().find((n) => n.type !== 'done')
                       if (lastNonDone) {
                         addNode(lastNonDone.id, st.key as NodeTypeKey, sub)
@@ -58,7 +58,7 @@ export function NodeContextToolbar() {
                         key={s.key}
                         type="button"
                         onClick={() => {
-                          const graph = useRecipeFlowStore.getState().graph
+                          const graph = selectGraph(useRecipeFlowStore.getState())
                           const target = selectedNodeId || [...graph.nodes].reverse().find((n) => n.type !== 'done')?.id
                           if (target) {
                             addNode(target, st.key as NodeTypeKey, s.key)

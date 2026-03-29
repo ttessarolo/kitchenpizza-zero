@@ -1,0 +1,20 @@
+{
+  "type": "catalog",
+  "id": "ferment_types",
+  "_meta": {
+    "section": "ferment",
+    "displayName": "meta.catalog.ferment_types.name",
+    "description": "meta.catalog.ferment_types.desc",
+    "tags": ["ferment", "catalog"],
+    "lastModified": "2026-03-29",
+    "author": "system"
+  },
+  "entries": [
+    { "key": "lattofermentazione", "label": "Lattofermentazione", "minSalt": 2, "maxSalt": 5, "idealTemp": 20, "minPH": 3.5 },
+    { "key": "salamoia", "label": "Salamoia", "minSalt": 3.5, "maxSalt": 10, "idealTemp": 18, "minPH": 3.8 },
+    { "key": "kombucha", "label": "Kombucha", "minSalt": 0, "maxSalt": 0, "idealTemp": 24, "minPH": 2.5 },
+    { "key": "kefir", "label": "Kefir", "minSalt": 0, "maxSalt": 0, "idealTemp": 22, "minPH": 3.5 },
+    { "key": "miso", "label": "Miso", "minSalt": 5, "maxSalt": 13, "idealTemp": 25, "minPH": 4.5 },
+    { "key": "kimchi", "label": "Kimchi", "minSalt": 2, "maxSalt": 5, "idealTemp": 18, "minPH": 3.5 }
+  ]
+}

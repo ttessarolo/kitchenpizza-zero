@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
 
 export function EdgeCallout() {
   const t = useT()
   const selectedEdgeId = useRecipeFlowStore((s) => s.selectedEdgeId)
   const edgeCalloutPos = useRecipeFlowStore((s) => s.edgeCalloutPos)
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const graph = useRecipeFlowStore(selectGraph)
   const updateEdgeData = useRecipeFlowStore((s) => s.updateEdgeData)
   const removeEdge = useRecipeFlowStore((s) => s.removeEdge)
   const selectEdge = useRecipeFlowStore((s) => s.selectEdge)

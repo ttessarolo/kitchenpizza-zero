@@ -14,7 +14,7 @@ import '@xyflow/react/dist/style.css'
 
 import { customNodeTypes } from './nodes'
 import { RecipeFlowEdge } from './edges/RecipeFlowEdge'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 import { NodeContextToolbar } from './NodeContextToolbar'
 import { UndoToast } from './UndoToast'
 import { EdgeCallout } from './EdgeCallout'
@@ -36,10 +36,14 @@ export function RecipeFlowCanvas() {
   const closePeek = useRecipeFlowStore((s) => s.closePeek)
   const peekNodeIds = useRecipeFlowStore((s) => s.peekNodeIds)
   const selectEdge = useRecipeFlowStore((s) => s.selectEdge)
+  const layers = useRecipeFlowStore((s) => s.layers)
+  const setActiveLayer = useRecipeFlowStore((s) => s.setActiveLayer)
   const resetRecipe = useRecipeFlowStore((s) => s.resetRecipe)
   const undo = useRecipeFlowStore((s) => s.undo)
   const canUndo = useRecipeFlowStore((s) => s.canUndo)
-  const hasNodes = useRecipeFlowStore((s) => s.graph.nodes.length > 0)
+  const viewMode = useRecipeFlowStore((s) => s.viewMode)
+  const hasNodes = useRecipeFlowStore((s) => selectGraph(s).nodes.length > 0)
+  const isPanoramica = viewMode === 'panoramica'
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmUndo, setConfirmUndo] = useState(false)
 
@@ -57,9 +61,21 @@ export function RecipeFlowCanvas() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const onNodeClick: NodeMouseHandler = useCallback(
+  const handleNodeClick: NodeMouseHandler = useCallback(
     (event, node) => {
-      if (event.metaKey) {
+      // Check if this is a dimmed node from an inactive layer (namespaced ID)
+      if (node.id.includes(':')) {
+        const layerId = node.id.split(':')[0]
+        const layer = layers.find((l) => l.id === layerId)
+        if (layer && !layer.locked) {
+          setActiveLayer(layerId)
+        }
+        return // Don't expand — layer switch rebuilds flowNodes
+      }
+
+      // Existing logic for active layer nodes
+      selectEdge(null)
+      if (event.metaKey || event.ctrlKey) {
         if (peekNodeIds.includes(node.id)) {
           closePeek(node.id)
         } else {
@@ -68,9 +84,8 @@ export function RecipeFlowCanvas() {
       } else {
         expandNode(node.id)
       }
-      selectEdge(null) // close edge callout when clicking a node
     },
-    [expandNode, peekNode, closePeek, peekNodeIds, selectEdge],
+    [expandNode, peekNode, closePeek, peekNodeIds, selectEdge, layers, setActiveLayer],
   )
 
   const onEdgeClick: EdgeMouseHandler = useCallback(
@@ -194,14 +209,17 @@ export function RecipeFlowCanvas() {
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        onEdgeClick={onEdgeClick}
-        onPaneClick={onPaneClick}
-        onReconnect={onReconnect}
-        edgesReconnectable
+        onNodesChange={isPanoramica ? undefined : onNodesChange}
+        onEdgesChange={isPanoramica ? undefined : onEdgesChange}
+        onConnect={isPanoramica ? undefined : onConnect}
+        onNodeClick={isPanoramica ? undefined : handleNodeClick}
+        onEdgeClick={isPanoramica ? undefined : onEdgeClick}
+        onPaneClick={isPanoramica ? undefined : onPaneClick}
+        onReconnect={isPanoramica ? undefined : onReconnect}
+        edgesReconnectable={!isPanoramica}
+        nodesDraggable={!isPanoramica}
+        nodesConnectable={!isPanoramica}
+        elementsSelectable={!isPanoramica}
         nodeTypes={customNodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{ type: 'recipe' }}

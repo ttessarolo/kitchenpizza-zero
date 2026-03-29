@@ -212,5 +212,27 @@
   "meta.rule.gluten_free_with_yeast.name": "Gluten-free flour with yeast",
   "meta.rule.gluten_free_with_yeast.desc": "Error when gluten-free flour is mixed with yeast.",
   "meta.rule.whole_grain_needs_hydration.name": "Whole grain hydration",
-  "meta.rule.whole_grain_needs_hydration.desc": "Informs when whole grain needs higher hydration."
+  "meta.rule.whole_grain_needs_hydration.desc": "Informs when whole grain needs higher hydration.",
+
+  "warning_graph_cycle": "The graph contains a cycle: nodes cannot be sorted. Remove the circular connection.",
+
+  "warning_sauce_emulsion_temp_high": "Emulsion temperature too high ({{temp}}°C). Above 70°C emulsions risk breaking.",
+  "warning_sauce_reduction_over": "Over-reduced: volume dropped below 20% of original. Risk of burning and bitter flavor.",
+  "warning_sauce_pesto_oxidation": "Pesto oxidizes rapidly: work quickly and cover with a thin layer of oil.",
+  "warning_sauce_marinade_acid_long": "Acidic marinade over 24h: proteins break down and texture becomes rubbery.",
+
+  "warning_ferment_salt_low_botulism": "Salt below 2% in lacto-fermentation: botulism risk. Use at least 2-3% salt by vegetable weight.",
+  "warning_ferment_ph_high": "pH too high ({{ph}}). For food safety pH must drop below 4.6 within 48h.",
+  "warning_ferment_temp_high": "Fermentation temperature {{temp}}°C too high. Above 35°C lactic bacteria slow down and pathogens proliferate.",
+  "warning_ferment_vessel_not_airtight": "Non-airtight vessel for anaerobic fermentation: use an airlock or valve-lid.",
+  "warning_ferment_starter_ratio_low": "Starter ratio too low ({{ratio}}%). At least 2-5% is needed to initiate fermentation safely.",
+
+  "warning_pastry_ganache_ratio": "Unbalanced chocolate/cream ratio ({{ratio}}). For stable ganache: dark 2:1, milk 2.5:1, white 3:1.",
+  "warning_pastry_temper_curve": "Tempering curve not followed: dark 50→27→31°C, milk 45→26→29°C, white 40→25→27°C.",
+  "warning_pastry_meringue_fat_contact": "Meringue will not whip if in contact with fat. Ensure bowl and whisk are grease-free.",
+  "warning_pastry_cream_curdling": "Cream at risk of curdling: add hot liquids gradually and stir constantly.",
+  "warning_pastry_chilling_too_fast": "Cooling too quickly: thermal shock can cause cracks in tempered chocolate.",
+
+  "warning_prep_cross_contamination": "Cross-contamination risk: use separate cutting boards and utensils for raw meat and vegetables.",
+  "warning_prep_oxidation": "Ingredient oxidizes rapidly after cutting. Store in acidulated water or work quickly."
 }

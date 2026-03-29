@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 
 const LANE_COLORS: Record<string, string> = {
   main: 'rgba(212,165,116,0.06)',
@@ -15,7 +15,7 @@ const PASTEL_COLORS = [
 ]
 
 export function LaneBackgrounds() {
-  const graph = useRecipeFlowStore((s) => s.graph)
+  const graph = useRecipeFlowStore(selectGraph)
   const lanes = graph.lanes
 
   // Group nodes by lane

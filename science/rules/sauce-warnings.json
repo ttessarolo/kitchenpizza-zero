@@ -1,0 +1,65 @@
+[
+  {
+    "type": "rule",
+    "id": "sauce_temp_too_high_emulsion",
+    "_meta": { "section": "sauce", "displayName": "meta.rule.sauce_temp_too_high_emulsion.name", "description": "meta.rule.sauce_temp_too_high_emulsion.desc", "tags": ["sauce", "emulsion", "temperature", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "sauce",
+    "severity": "warning",
+    "messageKey": "warning.sauce_temp_too_high_emulsion",
+    "messageVars": ["cookTemp", "sauceType"],
+    "conditions": [
+      { "field": "cookTemp", "op": "gt", "value": 70 },
+      { "field": "sauceType", "op": "eq", "value": "emulsione" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.lower_sauce_temp",
+        "mutations": [{ "type": "updateNode", "patch": { "cookTemp": 65 } }]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "sauce_reduction_excessive",
+    "_meta": { "section": "sauce", "displayName": "meta.rule.sauce_reduction_excessive.name", "description": "meta.rule.sauce_reduction_excessive.desc", "tags": ["sauce", "reduction", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "sauce",
+    "severity": "warning",
+    "messageKey": "warning.sauce_reduction_excessive",
+    "messageVars": ["reductionPct"],
+    "conditions": [
+      { "field": "reductionPct", "op": "gt", "value": 60 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "sauce_simmer_too_long",
+    "_meta": { "section": "sauce", "displayName": "meta.rule.sauce_simmer_too_long.name", "description": "meta.rule.sauce_simmer_too_long.desc", "tags": ["sauce", "sugo", "duration", "info"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "sauce",
+    "severity": "info",
+    "messageKey": "warning.sauce_simmer_too_long",
+    "messageVars": ["baseDur", "sauceType"],
+    "conditions": [
+      { "field": "baseDur", "op": "gt", "value": 180 },
+      { "field": "sauceType", "op": "eq", "value": "sugo" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "sauce_pesto_oxidation",
+    "_meta": { "section": "sauce", "displayName": "meta.rule.sauce_pesto_oxidation.name", "description": "meta.rule.sauce_pesto_oxidation.desc", "tags": ["sauce", "pesto", "oxidation", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "sauce",
+    "severity": "warning",
+    "messageKey": "warning.sauce_pesto_oxidation",
+    "messageVars": ["cookTemp", "sauceType"],
+    "conditions": [
+      { "field": "cookTemp", "op": "gt", "value": 40 },
+      { "field": "sauceType", "op": "eq", "value": "pesto" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.keep_pesto_cold",
+        "mutations": [{ "type": "updateNode", "patch": { "cookTemp": 0 } }]
+      }
+    ]
+  }
+]

@@ -9,6 +9,7 @@ import { DoneNode } from './DoneNode'
  * Most types use BaseNode — split, join, done have custom renderers.
  */
 export const customNodeTypes: NodeTypes = {
+  // Impasto (existing)
   pre_dough: BaseNode,
   pre_ferment: BaseNode,
   dough: BaseNode,
@@ -22,4 +23,35 @@ export const customNodeTypes: NodeTypes = {
   split: SplitNode,
   join: JoinNode,
   done: DoneNode,
+  // Multi-layer shared
+  ingredient: BaseNode,
+  cook: BaseNode,
+  mix: BaseNode,
+  // Sauce
+  blend: BaseNode,
+  emulsify: BaseNode,
+  strain: BaseNode,
+  season: BaseNode,
+  // Prep
+  wash: BaseNode,
+  cut: BaseNode,
+  peel: BaseNode,
+  grate: BaseNode,
+  stuff: BaseNode,
+  assemble: BaseNode,
+  plate: BaseNode,
+  garnish: BaseNode,
+  // Ferment
+  brine: BaseNode,
+  inoculate: BaseNode,
+  ferment_node: BaseNode,
+  check: BaseNode,
+  store: BaseNode,
+  // Pastry
+  whip: BaseNode,
+  temper: BaseNode,
+  fold: BaseNode,
+  chill: BaseNode,
+  mold: BaseNode,
+  glaze: BaseNode,
 }
