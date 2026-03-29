@@ -67,13 +67,24 @@ export function RecipeFlowCanvas() {
       if (node.id.includes(':')) {
         const layerId = node.id.split(':')[0]
         const layer = layers.find((l) => l.id === layerId)
-        if (layer && !layer.locked) {
+        if (!layer || layer.locked) return
+
+        if (event.metaKey || event.ctrlKey) {
+          // CMD+click → Peek cross-layer node (DON'T switch layer)
+          selectEdge(null)
+          if (peekNodeIds.includes(node.id)) {
+            closePeek(node.id)
+          } else {
+            peekNode(node.id)
+          }
+        } else {
+          // Normal click → switch to that layer
           setActiveLayer(layerId)
         }
-        return // Don't expand — layer switch rebuilds flowNodes
+        return
       }
 
-      // Existing logic for active layer nodes
+      // Active layer nodes
       selectEdge(null)
       if (event.metaKey || event.ctrlKey) {
         if (peekNodeIds.includes(node.id)) {

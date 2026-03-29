@@ -68,5 +68,18 @@
   "layer_type_pastry": "Pasticceria",
   "layer_type_pastry_desc": "Creme, meringhe, ganache, temperaggio, frolle",
   "rise_method_room": "Ambiente",
-  "rise_method_fridge": "Frigo"
+  "rise_method_fridge": "Frigo",
+  "layer_opacity": "Opacità",
+  "cancel": "Annulla",
+  "confirm_remove_layer_title": "Elimina Layer",
+  "confirm_remove_layer_description": "Stai per eliminare il layer \"{{name}}\" e tutti i suoi nodi. Questa azione non può essere annullata.",
+  "confirm_remove_layer_action": "Elimina",
+  "layer_color": "Colore layer",
+  "color_preset": "Colori predefiniti",
+  "color_show_custom": "Colore personalizzato",
+  "color_hide_custom": "Nascondi personalizzato",
+  "layer_section_title": "Layer",
+  "layer_name_placeholder": "Nome del layer",
+  "search_layer_type": "Cerca tipo di layer...",
+  "no_results": "Nessun risultato"
 }

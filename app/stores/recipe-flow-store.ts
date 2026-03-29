@@ -412,7 +412,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         fn.connectable = false
         fn.selectable = false
         fn.style = { ...fn.style, opacity: s.inactiveLayerOpacity }
-        fn.data = { ...fn.data, layerColor: layer.color, layerLocked: layer.locked }
+        fn.data = { ...fn.data, layerColor: layer.color, layerLocked: layer.locked, isPeek: s.peekNodeIds.includes(fn.id) }
         dimmedNodes.push(fn)
       }
       for (const edge of layer.edges) {

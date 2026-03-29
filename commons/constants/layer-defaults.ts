@@ -17,32 +17,32 @@ export const LAYER_TYPE_META: Record<LayerType, LayerTypeMeta> = {
   impasto: {
     icon: 'wheat',
     defaultColor: '#D97706',
-    labelKey: 'layer.impasto.label',
-    descriptionKey: 'layer.impasto.description',
+    labelKey: 'layer_type_impasto',
+    descriptionKey: 'layer_type_impasto_desc',
   },
   sauce: {
     icon: 'droplet',
     defaultColor: '#DC2626',
-    labelKey: 'layer.sauce.label',
-    descriptionKey: 'layer.sauce.description',
+    labelKey: 'layer_type_sauce',
+    descriptionKey: 'layer_type_sauce_desc',
   },
   prep: {
     icon: 'utensils',
     defaultColor: '#16A34A',
-    labelKey: 'layer.prep.label',
-    descriptionKey: 'layer.prep.description',
+    labelKey: 'layer_type_prep',
+    descriptionKey: 'layer_type_prep_desc',
   },
   ferment: {
     icon: 'flask-conical',
     defaultColor: '#7C3AED',
-    labelKey: 'layer.ferment.label',
-    descriptionKey: 'layer.ferment.description',
+    labelKey: 'layer_type_ferment',
+    descriptionKey: 'layer_type_ferment_desc',
   },
   pastry: {
     icon: 'cake-slice',
     defaultColor: '#EC4899',
-    labelKey: 'layer.pastry.label',
-    descriptionKey: 'layer.pastry.description',
+    labelKey: 'layer_type_pastry',
+    descriptionKey: 'layer_type_pastry_desc',
   },
 }
 

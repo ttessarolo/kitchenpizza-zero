@@ -42,16 +42,31 @@ function SinglePanel({
   const temperatureUnit = useRecipeFlowStore((s) => s.temperatureUnit)
   const ambientTemp = useRecipeFlowStore((s) => s.ambientTemp)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)
+  const updateNodeCosmetic = useRecipeFlowStore((s) => s.updateNodeCosmetic)
   const updateNodeWithReconcile = useRecipeFlowStore((s) => s.updateNodeWithReconcile)
   const setTemperatureUnit = useRecipeFlowStore((s) => s.setTemperatureUnit)
   const removeNode = useRecipeFlowStore((s) => s.removeNode)
   const storeAddDep = useRecipeFlowStore((s) => s.addDep)
   const storeRemoveDep = useRecipeFlowStore((s) => s.removeDep)
   const storeUpdateDep = useRecipeFlowStore((s) => s.updateDep)
+  const layers = useRecipeFlowStore((s) => s.layers)
   const storeWarnings = useRecipeFlowStore((s) => s.warnings)
-  const nodeWarnings = storeWarnings.filter((w) => w.sourceNodeId === nodeId)
 
-  const node = graph.nodes.find((n) => n.id === nodeId)
+  // Cross-layer peek: nodeId may be namespaced "layerId:bareNodeId"
+  const isCrossLayerPeek = nodeId.includes(':')
+  const bareNodeId = isCrossLayerPeek ? nodeId.split(':').slice(1).join(':') : nodeId
+
+  const nodeWarnings = storeWarnings.filter((w) => w.sourceNodeId === bareNodeId)
+
+  // Resolve node: active layer (bare ID) or specific layer (namespaced ID)
+  const node = useMemo(() => {
+    if (isCrossLayerPeek) {
+      const layerId = nodeId.split(':')[0]
+      const layer = layers.find((l) => l.id === layerId)
+      return layer?.nodes.find((n) => n.id === bareNodeId) ?? null
+    }
+    return graph.nodes.find((n) => n.id === nodeId) ?? null
+  }, [nodeId, isCrossLayerPeek, bareNodeId, graph, layers])
 
   const recipe: Recipe = useMemo(
     () => graphToRecipeV1(graph, meta, portioning, ingredientGroups),
@@ -134,7 +149,7 @@ function SinglePanel({
 
     return {
       recipe,
-      editMode: true,
+      editMode: !isCrossLayerPeek,
       temperatureUnit,
       ambientTemp,
       displayTemp,
@@ -155,9 +170,24 @@ function SinglePanel({
 
   if (!node) return null
 
-  const step = nodeToStep(node, graph.edges)
+  // For cross-layer peek, use the edges from the node's own layer
+  const nodeEdges = useMemo(() => {
+    if (isCrossLayerPeek) {
+      const layerId = nodeId.split(':')[0]
+      const layer = layers.find((l) => l.id === layerId)
+      return layer?.edges ?? []
+    }
+    return graph.edges
+  }, [isCrossLayerPeek, nodeId, layers, graph.edges])
+
+  const step = nodeToStep(node, nodeEdges)
   const cm = COLOR_MAP[node.type] || COLOR_MAP.dough
   const typeEntry = STEP_TYPES.find((t) => t.key === node.type)
+
+  // Resolve the layer this node belongs to (for the layer pill in the header)
+  const activeLayerId = useRecipeFlowStore((s) => s.activeLayerId)
+  const nodeLayerId = isCrossLayerPeek ? nodeId.split(':')[0] : activeLayerId
+  const nodeLayer = layers.find((l) => l.id === nodeLayerId)
 
   return (
     <div
@@ -171,31 +201,49 @@ function SinglePanel({
     >
       {/* Header */}
       <div
-        className="sticky top-0 z-10 px-3 py-2.5 border-b flex items-center gap-2 shrink-0"
+        className="sticky top-0 z-10 px-3 pt-2.5 pb-2 border-b shrink-0"
         style={{ backgroundColor: cm.bg, borderColor: cm.tx + '30' }}
       >
-        {isPeek && (
-          <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/60" style={{ color: cm.tx }}>
-            peek
-          </span>
-        )}
-        <span className="text-lg">{typeEntry?.icon || '📋'}</span>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold" style={{ color: cm.tx }}>
-            {node.data.title || t(typeEntry?.labelKey || node.type)}
+        <div className="flex items-center gap-2">
+          {isPeek && (
+            <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/60" style={{ color: cm.tx }}>
+              peek
+            </span>
+          )}
+          <span className="text-lg">{typeEntry?.icon || '📋'}</span>
+          <div className="flex-1 min-w-0">
+            <input
+              type="text"
+              value={node.data.title}
+              onChange={(e) => !isCrossLayerPeek && updateNodeCosmetic(bareNodeId, { title: e.target.value })}
+              placeholder={t(typeEntry?.labelKey || node.type)}
+              disabled={isCrossLayerPeek}
+              className="text-sm font-bold bg-transparent outline-none w-full truncate placeholder:opacity-50 disabled:cursor-default"
+              style={{ color: cm.tx }}
+            />
+            <div className="text-[10px] opacity-70" style={{ color: cm.tx }}>
+              {t(cm.lbKey)} · {fmtDuration(getNodeDuration(node, meta.type, meta.subtype, portioning.thickness))}
+            </div>
           </div>
-          <div className="text-[10px] opacity-70" style={{ color: cm.tx }}>
-            {t(cm.lbKey)} · {fmtDuration(getNodeDuration(node, meta.type, meta.subtype, portioning.thickness))}
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-7 h-7 rounded-md flex items-center justify-center text-xs hover:bg-black/5"
+            style={{ color: cm.tx }}
+          >
+            ▶
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-7 h-7 rounded-md flex items-center justify-center text-xs hover:bg-black/5"
-          style={{ color: cm.tx }}
-        >
-          ▶
-        </button>
+        {nodeLayer && (
+          <div className="flex justify-end mt-1">
+            <span
+              className="text-[9px] font-semibold px-2 py-0.5 rounded-full text-white"
+              style={{ backgroundColor: nodeLayer.color }}
+            >
+              {nodeLayer.name}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Per-node warnings */}

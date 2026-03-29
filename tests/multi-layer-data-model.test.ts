@@ -30,9 +30,9 @@ describe('LAYER_TYPE_META', () => {
       expect(typeof meta.defaultColor).toBe('string')
       expect(meta.defaultColor).toMatch(/^#[0-9A-Fa-f]{6}$/)
       expect(typeof meta.labelKey).toBe('string')
-      expect(meta.labelKey).toContain('layer.')
+      expect(meta.labelKey).toContain('layer_type_')
       expect(typeof meta.descriptionKey).toBe('string')
-      expect(meta.descriptionKey).toContain('layer.')
+      expect(meta.descriptionKey).toContain('layer_type_')
     }
   })
 

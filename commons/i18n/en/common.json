@@ -68,5 +68,18 @@
   "layer_type_pastry": "Pastry",
   "layer_type_pastry_desc": "Creams, meringues, ganache, tempering, pastry dough",
   "rise_method_room": "Room temp",
-  "rise_method_fridge": "Fridge"
+  "rise_method_fridge": "Fridge",
+  "layer_opacity": "Opacity",
+  "cancel": "Cancel",
+  "confirm_remove_layer_title": "Remove Layer",
+  "confirm_remove_layer_description": "You are about to remove the layer \"{{name}}\" and all its nodes. This action cannot be undone.",
+  "confirm_remove_layer_action": "Remove",
+  "layer_color": "Layer color",
+  "color_preset": "Preset colors",
+  "color_show_custom": "Custom color",
+  "color_hide_custom": "Hide custom",
+  "layer_section_title": "Layer",
+  "layer_name_placeholder": "Layer name",
+  "search_layer_type": "Search layer type...",
+  "no_results": "No results"
 }

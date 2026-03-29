@@ -8,6 +8,7 @@ import { IngredientsOverview } from '~/components/recipe/IngredientsOverview'
 import { TimeSummary } from '~/components/recipe/TimeSummary'
 import { DoughCompositionPanel } from './DoughCompositionPanel'
 import { DoughTotalsPanel } from './DoughTotalsPanel'
+import { LayerColorPicker } from './LayerColorPicker'
 import { LayerMasterConfig } from './layer-configs/LayerMasterConfig'
 import { RECIPE_SUBTYPES } from '@/local_data'
 import { Switch } from '~/components/ui/switch'
@@ -54,6 +55,9 @@ export function RecipeToolbar() {
   const applyTypeDefaults = useRecipeFlowStore((s) => s.applyTypeDefaults)
   const generateDough = useRecipeFlowStore((s) => s.generateDough)
   const graphEmpty = useRecipeFlowStore((s) => selectGraph(s).nodes.length === 0)
+  const activeLayerId = useRecipeFlowStore((s) => s.activeLayerId)
+  const activeLayer = useRecipeFlowStore((s) => s.layers.find(l => l.id === s.activeLayerId))
+  const updateLayer = useRecipeFlowStore((s) => s.updateLayer)
   const activeLayerType = useRecipeFlowStore((s) => {
     const layer = s.layers.find((l) => l.id === s.activeLayerId)
     return layer?.masterConfig.type ?? 'impasto'
@@ -116,6 +120,27 @@ export function RecipeToolbar() {
           ▶
         </button>
       </div>
+
+      {/* Layer identity — always visible */}
+      <AccordionSection title={t('layer_section_title')} icon="🏷️">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={activeLayer?.name ?? ''}
+            onChange={(e) => {
+              if (activeLayerId) updateLayer(activeLayerId, { name: e.target.value })
+            }}
+            className="flex-1 text-xs bg-background border border-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+            placeholder={t('layer_name_placeholder')}
+          />
+          <LayerColorPicker
+            color={activeLayer?.color ?? '#D97706'}
+            onChange={(c) => {
+              if (activeLayerId) updateLayer(activeLayerId, { color: c })
+            }}
+          />
+        </div>
+      </AccordionSection>
 
       {activeLayerType === 'impasto' ? (
         <>

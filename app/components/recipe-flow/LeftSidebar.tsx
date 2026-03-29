@@ -19,13 +19,13 @@ export function LeftSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
   const [deleteLayerId, setDeleteLayerId] = useState<string | null>(null)
-  const [sidebarWidth, setSidebarWidth] = useState(220)
+  const [sidebarWidth, setSidebarWidth] = useState(320)
   const isResizing = useRef(false)
   const t = useT()
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isResizing.current) return
-    const newWidth = Math.min(400, Math.max(200, e.clientX))
+    const newWidth = Math.min(500, Math.max(320, e.clientX))
     setSidebarWidth(newWidth)
   }, [])
 
@@ -91,8 +91,8 @@ export function LeftSidebar() {
         <ModeToggle />
       </div>
 
-      {/* Recipe details — always visible in both modes */}
-      <details open className="border-b border-border">
+      {/* Recipe details — always visible in both modes, default closed */}
+      <details className="border-b border-border">
         <summary className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
           {t('section_recipe_details')}
           <span className="text-[8px]">▾</span>
@@ -144,7 +144,7 @@ export function LeftSidebar() {
             {/* Inactive layer opacity slider */}
             {layers.length >= 2 && (
               <div className="px-3 py-1.5 border-b border-border flex items-center gap-2">
-                <span className="text-[9px] text-muted-foreground whitespace-nowrap">Opacity</span>
+                <span className="text-[9px] text-muted-foreground whitespace-nowrap">{t('layer_opacity')}</span>
                 <input
                   type="range"
                   min={20} max={80} step={5}
@@ -244,14 +244,14 @@ export function LeftSidebar() {
       <AlertDialog open={deleteLayerId !== null} onOpenChange={(open) => { if (!open) setDeleteLayerId(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('remove_layer')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('confirm_remove_layer_title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('confirm_remove_layer')}
+              {t('confirm_remove_layer_description', { name: layers.find(l => l.id === deleteLayerId)?.name ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeleteLayerId(null)}>
-              {t('cancel') || 'Annulla'}
+              {t('cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -260,7 +260,7 @@ export function LeftSidebar() {
                 setDeleteLayerId(null)
               }}
             >
-              {t('remove_layer')}
+              {t('confirm_remove_layer_action')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

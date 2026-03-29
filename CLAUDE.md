@@ -12,6 +12,13 @@ Usa shadcn per le componenti.
 Usa Tailwind per gli stili.
 (tutti in ultima versione)
 
+### ⚠️ i18n OBBLIGATORIO — NESSUNA ECCEZIONE
+
+**TUTTI i testi visibili all'utente DEVONO usare `t('key')` o `t('key', { var: value })`.**
+Mai stringhe hardcoded in JSX, titoli, placeholder, tooltip, bottoni, dialog, label, messaggi di errore.
+Questo vale per OGNI file: componenti, dialog, toast, alert, tooltip.
+Se crei un nuovo testo, aggiungi SEMPRE la chiave in `commons/i18n/it/*.json` E `commons/i18n/en/*.json`.
+
 ---
 
 ## Monorepo Structure

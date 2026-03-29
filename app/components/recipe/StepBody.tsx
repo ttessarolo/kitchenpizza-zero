@@ -85,18 +85,6 @@ export function StepBody({ step: s }: StepBodyProps) {
 
   return (
     <div className="px-3 pb-3 border-t border-[#f0e8df]">
-      {/* Title */}
-      <div className="mt-2 mb-1.5">
-        <input
-          type="text"
-          value={s.title}
-          onChange={(e) => uSF(s.id, 'title', e.target.value)}
-          placeholder={t("step_title_placeholder")}
-          disabled={!editMode}
-          className="w-full text-sm font-semibold text-foreground bg-transparent border-none border-b border-dashed border-border outline-none pb-0.5 disabled:opacity-50"
-        />
-      </div>
-
       {/* Type + Subtype + Group selectors */}
       <div className="flex gap-2 mb-1.5 flex-wrap">
         <MiniSelect
@@ -178,44 +166,49 @@ export function StepBody({ step: s }: StepBodyProps) {
         />
       </div>
 
-      {/* Duration (left) + Rest (right) */}
-      <div className="flex justify-between mb-1.5">
-        <div>
-          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[1px] mb-0.5">{t("label_duration")}</div>
-          <div className="flex items-center gap-0.5 text-xs">
-            <input type="number" min={0} value={baseDurH} onChange={(e) => setDuration('baseDur', +e.target.value || 0, baseDurM, baseDurS)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
-            <span className="text-muted-foreground">h</span>
-            <input type="number" min={0} max={59} value={baseDurM} onChange={(e) => setDuration('baseDur', baseDurH, +e.target.value || 0, baseDurS)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
-            <span className="text-muted-foreground">m</span>
-            <input type="number" min={0} max={59} value={baseDurS} onChange={(e) => setDuration('baseDur', baseDurH, baseDurM, +e.target.value || 0)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
-            <span className="text-muted-foreground">s</span>
-          </div>
+      {/* Duration — segmented inline input */}
+      <div className="mb-2.5">
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t("label_duration")}</div>
+        <div className="inline-flex items-center border border-border rounded-lg px-2.5 py-1.5 bg-background">
+          <input type="number" min={0} max={999} value={baseDurH} onChange={(e) => setDuration('baseDur', +e.target.value || 0, baseDurM, baseDurS)} disabled={!editMode} className="w-8 text-center text-sm font-bold bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50" />
+          <span className="text-[10px] text-muted-foreground mr-1">h</span>
+          <span className="text-border">:</span>
+          <input type="number" min={0} max={59} value={baseDurM} onChange={(e) => setDuration('baseDur', baseDurH, +e.target.value || 0, baseDurS)} disabled={!editMode} className="w-8 text-center text-sm font-bold bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50 ml-1" />
+          <span className="text-[10px] text-muted-foreground mr-1">m</span>
+          <span className="text-border">:</span>
+          <input type="number" min={0} max={59} value={baseDurS} onChange={(e) => setDuration('baseDur', baseDurH, baseDurM, +e.target.value || 0)} disabled={!editMode} className="w-8 text-center text-sm font-bold bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50 ml-1" />
+          <span className="text-[10px] text-muted-foreground">s</span>
         </div>
-        <div>
-          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[1px] mb-0.5 text-right">{t("label_rest")}</div>
-          <div className="flex items-center gap-0.5 text-xs">
-            <input type="number" min={0} value={restDurH} onChange={(e) => setDuration('restDur', +e.target.value || 0, restDurM, restDurS)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
-            <span className="text-muted-foreground">h</span>
-            <input type="number" min={0} max={59} value={restDurM} onChange={(e) => setDuration('restDur', restDurH, +e.target.value || 0, restDurS)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
-            <span className="text-muted-foreground">m</span>
-            <input type="number" min={0} max={59} value={restDurS} onChange={(e) => setDuration('restDur', restDurH, restDurM, +e.target.value || 0)} className="w-11 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7" />
-            <span className="text-muted-foreground">s</span>
-          </div>
-          {/* Rest temperature */}
-          {restDur > 0 && (
-            <div className="flex items-center gap-1 mt-1 justify-end">
-              <span className="text-[11px] text-muted-foreground">{t("label_temp")}</span>
-              <input
-                type="number"
-                step={0.1}
-                value={s.restTemp ?? (tu === 'F' ? celsiusToFahrenheit(at) : at)}
-                onChange={(e) => uSF(s.id, 'restTemp', tu === 'F' ? fahrenheitToCelsius(+e.target.value) : +e.target.value)}
-                className="w-14 text-xs font-bold bg-background border border-border rounded px-1 py-0.5 outline-none text-center min-h-7"
-              />
-              <span className="text-[11px] text-muted-foreground">{tu === 'F' ? '°F' : '°C'}</span>
-            </div>
-          )}
+      </div>
+
+      {/* Rest — segmented inline input (separate row) */}
+      <div className="mb-2.5">
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t("label_rest")}</div>
+        <div className="inline-flex items-center border border-border rounded-lg px-2.5 py-1.5 bg-background">
+          <input type="number" min={0} max={999} value={restDurH} onChange={(e) => setDuration('restDur', +e.target.value || 0, restDurM, restDurS)} disabled={!editMode} className="w-8 text-center text-sm font-bold bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50" />
+          <span className="text-[10px] text-muted-foreground mr-1">h</span>
+          <span className="text-border">:</span>
+          <input type="number" min={0} max={59} value={restDurM} onChange={(e) => setDuration('restDur', restDurH, +e.target.value || 0, restDurS)} disabled={!editMode} className="w-8 text-center text-sm font-bold bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50 ml-1" />
+          <span className="text-[10px] text-muted-foreground mr-1">m</span>
+          <span className="text-border">:</span>
+          <input type="number" min={0} max={59} value={restDurS} onChange={(e) => setDuration('restDur', restDurH, restDurM, +e.target.value || 0)} disabled={!editMode} className="w-8 text-center text-sm font-bold bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50 ml-1" />
+          <span className="text-[10px] text-muted-foreground">s</span>
         </div>
+        {/* Rest temperature — only if rest > 0 */}
+        {restDur > 0 && (
+          <div className="inline-flex items-center border border-border rounded-lg px-2.5 py-1.5 bg-background ml-3">
+            <span className="text-[10px] text-muted-foreground mr-1">{t("label_temp")}</span>
+            <input
+              type="number"
+              step={0.1}
+              value={s.restTemp ?? (tu === 'F' ? celsiusToFahrenheit(at) : at)}
+              onChange={(e) => uSF(s.id, 'restTemp', tu === 'F' ? fahrenheitToCelsius(+e.target.value) : +e.target.value)}
+              disabled={!editMode}
+              className="w-10 text-center text-sm font-bold bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50"
+            />
+            <span className="text-[10px] text-muted-foreground">{tu === 'F' ? '°F' : '°C'}</span>
+          </div>
+        )}
       </div>
 
       {/* Description */}
