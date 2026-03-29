@@ -74,12 +74,13 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
     <div
       className="rounded-2xl shadow-sm w-[360px] cursor-pointer transition-all hover:shadow-md relative"
       style={{
-        backgroundColor: isError ? undefined : cm.bg,
-        backgroundImage: isError
-          ? 'repeating-linear-gradient(135deg, #fef2f2, #fef2f2 8px, #fecaca 8px, #fecaca 10px)'
-          : undefined,
+        backgroundColor: layerLocked ? '#f3f4f6' : isError ? undefined : cm.bg,
+        backgroundImage: layerLocked
+          ? 'repeating-linear-gradient(135deg, #f3f4f6, #f3f4f6 6px, #e5e7eb 6px, #e5e7eb 7px)'
+          : isError
+            ? 'repeating-linear-gradient(135deg, #fef2f2, #fef2f2 8px, #fecaca 8px, #fecaca 10px)'
+            : undefined,
         borderLeft: layerColor ? `4px solid ${layerColor}` : undefined,
-        filter: layerLocked ? 'saturate(0.5)' : undefined,
         ...borderStyle,
       }}
     >

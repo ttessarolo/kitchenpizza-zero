@@ -120,9 +120,11 @@ export function LeftSidebar() {
                   key={layer.id}
                   onClick={() => setActiveLayer(layer.id)}
                   className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer ${
-                    isActive
-                      ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-                      : 'text-foreground hover:bg-muted/50'
+                    layer.locked
+                      ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                      : isActive
+                        ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+                        : 'text-foreground hover:bg-muted/50'
                   }`}
                 >
                   <span

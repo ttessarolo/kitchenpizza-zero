@@ -389,6 +389,12 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     const activeLayerOffset = activeLayer.position * 400
     for (const fn of activeFlowNodes) {
       fn.position = { x: fn.position.x + activeLayerOffset, y: fn.position.y }
+      // If active layer is locked, disable drag and connect
+      if (activeLayer.locked) {
+        fn.draggable = false
+        fn.connectable = false
+        fn.data = { ...fn.data, layerLocked: true }
+      }
     }
 
     // Inactive visible layers: dimmed, non-interactive, namespaced IDs
@@ -565,12 +571,21 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const sourceIsNamespaced = sourceId.includes(':')
         const targetIsNamespaced = targetId.includes(':')
 
+        // Reject connections involving locked layers
+        const activeLayer = getActiveLayer(s)
+        if (activeLayer?.locked) return s
+
         // If either end is namespaced, this is a cross-layer connection
         if (sourceIsNamespaced || targetIsNamespaced) {
           const sourceLayerId = sourceIsNamespaced ? sourceId.split(':')[0] : s.activeLayerId
           const sourceNodeId = sourceIsNamespaced ? sourceId.split(':').slice(1).join(':') : sourceId
           const targetLayerId = targetIsNamespaced ? targetId.split(':')[0] : s.activeLayerId
           const targetNodeId = targetIsNamespaced ? targetId.split(':').slice(1).join(':') : targetId
+
+          // Reject if source or target layer is locked
+          const srcLayer = s.layers.find(l => l.id === sourceLayerId)
+          const tgtLayer = s.layers.find(l => l.id === targetLayerId)
+          if (srcLayer?.locked || tgtLayer?.locked) return s
 
           // Don't create intra-layer edges via this path
           if (sourceLayerId === targetLayerId) return s
