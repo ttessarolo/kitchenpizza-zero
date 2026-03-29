@@ -37,5 +37,25 @@
   "label_estimated_w": "Est. W",
   "label_blended_w": "Blended W",
   "btn_select_all": "Select all",
-  "btn_deselect_all": "Deselect all"
+  "btn_deselect_all": "Deselect all",
+
+  "layer_panel_title": "Layers",
+  "add_layer": "Add Layer",
+  "remove_layer": "Remove Layer",
+  "duplicate_layer": "Duplicate Layer",
+  "layer_visible": "Visible",
+  "layer_locked": "Locked",
+  "panoramica_title": "Overview",
+  "mode_layer": "Layers",
+  "mode_panoramica": "Overview",
+  "layer_type_impasto": "Dough",
+  "layer_type_impasto_desc": "Dough for bread, pizza, focaccia, fresh pasta",
+  "layer_type_sauce": "Sauce",
+  "layer_type_sauce_desc": "Sauces, pesto, emulsions, marinades, reductions",
+  "layer_type_prep": "Preparation",
+  "layer_type_prep_desc": "Cutting, cleaning, assembly, plating",
+  "layer_type_ferment": "Fermentation",
+  "layer_type_ferment_desc": "Lacto-fermentation, brine, vinegar, starter",
+  "layer_type_pastry": "Pastry",
+  "layer_type_pastry_desc": "Creams, meringues, ganache, tempering, pastry dough"
 }

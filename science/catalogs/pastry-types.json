@@ -1,0 +1,21 @@
+{
+  "type": "catalog",
+  "id": "pastry_types",
+  "_meta": {
+    "section": "pastry",
+    "displayName": "meta.catalog.pastry_types.name",
+    "description": "meta.catalog.pastry_types.desc",
+    "tags": ["pastry", "catalog"],
+    "lastModified": "2026-03-29",
+    "author": "system"
+  },
+  "entries": [
+    { "key": "dark", "label": "Cioccolato Fondente", "meltTemp": 55, "coolTemp": 27, "workTempMin": 31, "workTempMax": 32 },
+    { "key": "milk", "label": "Cioccolato al Latte", "meltTemp": 50, "coolTemp": 26, "workTempMin": 29, "workTempMax": 30 },
+    { "key": "white", "label": "Cioccolato Bianco", "meltTemp": 45, "coolTemp": 25, "workTempMin": 27, "workTempMax": 28 },
+    { "key": "custard", "label": "Crema Pasticcera", "meltTemp": 0, "coolTemp": 0, "workTempMin": 82, "workTempMax": 85 },
+    { "key": "meringue_french", "label": "Meringa Francese", "meltTemp": 0, "coolTemp": 0, "workTempMin": 20, "workTempMax": 25 },
+    { "key": "meringue_italian", "label": "Meringa Italiana", "meltTemp": 0, "coolTemp": 0, "workTempMin": 118, "workTempMax": 121 },
+    { "key": "meringue_swiss", "label": "Meringa Svizzera", "meltTemp": 0, "coolTemp": 0, "workTempMin": 55, "workTempMax": 60 }
+  ]
+}

@@ -212,5 +212,27 @@
   "meta.rule.gluten_free_with_yeast.name": "Farina senza glutine con lievito",
   "meta.rule.gluten_free_with_yeast.desc": "Errore quando farina senza glutine è usata con lievito.",
   "meta.rule.whole_grain_needs_hydration.name": "Idratazione per integrale",
-  "meta.rule.whole_grain_needs_hydration.desc": "Info quando farina integrale necessita più idratazione."
+  "meta.rule.whole_grain_needs_hydration.desc": "Info quando farina integrale necessita più idratazione.",
+
+  "warning_graph_cycle": "Il grafo contiene un ciclo: i nodi non possono essere ordinati. Rimuovi la connessione circolare.",
+
+  "warning_sauce_emulsion_temp_high": "Emulsione a temperatura troppo alta ({{temp}}°C). Oltre 70°C le emulsioni rischiano di separarsi.",
+  "warning_sauce_reduction_over": "Riduzione eccessiva: il volume è sceso sotto il 20% dell'originale. Rischio di bruciatura e sapore amaro.",
+  "warning_sauce_pesto_oxidation": "Il pesto si ossida rapidamente: lavorare velocemente e coprire con olio a filo.",
+  "warning_sauce_marinade_acid_long": "Marinatura acida oltre 24h: le proteine si degradano e la consistenza diventa gommosa.",
+
+  "warning_ferment_salt_low_botulism": "Sale sotto il 2% in fermentazione lattica: rischio botulino. Usare almeno 2-3% di sale sul peso dei vegetali.",
+  "warning_ferment_ph_high": "pH troppo alto ({{ph}}). Per sicurezza alimentare il pH deve scendere sotto 4.6 entro 48h.",
+  "warning_ferment_temp_high": "Temperatura fermentazione {{temp}}°C troppo alta. Sopra 35°C i batteri lattici rallentano e i patogeni proliferano.",
+  "warning_ferment_vessel_not_airtight": "Contenitore non ermetico per fermentazione anaerobica: usa un airlock o un coperchio con valvola.",
+  "warning_ferment_starter_ratio_low": "Rapporto starter troppo basso ({{ratio}}%). Servono almeno 2-5% per avviare la fermentazione in tempi sicuri.",
+
+  "warning_pastry_ganache_ratio": "Rapporto cioccolato/panna sbilanciato ({{ratio}}). Per ganache stabile: fondente 2:1, latte 2.5:1, bianco 3:1.",
+  "warning_pastry_temper_curve": "Curva di temperaggio non rispettata: fondente 50→27→31°C, latte 45→26→29°C, bianco 40→25→27°C.",
+  "warning_pastry_meringue_fat_contact": "La meringa non monta se a contatto con grassi. Assicurarsi che ciotola e fruste siano sgrassate.",
+  "warning_pastry_cream_curdling": "Crema a rischio di impazzire: aggiungere i liquidi caldi gradualmente e mescolare costantemente.",
+  "warning_pastry_chilling_too_fast": "Raffreddamento troppo rapido: lo shock termico può causare crepe nel cioccolato temperato.",
+
+  "warning_prep_cross_contamination": "Rischio contaminazione crociata: usare taglieri e utensili separati per carne cruda e verdure.",
+  "warning_prep_oxidation": "L'ingrediente si ossida rapidamente dopo il taglio. Conservare in acqua acidulata o lavorare velocemente."
 }

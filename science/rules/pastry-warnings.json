@@ -1,0 +1,77 @@
+[
+  {
+    "type": "rule",
+    "id": "pastry_temper_dark_too_hot",
+    "_meta": { "section": "pastry", "displayName": "meta.rule.pastry_temper_dark_too_hot.name", "description": "meta.rule.pastry_temper_dark_too_hot.desc", "tags": ["pastry", "tempering", "chocolate", "dark", "error"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "pastry",
+    "severity": "error",
+    "messageKey": "warning.pastry_temper_dark_too_hot",
+    "messageVars": ["workTemp", "chocolateType"],
+    "conditions": [
+      { "field": "workTemp", "op": "gt", "value": 32 },
+      { "field": "chocolateType", "op": "eq", "value": "dark" }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.lower_work_temp",
+        "mutations": [{ "type": "updateNode", "patch": { "workTemp": 31 } }]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pastry_temper_dark_too_cold",
+    "_meta": { "section": "pastry", "displayName": "meta.rule.pastry_temper_dark_too_cold.name", "description": "meta.rule.pastry_temper_dark_too_cold.desc", "tags": ["pastry", "tempering", "chocolate", "dark", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "pastry",
+    "severity": "warning",
+    "messageKey": "warning.pastry_temper_dark_too_cold",
+    "messageVars": ["workTemp", "chocolateType"],
+    "conditions": [
+      { "field": "workTemp", "op": "lt", "value": 29 },
+      { "field": "chocolateType", "op": "eq", "value": "dark" }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pastry_custard_not_pasteurized",
+    "_meta": { "section": "pastry", "displayName": "meta.rule.pastry_custard_not_pasteurized.name", "description": "meta.rule.pastry_custard_not_pasteurized.desc", "tags": ["pastry", "custard", "pasteurization", "error"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "pastry",
+    "severity": "error",
+    "messageKey": "warning.pastry_custard_not_pasteurized",
+    "messageVars": ["cookTemp"],
+    "conditions": [
+      { "field": "cookTemp", "op": "lt", "value": 82 },
+      { "field": "hasEggs", "op": "eq", "value": true }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.raise_custard_temp",
+        "mutations": [{ "type": "updateNode", "patch": { "cookTemp": 85 } }]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pastry_meringue_unstable",
+    "_meta": { "section": "pastry", "displayName": "meta.rule.pastry_meringue_unstable.name", "description": "meta.rule.pastry_meringue_unstable.desc", "tags": ["pastry", "meringue", "ratio", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "pastry",
+    "severity": "warning",
+    "messageKey": "warning.pastry_meringue_unstable",
+    "messageVars": ["sugarEggRatio"],
+    "conditions": [
+      { "field": "sugarEggRatio", "op": "lt", "value": 1.5 }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "pastry_chill_too_slow",
+    "_meta": { "section": "pastry", "displayName": "meta.rule.pastry_chill_too_slow.name", "description": "meta.rule.pastry_chill_too_slow.desc", "tags": ["pastry", "chill", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "pastry",
+    "severity": "warning",
+    "messageKey": "warning.pastry_chill_too_slow",
+    "messageVars": ["chillDuration"],
+    "conditions": [
+      { "field": "chillDuration", "op": "gt", "value": 120 }
+    ]
+  }
+]

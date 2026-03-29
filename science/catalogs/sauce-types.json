@@ -1,0 +1,20 @@
+{
+  "type": "catalog",
+  "id": "sauce_types",
+  "_meta": {
+    "section": "sauce",
+    "displayName": "meta.catalog.sauce_types.name",
+    "description": "meta.catalog.sauce_types.desc",
+    "tags": ["sauce", "catalog"],
+    "lastModified": "2026-03-29",
+    "author": "system"
+  },
+  "entries": [
+    { "key": "sugo", "label": "Sugo (pomodoro)", "baseMinPerLiter": 30, "maxTemp": 100, "reductionRate": 0.15 },
+    { "key": "emulsione", "label": "Emulsione", "baseMinPerLiter": 10, "maxTemp": 70, "reductionRate": 0.05 },
+    { "key": "pesto", "label": "Pesto", "baseMinPerLiter": 5, "maxTemp": 0, "reductionRate": 0 },
+    { "key": "crema", "label": "Crema", "baseMinPerLiter": 20, "maxTemp": 90, "reductionRate": 0.1 },
+    { "key": "ragu", "label": "Rag\u00f9", "baseMinPerLiter": 120, "maxTemp": 100, "reductionRate": 0.2 },
+    { "key": "besciamella", "label": "Besciamella", "baseMinPerLiter": 15, "maxTemp": 95, "reductionRate": 0.08 }
+  ]
+}

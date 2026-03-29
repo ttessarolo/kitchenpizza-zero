@@ -1,0 +1,20 @@
+{
+  "type": "classification",
+  "id": "pastry_temper_zone",
+  "_meta": {
+    "section": "pastry",
+    "displayName": "meta.classification.pastry_temper_zone.name",
+    "description": "meta.classification.pastry_temper_zone.desc",
+    "tags": ["pastry", "tempering", "chocolate", "classification"],
+    "lastModified": "2026-03-29",
+    "author": "system"
+  },
+  "input": "workTemp",
+  "classes": [
+    { "lt": 27, "label": "too_cold" },
+    { "lt": 29, "label": "seeding_zone" },
+    { "lte": 32, "label": "working_zone" },
+    { "lte": 34, "label": "over_tempered" },
+    { "default": true, "label": "melted" }
+  ]
+}

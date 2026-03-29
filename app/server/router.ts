@@ -7,6 +7,8 @@ import { getMethods, calcDuration, maxHoursForW } from './procedures/rise'
 import { calcTarget } from './procedures/portioning'
 import { getDuration } from './procedures/schedule'
 import { listBlocks, getBlock, updateBlock, listI18n, updateI18n } from './procedures/science-admin'
+import { reconcileLayerProcedure } from './procedures/layer'
+import { computePanoramica } from './procedures/panoramica'
 
 export const appRouter = os.router({
   health: healthCheck,
@@ -44,6 +46,12 @@ export const appRouter = os.router({
     updateBlock,
     listI18n,
     updateI18n,
+  }),
+  layer: os.router({
+    reconcile: reconcileLayerProcedure,
+  }),
+  panoramica: os.router({
+    compute: computePanoramica,
   }),
 })
 

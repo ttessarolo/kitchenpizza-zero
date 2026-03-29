@@ -1,0 +1,48 @@
+[
+  {
+    "type": "rule",
+    "id": "prep_protein_room_temp",
+    "_meta": { "section": "prep", "displayName": "meta.rule.prep_protein_room_temp.name", "description": "meta.rule.prep_protein_room_temp.desc", "tags": ["prep", "protein", "food-safety", "error"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "prep",
+    "severity": "error",
+    "messageKey": "warning.prep_protein_room_temp",
+    "messageVars": ["roomTempMinutes", "ingredientCategory"],
+    "conditions": [
+      { "field": "roomTempMinutes", "op": "gt", "value": 120 },
+      { "field": "ingredientCategory", "op": "in", "value": ["protein", "dairy"] }
+    ],
+    "actions": [
+      {
+        "labelKey": "action.reduce_room_temp_time",
+        "mutations": [{ "type": "updateNode", "patch": { "roomTempMinutes": 60 } }]
+      }
+    ]
+  },
+  {
+    "type": "rule",
+    "id": "prep_dairy_room_temp",
+    "_meta": { "section": "prep", "displayName": "meta.rule.prep_dairy_room_temp.name", "description": "meta.rule.prep_dairy_room_temp.desc", "tags": ["prep", "dairy", "food-safety", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "prep",
+    "severity": "warning",
+    "messageKey": "warning.prep_dairy_room_temp",
+    "messageVars": ["roomTempMinutes", "ingredientCategory"],
+    "conditions": [
+      { "field": "roomTempMinutes", "op": "gt", "value": 60 },
+      { "field": "ingredientCategory", "op": "eq", "value": "dairy" }
+    ],
+    "suppressedBy": ["prep_protein_room_temp"]
+  },
+  {
+    "type": "rule",
+    "id": "prep_cross_contamination",
+    "_meta": { "section": "prep", "displayName": "meta.rule.prep_cross_contamination.name", "description": "meta.rule.prep_cross_contamination.desc", "tags": ["prep", "cross-contamination", "warning"], "lastModified": "2026-03-29", "author": "system" },
+    "category": "prep",
+    "severity": "warning",
+    "messageKey": "warning.prep_cross_contamination",
+    "messageVars": [],
+    "conditions": [
+      { "field": "rawProteinThenVegetable", "op": "eq", "value": true },
+      { "field": "washBetween", "op": "eq", "value": false }
+    ]
+  }
+]
