@@ -23,6 +23,7 @@ export interface BaseNodeData extends Record<string, unknown> {
   onExpand?: (id: string) => void
   layerColor?: string        // panoramica: layer color for visual grouping
   isCriticalPath?: boolean   // panoramica: node is on the critical path
+  layerLocked?: boolean      // node's layer is locked — show visual indicator
 }
 
 /** Generate a short preview line based on node type and data */
@@ -51,7 +52,7 @@ function getPreview(type: NodeTypeKey, d: NodeData, t: (key: string, vars?: Reco
 
 function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
   const t = useT()
-  const { nodeData, nodeType, nodeSubtype, duration, isSelected, isPeek, isError, isCriticalPath, layerColor } = data
+  const { nodeData, nodeType, nodeSubtype, duration, isSelected, isPeek, isError, isCriticalPath, layerColor, layerLocked } = data
   const inFlow = data.inFlow ?? []
   const outFlow = data.outFlow ?? []
   const cm = COLOR_MAP[nodeType] || COLOR_MAP.dough
@@ -71,16 +72,22 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
 
   return (
     <div
-      className="rounded-2xl shadow-sm w-[360px] cursor-pointer transition-all hover:shadow-md"
+      className="rounded-2xl shadow-sm w-[360px] cursor-pointer transition-all hover:shadow-md relative"
       style={{
         backgroundColor: isError ? undefined : cm.bg,
         backgroundImage: isError
           ? 'repeating-linear-gradient(135deg, #fef2f2, #fef2f2 8px, #fecaca 8px, #fecaca 10px)'
           : undefined,
         borderLeft: layerColor ? `4px solid ${layerColor}` : undefined,
+        filter: layerLocked ? 'saturate(0.5)' : undefined,
         ...borderStyle,
       }}
     >
+      {layerLocked && (
+        <div className="absolute top-1.5 right-1.5 z-10 flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 border border-amber-300 text-amber-600 text-[10px]">
+          🔒
+        </div>
+      )}
       {/* Target handle (top) */}
       <Handle
         type="target"

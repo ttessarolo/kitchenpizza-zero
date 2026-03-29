@@ -385,6 +385,12 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     )
     const activeFlowEdges = graph.edges.map(toFlowEdge)
 
+    // Apply the same positional offset to the active layer so switching layers doesn't shift layout
+    const activeLayerOffset = activeLayer.position * 400
+    for (const fn of activeFlowNodes) {
+      fn.position = { x: fn.position.x + activeLayerOffset, y: fn.position.y }
+    }
+
     // Inactive visible layers: dimmed, non-interactive, namespaced IDs
     const dimmedNodes: Node<BaseNodeData>[] = []
     const dimmedEdges: Edge[] = []
@@ -400,7 +406,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         fn.connectable = false
         fn.selectable = false
         fn.style = { ...fn.style, opacity: s.inactiveLayerOpacity }
-        fn.data = { ...fn.data, layerColor: layer.color }
+        fn.data = { ...fn.data, layerColor: layer.color, layerLocked: layer.locked }
         dimmedNodes.push(fn)
       }
       for (const edge of layer.edges) {
@@ -414,9 +420,30 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       }
     }
 
+    // Cross-layer edges (dashed purple)
+    const crossFlowEdges: Edge[] = []
+    for (const ce of s.crossEdges) {
+      // Resolve source/target IDs: if the node belongs to the active layer, use bare ID; else use namespaced
+      const sourceFlowId = ce.sourceLayerId === s.activeLayerId
+        ? ce.sourceNodeId
+        : `${ce.sourceLayerId}:${ce.sourceNodeId}`
+      const targetFlowId = ce.targetLayerId === s.activeLayerId
+        ? ce.targetNodeId
+        : `${ce.targetLayerId}:${ce.targetNodeId}`
+
+      crossFlowEdges.push({
+        id: ce.id,
+        source: sourceFlowId,
+        target: targetFlowId,
+        type: 'recipe',
+        data: ce.data,
+        style: { strokeDasharray: '8,6', stroke: '#8b5cf6', strokeWidth: 2 },
+      })
+    }
+
     return {
       flowNodes: [...dimmedNodes, ...activeFlowNodes],
-      flowEdges: [...dimmedEdges, ...activeFlowEdges],
+      flowEdges: [...dimmedEdges, ...activeFlowEdges, ...crossFlowEdges],
     }
   }
 
@@ -514,9 +541,11 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const layer = getActiveLayer(s)
         if (!layer) return { flowNodes: updated as Node<BaseNodeData>[] }
         // Only sync positions for active layer nodes (no : in ID)
+        // Subtract the active layer offset so stored positions remain canonical
+        const offset = layer.position * 400
         const newNodes = layer.nodes.map((n) => {
           const fn = updated.find((u) => u.id === n.id) // bare ID, no namespace
-          return fn ? { ...n, position: fn.position } : n
+          return fn ? { ...n, position: { x: fn.position.x - offset, y: fn.position.y } } : n
         })
         return {
           flowNodes: updated as Node<BaseNodeData>[],
@@ -531,11 +560,45 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
     onConnect: (connection) => {
       set((s) => {
+        const sourceId = connection.source!
+        const targetId = connection.target!
+        const sourceIsNamespaced = sourceId.includes(':')
+        const targetIsNamespaced = targetId.includes(':')
+
+        // If either end is namespaced, this is a cross-layer connection
+        if (sourceIsNamespaced || targetIsNamespaced) {
+          const sourceLayerId = sourceIsNamespaced ? sourceId.split(':')[0] : s.activeLayerId
+          const sourceNodeId = sourceIsNamespaced ? sourceId.split(':').slice(1).join(':') : sourceId
+          const targetLayerId = targetIsNamespaced ? targetId.split(':')[0] : s.activeLayerId
+          const targetNodeId = targetIsNamespaced ? targetId.split(':').slice(1).join(':') : targetId
+
+          // Don't create intra-layer edges via this path
+          if (sourceLayerId === targetLayerId) return s
+
+          const ceId = `xedge_${sourceLayerId}_${sourceNodeId}__${targetLayerId}_${targetNodeId}`
+          if (s.crossEdges.some(e => e.id === ceId)) return s
+
+          const newCrossEdge = {
+            id: ceId,
+            sourceLayerId,
+            sourceNodeId,
+            targetLayerId,
+            targetNodeId,
+            data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
+          }
+          const newCrossEdges = [...s.crossEdges, newCrossEdge]
+          return {
+            crossEdges: newCrossEdges,
+            ...rebuildAllFlowNodes({ ...s, crossEdges: newCrossEdges }),
+          }
+        }
+
+        // Intra-layer edge (existing logic)
         const graph = getGraph(s)
         const newEdge: RecipeEdge = {
-          id: `e_${connection.source}__${connection.target}`,
-          source: connection.source!,
-          target: connection.target!,
+          id: `e_${sourceId}__${targetId}`,
+          source: sourceId,
+          target: targetId,
           sourceHandle: connection.sourceHandle,
           targetHandle: connection.targetHandle,
           data: { scheduleTimeRatio: 1, scheduleQtyRatio: 1 },
