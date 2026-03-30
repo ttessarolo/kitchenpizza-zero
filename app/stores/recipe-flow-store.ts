@@ -141,6 +141,7 @@ interface RecipeFlowState {
 
   // Edge actions
   updateEdgeData: (edgeId: string, patch: { scheduleTimeRatio?: number; scheduleQtyRatio?: number }) => void
+  updateEdgeCurvature: (edgeId: string, curvature: number) => void
   removeEdge: (edgeId: string) => void
   addDep: (nodeId: string, parentId: string) => void
   removeDep: (nodeId: string, parentId: string) => void
@@ -1029,6 +1030,37 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
           layers: newLayers,
           ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
         }
+      })
+    },
+
+    updateEdgeCurvature: (edgeId, curvature) => {
+      set((s) => {
+        // Try active layer edges first
+        const graph = getGraph(s)
+        const edgeIdx = graph.edges.findIndex((e) => e.id === edgeId)
+        if (edgeIdx !== -1) {
+          const newEdges = graph.edges.map((e) =>
+            e.id === edgeId ? { ...e, data: { ...e.data, curvature } } : e,
+          )
+          const newGraph: RecipeGraph = { ...graph, edges: newEdges }
+          const newLayers = withGraphUpdate(s, newGraph)
+          return {
+            layers: newLayers,
+            ...rebuildAllFlowNodes({ ...s, layers: newLayers }),
+          }
+        }
+        // Try cross-layer edges
+        const crossIdx = s.crossEdges.findIndex((e) => e.id === edgeId)
+        if (crossIdx !== -1) {
+          const newCrossEdges = s.crossEdges.map((e) =>
+            e.id === edgeId ? { ...e, data: { ...e.data, curvature } } : e,
+          )
+          return {
+            crossEdges: newCrossEdges,
+            ...rebuildAllFlowNodes({ ...s, crossEdges: newCrossEdges }),
+          }
+        }
+        return s
       })
     },
 

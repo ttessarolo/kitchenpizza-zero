@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { fmtTime, fmtDuration } from '@commons/utils/format'
 import { STEP_TYPES, COLOR_MAP } from '@/local_data'
+import { stepColor } from '~/lib/theme-colors'
 import { useT } from '~/hooks/useTranslation'
 import type { ScheduledStep } from '@commons/types/recipe'
 import { StepBody } from './StepBody'
@@ -35,7 +36,7 @@ export function StepCard({
   // Done step card for "done" type
   if (s.type === 'done') {
     return (
-      <div className="rounded-xl p-3 text-center bg-white border border-primary/10">
+      <div className="rounded-xl p-3 text-center bg-card border border-primary/10">
         <div className="text-[26px]">{'🎉'}</div>
         <div className="text-sm font-bold">Fine</div>
         <div className="text-xl font-bold font-display mt-0.5">{fmtTime(s.start)}</div>
@@ -46,7 +47,7 @@ export function StepCard({
   return (
     <>
       <div
-        className={`rounded-[11px] overflow-hidden bg-white ${
+        className={`rounded-[11px] overflow-hidden bg-card ${
           isOpen
             ? 'border-[1.5px] border-primary'
             : 'border border-primary/10'
@@ -58,7 +59,7 @@ export function StepCard({
           {dragHandleProps && (
             <span
               {...dragHandleProps}
-              className="text-[#b8a08a] cursor-grab active:cursor-grabbing shrink-0 touch-none select-none"
+              className="text-canvas-edge cursor-grab active:cursor-grabbing shrink-0 touch-none select-none"
             >
               ⠿
             </span>
@@ -66,11 +67,11 @@ export function StepCard({
           {/* Time badge */}
           <div
             className="min-w-[44px] px-1.5 py-0.5 rounded-md text-center shrink-0"
-            style={{ background: cm.bg }}
+            style={{ background: stepColor(cm.bgVar) }}
           >
             <div
               className="text-sm font-bold"
-              style={{ color: cm.tx }}
+              style={{ color: stepColor(cm.txVar) }}
             >
               {fmtTime(s.start)}
             </div>
@@ -81,7 +82,7 @@ export function StepCard({
             <div className="text-sm font-semibold text-foreground">
               {STEP_TYPES.find((t) => t.key === s.type)?.icon} {s.title}
             </div>
-            <div className="text-xs text-[#b8a08a] mt-px">
+            <div className="text-xs text-canvas-edge mt-px">
               {t(cm.lbKey)}{s.subtype ? ` · ${t(STEP_TYPES.find((st) => st.key === s.type)?.subtypes?.find((sub) => sub.key === s.subtype)?.labelKey || s.subtype)}` : ''} · {fmtDuration(s.dur)}
             </div>
           </div>
@@ -91,7 +92,7 @@ export function StepCard({
             <button
               type="button"
               onClick={() => duplicateStepAction(s.id)}
-              className="w-7 h-7 rounded-md border-none bg-[#f0e8df] text-[#8a7a66] text-xs cursor-pointer flex items-center justify-center"
+              className="w-7 h-7 rounded-md border-none bg-panel-hover text-panel-header text-xs cursor-pointer flex items-center justify-center"
               title="Duplica"
             >
               ⧉
@@ -99,7 +100,7 @@ export function StepCard({
             <button
               type="button"
               onClick={() => setDeleteOpen(true)}
-              className="w-7 h-7 rounded-md border-none bg-[#fde8e8] text-[#c45a3a] text-xs cursor-pointer flex items-center justify-center"
+              className="w-7 h-7 rounded-md border-none bg-destructive/10 text-destructive text-xs cursor-pointer flex items-center justify-center"
               title="Elimina"
             >
               ✕
@@ -109,7 +110,7 @@ export function StepCard({
           {/* Chevron */}
           <span
             onClick={onToggle}
-            className={`text-xs text-[#b8a08a] cursor-pointer shrink-0 transition-transform duration-200 ${
+            className={`text-xs text-canvas-edge cursor-pointer shrink-0 transition-transform duration-200 ${
               isOpen ? 'rotate-180' : 'rotate-0'
             }`}
           >
@@ -134,7 +135,7 @@ export function StepCard({
             <button
               type="button"
               onClick={() => setDeleteOpen(false)}
-              className="px-3 py-1.5 text-xs border border-border rounded-md bg-white cursor-pointer"
+              className="px-3 py-1.5 text-xs border border-border rounded-md bg-card cursor-pointer"
             >
               Annulla
             </button>
@@ -144,7 +145,7 @@ export function StepCard({
                 deleteStep(s.id)
                 setDeleteOpen(false)
               }}
-              className="px-3 py-1.5 text-xs border-none rounded-md bg-[#c45a3a] text-white cursor-pointer font-semibold"
+              className="px-3 py-1.5 text-xs border-none rounded-md bg-destructive text-white cursor-pointer font-semibold"
             >
               Elimina
             </button>

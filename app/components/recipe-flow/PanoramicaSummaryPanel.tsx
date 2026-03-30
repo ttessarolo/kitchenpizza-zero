@@ -456,7 +456,7 @@ export function PanoramicaSummaryPanel() {
                       {/* Timeline dot */}
                       <span
                         className={`absolute left-0 w-[11px] h-[11px] rounded-full border-2 border-white flex-shrink-0 ${
-                          entry.isCriticalPath ? 'ring-1 ring-red-400' : ''
+                          entry.isCriticalPath ? 'ring-1 ring-critical' : ''
                         }`}
                         style={{ backgroundColor: entry.layerColor }}
                       />
@@ -470,7 +470,7 @@ export function PanoramicaSummaryPanel() {
                         className={`flex-1 truncate ${
                           entry.isCriticalPath ? 'text-foreground' : 'text-muted-foreground'
                         }`}
-                        style={entry.isCriticalPath ? { borderLeft: '2px solid #ef4444', paddingLeft: 4 } : undefined}
+                        style={entry.isCriticalPath ? { borderLeft: '2px solid hsl(var(--critical))', paddingLeft: 4 } : undefined}
                       >
                         {entry.nodeTitle}
                       </span>

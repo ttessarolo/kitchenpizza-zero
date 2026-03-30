@@ -24,7 +24,7 @@ export function UndoToast() {
   if (!visible || !lastAddedNodeId) return null
 
   return (
-    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-white border border-border rounded-xl shadow-lg px-4 py-2.5">
+    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-card border border-border rounded-xl shadow-lg px-4 py-2.5">
       <span className="text-sm text-foreground">{t('toast_node_added')}</span>
       <button
         type="button"

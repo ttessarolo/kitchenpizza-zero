@@ -1,6 +1,51 @@
 @import 'tailwindcss';
 
+/* ── Excalifont (hand-drawn canvas font) ────────────────────────── */
+@font-face {
+  font-family: 'Excalifont';
+  src: url('../fonts/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0000-007F, U+00A0-024F, U+0300-036F, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-214F, U+2190-21FF, U+2200-22FF, U+2300-23FF, U+2500-257F, U+2580-259F, U+25A0-25FF, U+2600-26FF, U+2700-27BF, U+FB00-FB4F, U+FE20-FE2F;
+}
+@font-face {
+  font-family: 'Excalifont';
+  src: url('../fonts/Excalifont-Regular-be310b9bcd4f1a43f571c46df7809174.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0100-024F, U+1E00-1EFF;
+}
+@font-face {
+  font-family: 'Excalifont';
+  src: url('../fonts/Excalifont-Regular-b9dcf9d2e50a1eaf42fc664b50a3fd0d.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0400-04FF, U+0500-052F;
+}
+@font-face {
+  font-family: 'Excalifont';
+  src: url('../fonts/Excalifont-Regular-41b173a47b57366892116a575a43e2b6.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Excalifont';
+  src: url('../fonts/Excalifont-Regular-3f2c5db56cc93c5a6873b1361d730c16.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0300-036F, U+FB00-FB4F;
+}
+@font-face {
+  font-family: 'Excalifont';
+  src: url('../fonts/Excalifont-Regular-349fac6ca4700ffec595a7150a0d1e1d.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+A640-A69F;
+}
+@font-face {
+  font-family: 'Excalifont';
+  src: url('../fonts/Excalifont-Regular-623ccf21b21ef6b3a0d87738f77eb071.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0300-036F;
+}
+
 @theme {
+  /* ── Core UI tokens ─────────────────────────────────────────────── */
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -24,71 +69,209 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
-  /* Step type colors */
-  --color-step-pre-dough-bg: #f5eef8;
-  --color-step-pre-dough-tx: #7050a0;
-  --color-step-dough-bg: #eef0f5;
-  --color-step-dough-tx: #5a6070;
-  --color-step-rest-bg: #f5f0ea;
-  --color-step-rest-tx: #7a6a55;
-  --color-step-rise-bg: #fef6ed;
-  --color-step-rise-tx: #8a6e40;
-  --color-step-shape-bg: #f0eef5;
-  --color-step-shape-tx: #6050a0;
-  --color-step-bake-bg: #fdeee8;
-  --color-step-bake-tx: #8a4a30;
-  --color-step-done-bg: #eaf5ea;
-  --color-step-done-tx: #3a7a3a;
+  /* ── Canvas tokens ──────────────────────────────────────────────── */
+  --color-canvas: hsl(var(--canvas-bg));
+  --color-canvas-dot: hsl(var(--canvas-dot));
+  --color-canvas-edge: hsl(var(--canvas-edge));
 
-  /* Font families */
+  /* ── Panel tokens ───────────────────────────────────────────────── */
+  --color-panel: hsl(var(--panel-bg));
+  --color-panel-header: hsl(var(--panel-header));
+  --color-panel-hover: hsl(var(--panel-hover));
+
+  /* ── Step type colors (theme-reactive via CSS vars) ─────────────── */
+  --color-step-pre-dough-bg: hsl(var(--step-pre-dough-bg));
+  --color-step-pre-dough-tx: hsl(var(--step-pre-dough-tx));
+  --color-step-pre-ferment-bg: hsl(var(--step-pre-ferment-bg));
+  --color-step-pre-ferment-tx: hsl(var(--step-pre-ferment-tx));
+  --color-step-dough-bg: hsl(var(--step-dough-bg));
+  --color-step-dough-tx: hsl(var(--step-dough-tx));
+  --color-step-rest-bg: hsl(var(--step-rest-bg));
+  --color-step-rest-tx: hsl(var(--step-rest-tx));
+  --color-step-rise-bg: hsl(var(--step-rise-bg));
+  --color-step-rise-tx: hsl(var(--step-rise-tx));
+  --color-step-shape-bg: hsl(var(--step-shape-bg));
+  --color-step-shape-tx: hsl(var(--step-shape-tx));
+  --color-step-pre-bake-bg: hsl(var(--step-pre-bake-bg));
+  --color-step-pre-bake-tx: hsl(var(--step-pre-bake-tx));
+  --color-step-bake-bg: hsl(var(--step-bake-bg));
+  --color-step-bake-tx: hsl(var(--step-bake-tx));
+  --color-step-done-bg: hsl(var(--step-done-bg));
+  --color-step-done-tx: hsl(var(--step-done-tx));
+  --color-step-post-bake-bg: hsl(var(--step-post-bake-bg));
+  --color-step-post-bake-tx: hsl(var(--step-post-bake-tx));
+  --color-step-prep-bg: hsl(var(--step-prep-bg));
+  --color-step-prep-tx: hsl(var(--step-prep-tx));
+  --color-step-split-bg: hsl(var(--step-split-bg));
+  --color-step-split-tx: hsl(var(--step-split-tx));
+  --color-step-join-bg: hsl(var(--step-join-bg));
+  --color-step-join-tx: hsl(var(--step-join-tx));
+
+  /* ── Semantic colors ────────────────────────────────────────────── */
+  --color-critical: hsl(var(--critical));
+  --color-error-bg: hsl(var(--error-bg));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  --color-cross-layer-edge: hsl(var(--cross-layer-edge));
+
+  /* ── Font families ──────────────────────────────────────────────── */
   --font-sans: 'Lato', sans-serif;
   --font-display: 'Lato', sans-serif;
+  --font-sketch: 'Excalifont', 'Segoe Print', cursive;
 }
 
+/* ── Light theme (clean, cool) ─────────────────────────────────────── */
 @layer base {
   :root {
-    --background: 36 43% 97%;
-    --foreground: 18 43% 12%;
+    /* Core UI */
+    --background: 220 20% 97%;
+    --foreground: 220 30% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 18 43% 12%;
+    --card-foreground: 220 30% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 18 43% 12%;
-    --primary: 27 48% 64%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 30 18% 92%;
-    --secondary-foreground: 18 43% 12%;
-    --muted: 28 21% 93%;
-    --muted-foreground: 27 22% 43%;
-    --accent: 38 50% 55%;
+    --popover-foreground: 220 30% 12%;
+    --primary: 220 8% 88%;
+    --primary-foreground: 220 20% 15%;
+    --secondary: 220 15% 93%;
+    --secondary-foreground: 220 30% 12%;
+    --muted: 220 15% 93%;
+    --muted-foreground: 220 15% 43%;
+    --accent: 170 50% 38%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 15 55% 51%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 30 22% 83%;
-    --input: 30 22% 83%;
-    --ring: 27 48% 64%;
+    --border: 220 15% 85%;
+    --input: 220 15% 85%;
+    --ring: 220 8% 88%;
     --radius: 0.625rem;
-  }
 
+    /* Canvas */
+    --canvas-bg: 220 15% 97%;
+    --canvas-dot: 220 12% 84%;
+    --canvas-edge: 230 20% 45%;
+
+    /* Panels */
+    --panel-bg: 0 0% 100%;
+    --panel-header: 230 15% 40%;
+    --panel-hover: 220 15% 96%;
+
+    /* Step type colors — light (pastel backgrounds, muted text) */
+    --step-pre-dough-bg: 276 40% 95%;
+    --step-pre-dough-tx: 270 33% 47%;
+    --step-pre-ferment-bg: 43 90% 95%;
+    --step-pre-ferment-tx: 43 58% 30%;
+    --step-dough-bg: 224 25% 95%;
+    --step-dough-tx: 224 12% 40%;
+    --step-rest-bg: 200 25% 93%;
+    --step-rest-tx: 200 22% 40%;
+    --step-rise-bg: 45 70% 95%;
+    --step-rise-tx: 45 55% 35%;
+    --step-shape-bg: 250 25% 95%;
+    --step-shape-tx: 250 33% 47%;
+    --step-pre-bake-bg: 50 70% 95%;
+    --step-pre-bake-tx: 50 45% 38%;
+    --step-bake-bg: 15 78% 95%;
+    --step-bake-tx: 15 48% 36%;
+    --step-done-bg: 120 30% 94%;
+    --step-done-tx: 120 35% 35%;
+    --step-post-bake-bg: 330 25% 95%;
+    --step-post-bake-tx: 330 35% 40%;
+    --step-prep-bg: 120 30% 94%;
+    --step-prep-tx: 120 45% 30%;
+    --step-split-bg: 275 30% 94%;
+    --step-split-tx: 275 45% 44%;
+    --step-join-bg: 275 30% 94%;
+    --step-join-tx: 275 45% 44%;
+
+    /* Semantic */
+    --critical: 0 84% 60%;
+    --error-bg: 0 86% 97%;
+    --success: 150 50% 38%;
+    --success-foreground: 150 50% 15%;
+    --warning: 38 90% 50%;
+    --warning-foreground: 38 90% 20%;
+    --info: 210 70% 50%;
+    --info-foreground: 210 70% 20%;
+    --cross-layer-edge: 220 30% 55%;
+  }
+}
+
+/* ── Dark theme (chalk on blackboard) ─────────────────────────────── */
+@layer base {
   .dark {
-    --background: 20 15% 8%;
-    --foreground: 36 30% 92%;
-    --card: 20 15% 10%;
-    --card-foreground: 36 30% 92%;
-    --popover: 20 15% 10%;
-    --popover-foreground: 36 30% 92%;
-    --primary: 27 48% 64%;
-    --primary-foreground: 20 15% 8%;
-    --secondary: 20 12% 16%;
-    --secondary-foreground: 36 30% 92%;
-    --muted: 20 12% 16%;
-    --muted-foreground: 27 18% 55%;
-    --accent: 38 50% 45%;
+    /* Core UI */
+    --background: 220 18% 8%;
+    --foreground: 220 15% 90%;
+    --card: 220 16% 11%;
+    --card-foreground: 220 15% 90%;
+    --popover: 220 16% 11%;
+    --popover-foreground: 220 15% 90%;
+    --primary: 220 8% 18%;
+    --primary-foreground: 220 8% 90%;
+    --secondary: 220 14% 16%;
+    --secondary-foreground: 220 15% 90%;
+    --muted: 220 14% 16%;
+    --muted-foreground: 220 10% 62%;
+    --accent: 170 55% 48%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 15 55% 41%;
+    --destructive: 0 65% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 20 12% 20%;
-    --input: 20 12% 20%;
-    --ring: 27 48% 54%;
+    --border: 220 12% 20%;
+    --input: 220 12% 20%;
+    --ring: 220 8% 18%;
+
+    /* Canvas — dark slate */
+    --canvas-bg: 220 18% 10%;
+    --canvas-dot: 220 12% 22%;
+    --canvas-edge: 220 15% 55%;
+
+    /* Panels — dark charcoal */
+    --panel-bg: 220 16% 11%;
+    --panel-header: 220 12% 60%;
+    --panel-hover: 220 14% 14%;
+
+    /* Step type colors — dark (deep muted bg, bright chalk/neon text) */
+    --step-pre-dough-bg: 280 30% 15%;
+    --step-pre-dough-tx: 280 65% 75%;
+    --step-pre-ferment-bg: 43 40% 14%;
+    --step-pre-ferment-tx: 43 75% 68%;
+    --step-dough-bg: 224 20% 15%;
+    --step-dough-tx: 224 35% 72%;
+    --step-rest-bg: 200 20% 14%;
+    --step-rest-tx: 200 45% 68%;
+    --step-rise-bg: 45 40% 14%;
+    --step-rise-tx: 45 70% 68%;
+    --step-shape-bg: 250 25% 15%;
+    --step-shape-tx: 250 55% 74%;
+    --step-pre-bake-bg: 50 30% 14%;
+    --step-pre-bake-tx: 50 65% 68%;
+    --step-bake-bg: 15 35% 14%;
+    --step-bake-tx: 15 65% 68%;
+    --step-done-bg: 120 25% 14%;
+    --step-done-tx: 120 55% 62%;
+    --step-post-bake-bg: 330 25% 14%;
+    --step-post-bake-tx: 330 55% 68%;
+    --step-prep-bg: 120 30% 13%;
+    --step-prep-tx: 120 60% 60%;
+    --step-split-bg: 275 25% 14%;
+    --step-split-tx: 275 60% 72%;
+    --step-join-bg: 275 25% 14%;
+    --step-join-tx: 275 60% 72%;
+
+    /* Semantic */
+    --critical: 0 75% 55%;
+    --error-bg: 0 40% 15%;
+    --success: 150 55% 50%;
+    --success-foreground: 150 50% 90%;
+    --warning: 38 80% 55%;
+    --warning-foreground: 38 90% 90%;
+    --info: 210 65% 60%;
+    --info-foreground: 210 70% 90%;
+    --cross-layer-edge: 220 25% 60%;
   }
 }
 
@@ -101,4 +284,13 @@
     color: hsl(var(--foreground));
     font-family: var(--font-sans);
   }
+}
+
+/* ── Warning pulse animation for error nodes ──────────────────────── */
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.animate-pulse-warning {
+  animation: pulse-warning 1.5s ease-in-out infinite;
 }

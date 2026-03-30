@@ -15,7 +15,7 @@ export function MetricBox({ label, value, color, className }: MetricBoxProps) {
         className,
       )}
     >
-      <div className="text-[11px] text-muted-foreground font-medium">
+      <div className="text-[9px] text-muted-foreground font-medium">
         {label}
       </div>
       <div

@@ -33,7 +33,7 @@ export function IngredientsOverview({
           return null
         return (
           <Card key={g} className="p-3 mb-1.5">
-            <h3 className="text-[11px] uppercase tracking-[1.5px] text-[#b8845a] mb-1.5 font-semibold">
+            <h3 className="text-[9px] uppercase tracking-[1.5px] text-accent mb-1.5 font-semibold">
               {g}
             </h3>
             {grp.flours.map((f) => (

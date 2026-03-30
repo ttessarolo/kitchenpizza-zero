@@ -54,7 +54,7 @@ export function ScheduleEditor({
             className={`flex-1 py-1.5 border-none cursor-pointer text-xs min-h-11 ${
               planningMode === t.k
                 ? 'bg-primary text-primary-foreground font-bold'
-                : 'bg-white text-muted-foreground font-normal'
+                : 'bg-card text-muted-foreground font-normal'
             }`}
           >
             {t.l}
@@ -92,7 +92,7 @@ export function ScheduleEditor({
             <button
               type="button"
               onClick={onNow}
-              className="text-xs font-semibold bg-[#f5ede3] border border-border rounded-[5px] px-2 py-1 cursor-pointer text-muted-foreground min-h-7"
+              className="text-xs font-semibold bg-muted border border-border rounded-[5px] px-2 py-1 cursor-pointer text-muted-foreground min-h-7"
             >
               Adesso
             </button>

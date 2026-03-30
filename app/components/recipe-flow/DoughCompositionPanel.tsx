@@ -38,7 +38,7 @@ function SliderRow({
             type="number" value={value} min={min} max={max} step={step}
             onChange={(e) => onChange(+e.target.value || 0)}
             disabled={isDisabled}
-            className="w-[60px] text-xs font-bold bg-white border border-border rounded px-1.5 py-0.5 outline-none text-center min-h-7 disabled:cursor-not-allowed"
+            className="w-[60px] text-xs font-bold bg-card border border-border rounded px-1.5 py-0.5 outline-none text-center min-h-7 disabled:cursor-not-allowed"
           />
           <span className="text-muted-foreground text-[10px]">{unit}</span>
         </div>
@@ -238,7 +238,7 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("label_flours_g")}</label>
           <input type="number" value={Math.round(totalFlour * 10) / 10} min={10} step={1}
             onChange={(e) => setFlourG(+e.target.value || 10)}
-            className="w-full text-xs font-bold bg-white border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none" />
+            className="w-full text-xs font-bold bg-card border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none" />
         </div>
         <div>
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
@@ -248,7 +248,7 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
           <input type="number" value={hyd} min={30} max={100} step={1}
             onChange={(e) => setHydration(+e.target.value || 60)}
             disabled={locks.hydration}
-            className="w-full text-xs font-bold bg-white border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+            className="w-full text-xs font-bold bg-card border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
         </div>
       </div>
 
@@ -394,7 +394,7 @@ function WarningSection({ warnings }: { warnings: import('@commons/types/recipe-
     <div className="mt-2 space-y-2">
       {/* Auto-correct report banner */}
       {hasReport && !hasWarnings && (
-        <div className={`rounded-xl p-3 text-xs ${autoCorrectReport.status === 'ok' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
+        <div className={`rounded-xl p-3 text-xs ${autoCorrectReport.status === 'ok' ? 'bg-success/10 border border-success/30 text-success' : 'bg-warning/10 border border-warning/30 text-warning'}`}>
           <div className="flex items-center justify-between">
             <span className="font-semibold">
               {autoCorrectReport.status === 'ok'

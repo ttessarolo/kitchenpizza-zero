@@ -3,6 +3,8 @@ import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import { STEP_TYPES, COLOR_MAP } from '@/local_data'
 import { fmtDuration } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
+import { stepColor } from '~/lib/theme-colors'
+import { SketchyNodeWrapper, hashStringToNumber } from '~/components/recipe-flow/sketchy'
 import type { NodeData, NodeTypeKey } from '@commons/types/recipe-graph'
 
 export interface FlowSummary {
@@ -50,7 +52,7 @@ function getPreview(type: NodeTypeKey, d: NodeData, t: (key: string, vars?: Reco
   return parts.length > 0 ? parts.join(' · ') : null
 }
 
-function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
+function BaseNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
   const t = useT()
   const { nodeData, nodeType, nodeSubtype, duration, isSelected, isPeek, isError, isCriticalPath, layerColor, layerLocked } = data
   const inFlow = data.inFlow ?? []
@@ -60,42 +62,71 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
   const subtypeEntry = typeEntry?.subtypes?.find((s) => s.key === nodeSubtype)
   const preview = getPreview(nodeType, nodeData, t)
 
-  const borderStyle = isCriticalPath
-    ? { borderColor: '#ef4444', borderWidth: 3, boxShadow: '0 4px 20px rgba(239,68,68,0.25)' }
-    : isError
-      ? { borderColor: '#dc2626', borderWidth: 3, boxShadow: '0 4px 20px rgba(220,38,38,0.2)' }
-      : isSelected
-        ? { borderColor: cm.tx, borderWidth: 3, boxShadow: `0 4px 20px ${cm.tx}30` }
-        : isPeek
-          ? { borderColor: cm.tx + '80', borderWidth: 2, borderStyle: 'dashed' as const }
-          : { borderColor: cm.tx + '40', borderWidth: 2 }
+  const sketchStrokeWidth = isCriticalPath || isError || isSelected ? 3 : isPeek ? 1.5 : 2
+  const sketchRoughness = isSelected || isCriticalPath ? 2.0 : isPeek ? 0.8 : 1.2
+  const sketchFillStyle = layerLocked ? 'hachure' : 'solid' as const
+  const sketchStrokeVar = isCriticalPath ? 'critical' : cm.txVar
+  const sketchFillVar = layerLocked ? 'muted' : cm.bgVar
 
   return (
-    <div
-      className="rounded-2xl shadow-sm w-[360px] cursor-pointer transition-all hover:shadow-md relative"
-      style={{
-        backgroundColor: layerLocked ? '#f3f4f6' : isError ? undefined : cm.bg,
-        backgroundImage: layerLocked
-          ? 'repeating-linear-gradient(135deg, #f3f4f6, #f3f4f6 6px, #e5e7eb 6px, #e5e7eb 7px)'
-          : isError
-            ? 'repeating-linear-gradient(135deg, #fef2f2, #fef2f2 8px, #fecaca 8px, #fecaca 10px)'
-            : undefined,
-        borderLeft: layerColor ? `4px solid ${layerColor}` : undefined,
-        ...borderStyle,
-      }}
+    <SketchyNodeWrapper
+      width={360}
+      fillColor={sketchFillVar}
+      strokeColor={sketchStrokeVar}
+      strokeWidth={sketchStrokeWidth}
+      roughness={sketchRoughness}
+      seed={hashStringToNumber(id)}
+      fillStyle={sketchFillStyle}
+      className="cursor-pointer"
+      pulse={!!data.isError}
     >
+      {/* Layer color indicator */}
+      {layerColor && (
+        <div
+          className="absolute left-0 top-2 bottom-2 w-1 rounded-full"
+          style={{ backgroundColor: layerColor, zIndex: 2 }}
+        />
+      )}
       {layerLocked && (
-        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-600 text-white text-[9px] font-semibold uppercase tracking-wider shadow-sm">
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-600 text-white text-[9px] font-semibold font-sketch uppercase tracking-wider shadow-sm">
           🔒 {t('layer_locked')}
         </div>
       )}
-      {/* Target handle (top) */}
+      {/* Target handles (top) */}
       <Handle
         type="target"
         position={Position.Top}
         id="in"
-        className="!w-3.5 !h-3.5 !border-2 !bg-white"
-        style={{ borderColor: cm.tx }}
+        className="!w-3.5 !h-3.5 !border-2 !bg-card"
+        style={{ borderColor: stepColor(cm.txVar) }}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="in_tl"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor(cm.txVar), left: '20%' }}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="in_tr"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor(cm.txVar), left: '80%' }}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="in_sl"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor(cm.txVar), top: '25%' }}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="in_sr"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor(cm.txVar), top: '25%' }}
       />
 
       <div className="px-5 py-3.5">
@@ -103,10 +134,10 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
         <div className="flex items-center gap-2.5">
           <span className="text-2xl shrink-0">{typeEntry?.icon || '📋'}</span>
           <div className="flex-1 min-w-0">
-            <div className="text-lg font-bold truncate leading-tight" style={{ color: cm.tx }}>
+            <div className="text-lg font-bold font-sketch truncate leading-tight" style={{ color: stepColor(cm.txVar) }}>
               {nodeData.title || t(typeEntry?.labelKey || nodeType)}
             </div>
-            <div className="text-sm opacity-70 truncate" style={{ color: cm.tx }}>
+            <div className="text-sm font-sketch opacity-70 truncate" style={{ color: stepColor(cm.txVar) }}>
               {t(cm.lbKey)}
               {subtypeEntry ? ` · ${t(subtypeEntry.labelKey)}` : ''}
               {' · '}
@@ -118,16 +149,16 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
         {/* Preview line */}
         {preview && (
           <div
-            className="text-xs mt-1.5 truncate opacity-60"
-            style={{ color: cm.tx }}
+            className="text-xs font-sketch mt-1.5 truncate opacity-60"
+            style={{ color: stepColor(cm.txVar) }}
           >
             {preview}
           </div>
         )}
 
         {/* IN / OUT flow box — always show for debugging */}
-        <div className="mt-2 pt-2 border-t border-dashed" style={{ borderColor: cm.tx + '25' }}>
-          <div className="flex items-start gap-1.5 text-[10px]" style={{ color: cm.tx }}>
+        <div className="mt-2 pt-2 border-t border-dashed" style={{ borderColor: stepColor(cm.txVar, 0.15) }}>
+          <div className="flex items-start gap-1.5 text-[10px]" style={{ color: stepColor(cm.txVar) }}>
             <span className="font-bold opacity-50 shrink-0 w-6">IN</span>
             <span className="opacity-60 truncate">
               {inFlow.length > 0
@@ -135,7 +166,7 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
                 : '—'}
             </span>
           </div>
-          <div className="flex items-start gap-1.5 text-[10px] mt-0.5" style={{ color: cm.tx }}>
+          <div className="flex items-start gap-1.5 text-[10px] mt-0.5" style={{ color: stepColor(cm.txVar) }}>
             <span className="font-bold opacity-50 shrink-0 w-6">OUT</span>
             <span className="opacity-60 truncate">
               {outFlow.length > 0
@@ -146,15 +177,43 @@ function BaseNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
         </div>
       </div>
 
-      {/* Source handle (bottom) */}
+      {/* Source handles (bottom) */}
       <Handle
         type="source"
         position={Position.Bottom}
         id="out"
-        className="!w-3.5 !h-3.5 !border-2 !bg-white"
-        style={{ borderColor: cm.tx }}
+        className="!w-3.5 !h-3.5 !border-2 !bg-card"
+        style={{ borderColor: stepColor(cm.txVar) }}
       />
-    </div>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="out_bl"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor(cm.txVar), left: '20%' }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="out_br"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor(cm.txVar), left: '80%' }}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="out_sl"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor(cm.txVar), top: '75%' }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="out_sr"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor(cm.txVar), top: '75%' }}
+      />
+    </SketchyNodeWrapper>
   )
 }
 

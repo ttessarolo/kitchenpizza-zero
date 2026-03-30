@@ -13,15 +13,15 @@ export function ActionableWarningBox({ warnings, onApplyAll }: ActionableWarning
   if (warnings.length === 0) return null
 
   return (
-    <div className="border border-amber-200 bg-amber-50/30 rounded-xl p-3 space-y-2">
+    <div className="border border-warning/30 bg-warning/10 rounded-xl p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-warning">
           {t('warning_actionable_title')}
         </span>
         <button
           type="button"
           onClick={onApplyAll}
-          className="text-[10px] font-semibold text-white bg-amber-600 hover:bg-amber-700 px-3 py-1 rounded-lg transition-colors"
+          className="text-[10px] font-semibold text-white bg-warning hover:bg-warning/80 px-3 py-1 rounded-lg transition-colors"
         >
           {t('btn_apply_all')}
         </button>

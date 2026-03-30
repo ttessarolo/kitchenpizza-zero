@@ -21,12 +21,12 @@ export function NodeContextToolbar() {
         <button
           type="button"
           onClick={() => setMenuOpen(!menuOpen)}
-          className="h-8 px-3 rounded-lg bg-white border border-border shadow-sm text-xs font-medium text-[#8a7a66] hover:bg-[#faf8f5] flex items-center gap-1"
+          className="h-8 px-3 rounded-lg bg-card border border-border shadow-sm text-xs font-medium text-panel-header hover:bg-panel-hover flex items-center gap-1"
         >
           {t('btn_add_node')}
         </button>
         {menuOpen && (
-          <div className="absolute top-9 left-0 bg-white border border-border rounded-lg shadow-lg py-1 min-w-[180px] max-h-[400px] overflow-y-auto z-50">
+          <div className="absolute top-9 left-0 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[180px] max-h-[400px] overflow-y-auto z-50">
             {STEP_TYPES.map((st) => (
               <div key={st.key}>
                 <button
@@ -46,7 +46,7 @@ export function NodeContextToolbar() {
                     }
                     setMenuOpen(false)
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#faf8f5] flex items-center gap-2"
+                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-panel-hover flex items-center gap-2"
                 >
                   <span>{st.icon}</span>
                   <span>{t(st.labelKey)}</span>
@@ -67,7 +67,7 @@ export function NodeContextToolbar() {
                           }
                           setMenuOpen(false)
                         }}
-                        className="w-full text-left px-2 py-1 text-[11px] text-muted-foreground hover:bg-[#faf8f5]"
+                        className="w-full text-left px-2 py-1 text-[9px] text-muted-foreground hover:bg-panel-hover"
                       >
                         {t(s.labelKey)}
                       </button>
@@ -83,7 +83,7 @@ export function NodeContextToolbar() {
       <button
         type="button"
         onClick={runAutoLayout}
-        className="h-8 px-3 rounded-lg bg-white border border-border shadow-sm text-xs font-medium text-[#8a7a66] hover:bg-[#faf8f5]"
+        className="h-8 px-3 rounded-lg bg-card border border-border shadow-sm text-xs font-medium text-panel-header hover:bg-panel-hover"
         title={t('btn_reorder_title')}
       >
         {t('btn_reorder')}

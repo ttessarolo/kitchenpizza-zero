@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useT } from '~/hooks/useTranslation'
+import { stepColor } from '~/lib/theme-colors'
 import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { nodeToStep, stepToNodeData, graphToRecipeV1 } from '@commons/utils/graph-adapter'
 import { celsiusToFahrenheit } from '@commons/utils/format'
@@ -193,10 +194,10 @@ function SinglePanel({
 
   return (
     <div
-      className="bg-white border-l shadow-lg overflow-y-auto flex flex-col"
+      className="bg-card border-l shadow-lg overflow-y-auto flex flex-col"
       style={{
         width: 380,
-        borderColor: isPeek ? cm.tx + '60' : undefined,
+        borderColor: isPeek ? stepColor(cm.txVar, 0.38) : undefined,
         borderStyle: isPeek ? 'dashed' : undefined,
         borderLeftWidth: isPeek ? 2 : undefined,
       }}
@@ -204,11 +205,11 @@ function SinglePanel({
       {/* Header */}
       <div
         className="sticky top-0 z-10 px-3 pt-2.5 pb-2 border-b shrink-0"
-        style={{ backgroundColor: cm.bg, borderColor: cm.tx + '30' }}
+        style={{ backgroundColor: stepColor(cm.bgVar), borderColor: stepColor(cm.txVar, 0.19) }}
       >
         <div className="flex items-center gap-2">
           {isPeek && (
-            <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/60" style={{ color: cm.tx }}>
+            <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-card/60" style={{ color: stepColor(cm.txVar) }}>
               peek
             </span>
           )}
@@ -221,17 +222,17 @@ function SinglePanel({
               placeholder={t(typeEntry?.labelKey || node.type)}
               disabled={isCrossLayerPeek}
               className="text-sm font-bold bg-transparent outline-none w-full truncate placeholder:opacity-50 disabled:cursor-default"
-              style={{ color: cm.tx }}
+              style={{ color: stepColor(cm.txVar) }}
             />
-            <div className="text-[10px] opacity-70" style={{ color: cm.tx }}>
+            <div className="text-[10px] opacity-70" style={{ color: stepColor(cm.txVar) }}>
               {t(cm.lbKey)} · {fmtDuration(getNodeDuration(node, meta.type, meta.subtype, portioning.thickness))}
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-md flex items-center justify-center text-xs hover:bg-black/5"
-            style={{ color: cm.tx }}
+            className="w-7 h-7 rounded-md flex items-center justify-center text-xs hover:bg-foreground/5"
+            style={{ color: stepColor(cm.txVar) }}
           >
             ▶
           </button>
@@ -278,10 +279,10 @@ function SinglePanel({
 
       {/* Footer — Delete node */}
       {!isPeek && (
-        <div className="sticky bottom-0 border-t bg-white px-3 py-2 shrink-0">
+        <div className="sticky bottom-0 border-t bg-card px-3 py-2 shrink-0">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <button type="button" className="w-full text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-md py-2 font-medium cursor-pointer">
+              <button type="button" className="w-full text-sm text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-md py-2 font-medium cursor-pointer">
                 {t('btn_delete_node')}
               </button>
             </AlertDialogTrigger>
@@ -294,7 +295,7 @@ function SinglePanel({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('btn_cancel')}</AlertDialogCancel>
-                <AlertDialogAction onClick={() => removeNode(nodeId)} className="bg-red-600 hover:bg-red-700">
+                <AlertDialogAction onClick={() => removeNode(nodeId)} className="bg-destructive hover:bg-destructive/90">
                   {t('btn_delete')}
                 </AlertDialogAction>
               </AlertDialogFooter>

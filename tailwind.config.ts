@@ -8,6 +8,7 @@ export default {
       fontFamily: {
         sans: ['Lato', 'sans-serif'],
         display: ['Lato', 'sans-serif'],
+        sketch: ['Excalifont', 'Segoe Print', 'cursive'],
       },
       colors: {
         border: 'hsl(var(--border))',
@@ -42,6 +43,29 @@ export default {
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
+        },
+        canvas: {
+          DEFAULT: 'hsl(var(--canvas-bg))',
+          dot: 'hsl(var(--canvas-dot))',
+          edge: 'hsl(var(--canvas-edge))',
+        },
+        panel: {
+          DEFAULT: 'hsl(var(--panel-bg))',
+          header: 'hsl(var(--panel-header))',
+          hover: 'hsl(var(--panel-hover))',
+        },
+        critical: 'hsl(var(--critical))',
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--info-foreground))',
         },
       },
       borderRadius: {

@@ -60,7 +60,7 @@ export function FlourMixSelector() {
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="flex-1 flex items-center justify-between text-xs border border-border rounded-lg px-2.5 py-1.5 bg-white hover:bg-accent/50 transition-colors text-left min-h-8"
+              className="flex-1 flex items-center justify-between text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card hover:bg-accent/50 transition-colors text-left min-h-8"
             >
               <span className="truncate">{triggerLabel}</span>
               <svg className="h-3.5 w-3.5 ml-1 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

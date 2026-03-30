@@ -39,7 +39,7 @@ export function EdgeCallout() {
   return (
     <div
       ref={ref}
-      className="absolute z-40 bg-white border border-border rounded-xl shadow-xl p-3 w-[260px]"
+      className="absolute z-40 bg-card border border-border rounded-xl shadow-xl p-3 w-[260px]"
       style={{
         left: edgeCalloutPos ? edgeCalloutPos.x : '50%',
         top: edgeCalloutPos ? edgeCalloutPos.y + 10 : undefined,
@@ -49,7 +49,7 @@ export function EdgeCallout() {
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs font-semibold text-[#8a7a66] uppercase tracking-wider">
+        <div className="text-xs font-semibold text-panel-header uppercase tracking-wider">
           {t("edge_connection")}
         </div>
         <button
@@ -57,14 +57,14 @@ export function EdgeCallout() {
           onClick={() => {
             removeEdge(selectedEdgeId)
           }}
-          className="text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-2 py-1 hover:bg-red-100"
+          className="text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-2 py-1 hover:bg-destructive/20"
         >
           {"✕ " + t("edge_delete")}
         </button>
       </div>
 
       {/* Source → Target */}
-      <div className="text-[11px] text-muted-foreground mb-2">
+      <div className="text-[9px] text-muted-foreground mb-2">
         {sourceNode?.data.title || edge.source} → {targetNode?.data.title || edge.target}
       </div>
 
@@ -74,7 +74,7 @@ export function EdgeCallout() {
 
       {/* Schedule: Time completion ratio */}
       <div className="mb-2">
-        <div className="flex items-center justify-between text-[11px] mb-0.5">
+        <div className="flex items-center justify-between text-[9px] mb-0.5">
           <span className="text-muted-foreground font-medium">{"⏱ " + t("dep_time_completed")}</span>
           <span className="font-semibold text-foreground">
             {edge.data.scheduleTimeRatio === 1 ? '100%' : `${Math.round(edge.data.scheduleTimeRatio * 100)}%`}
@@ -93,7 +93,7 @@ export function EdgeCallout() {
 
       {/* Schedule: Quantity production ratio */}
       <div>
-        <div className="flex items-center justify-between text-[11px] mb-0.5">
+        <div className="flex items-center justify-between text-[9px] mb-0.5">
           <span className="text-muted-foreground font-medium">{"📦 " + t("dep_qty_produced")}</span>
           <span className="font-semibold text-foreground">{Math.round(edge.data.scheduleQtyRatio * 100)}%</span>
         </div>

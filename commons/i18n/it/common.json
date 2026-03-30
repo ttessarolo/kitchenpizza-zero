@@ -1,5 +1,6 @@
 {
   "app_title": "KitchenPizza",
+  "theme_toggle": "Cambia tema",
   "nav_home": "Home",
   "nav_recipes": "Ricette",
   "nav_admin": "Admin",

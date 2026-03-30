@@ -11,14 +11,14 @@ export function IngredientRow({ name, amount, unit, className }: IngredientRowPr
   return (
     <div
       className={cn(
-        'flex justify-between items-center py-0.5 border-b border-[#f0e8df]',
+        'flex justify-between items-center py-0.5 border-b border-border',
         className,
       )}
     >
-      <span className="text-xs text-[#4a3628]">{name}</span>
+      <span className="text-xs text-foreground">{name}</span>
       <span className="text-xs font-semibold">
         {amount}{' '}
-        <span className="text-[11px] font-normal text-[#a08060]">{unit}</span>
+        <span className="text-[9px] font-normal text-muted-foreground">{unit}</span>
       </span>
     </div>
   )

@@ -63,7 +63,7 @@ export function LeftSidebar() {
       <button
         type="button"
         onClick={() => setCollapsed(false)}
-        className="absolute top-2 left-2 z-10 w-8 h-8 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-[#8a7a66] hover:bg-[#faf8f5]"
+        className="absolute top-2 left-2 z-10 w-8 h-8 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-panel-header hover:bg-panel-hover"
         title={t('open_layers')}
       >
         ▶
@@ -72,14 +72,14 @@ export function LeftSidebar() {
   }
 
   return (
-    <div className="shrink-0 bg-white border-r border-border overflow-y-auto flex flex-col relative" style={{ width: sidebarWidth }}>
+    <div className="shrink-0 bg-card border-r border-border overflow-y-auto flex flex-col relative" style={{ width: sidebarWidth }}>
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <span className="text-xs font-semibold text-[#8a7a66] uppercase tracking-wider">{t('layers')}</span>
+        <span className="text-xs font-semibold text-panel-header uppercase tracking-wider">{t('layers')}</span>
         <button
           type="button"
           onClick={() => setCollapsed(true)}
-          className="w-6 h-6 rounded flex items-center justify-center text-[#8a7a66] hover:bg-[#faf8f5] text-xs"
+          className="w-6 h-6 rounded flex items-center justify-center text-panel-header hover:bg-panel-hover text-xs"
           title={t('close_layers')}
         >
           ◀
@@ -168,7 +168,7 @@ export function LeftSidebar() {
                     onClick={() => setActiveLayer(layer.id)}
                     className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer ${
                       layer.locked
-                        ? 'bg-gray-100 border border-gray-300 text-gray-500'
+                        ? 'bg-muted border border-border text-muted-foreground'
                         : isActive
                           ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
                           : 'text-foreground hover:bg-muted/50'
@@ -202,7 +202,7 @@ export function LeftSidebar() {
                           updateLayer(layer.id, { locked: !layer.locked })
                         }}
                         className={`w-5 h-5 rounded flex items-center justify-center text-[10px] hover:bg-muted ${
-                          layer.locked ? 'text-amber-600' : 'text-muted-foreground/40'
+                          layer.locked ? 'text-warning' : 'text-muted-foreground/40'
                         }`}
                         title={layer.locked ? t('unlock_layer') : t('lock_layer')}
                       >

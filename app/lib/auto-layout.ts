@@ -1,8 +1,23 @@
 import dagre from '@dagrejs/dagre'
 import type { RecipeGraph } from '@commons/types/recipe-graph'
+import { pickHandles } from './handle-router'
 
 export const NODE_WIDTH = 380
 export const NODE_HEIGHT = 110
+
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 49297
+  return x - Math.floor(x)
+}
+
+function hashId(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
 
 /**
  * Serpentine layout: main lane nodes zigzag left-right going top to bottom.
@@ -13,7 +28,7 @@ export function autoLayout(graph: RecipeGraph): RecipeGraph {
 
   // Step 1: dagre for topological order + parallel branch positioning
   const g = new dagre.graphlib.Graph()
-  g.setGraph({ rankdir: 'TB', nodesep: 40, ranksep: 50, marginx: 20, marginy: 20 })
+  g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80, marginx: 20, marginy: 20 })
   g.setDefaultEdgeLabel(() => ({}))
 
   for (const node of graph.nodes) {
@@ -35,8 +50,8 @@ export function autoLayout(graph: RecipeGraph): RecipeGraph {
     .map((x) => x.node)
 
   // Step 3: Serpentine — alternating left/right, flowing top to bottom
-  const ZIGZAG_OFFSET = 420 // horizontal offset between left and right positions
-  const ROW_GAP = 50        // vertical gap between nodes
+  const ZIGZAG_OFFSET = 480 // horizontal offset between left and right positions
+  const ROW_GAP = 90        // vertical gap between nodes
   const LEFT_X = 0
   const RIGHT_X = ZIGZAG_OFFSET
 
@@ -45,9 +60,12 @@ export function autoLayout(graph: RecipeGraph): RecipeGraph {
 
   mainSorted.forEach((node, i) => {
     const isRight = i % 2 === 1
+    const h = hashId(node.id)
+    const jitterX = (seededRandom(h) - 0.5) * 50     // ±25px
+    const jitterY = (seededRandom(h + 1) - 0.5) * 30  // ±15px
     positions.set(node.id, {
-      x: isRight ? RIGHT_X : LEFT_X,
-      y: currentY,
+      x: (isRight ? RIGHT_X : LEFT_X) + jitterX,
+      y: currentY + jitterY,
     })
     currentY += NODE_HEIGHT + ROW_GAP
   })
@@ -58,12 +76,34 @@ export function autoLayout(graph: RecipeGraph): RecipeGraph {
   for (const node of otherNodes) {
     const dagrePos = g.node(node.id)
     if (dagrePos) {
+      const h = hashId(node.id)
+      const jx = (seededRandom(h + 2) - 0.5) * 30
+      const jy = (seededRandom(h + 3) - 0.5) * 20
       positions.set(node.id, {
-        x: mainAreaRight + (dagrePos.x - g.node(node.id).x) * 0.5,
-        y: dagrePos.y - NODE_HEIGHT / 2,
+        x: mainAreaRight + (dagrePos.x - g.node(node.id).x) * 0.5 + jx,
+        y: dagrePos.y - NODE_HEIGHT / 2 + jy,
       })
     }
   }
+
+  // Step 5: Assign optimal handles to edges based on node positions
+  const edgesWithHandles = graph.edges.map((e) => {
+    const sourcePos = positions.get(e.source)
+    const targetPos = positions.get(e.target)
+    if (!sourcePos || !targetPos) return e
+
+    // Don't override split/join handles (they use dynamic handles)
+    const sourceNode = graph.nodes.find((n) => n.id === e.source)
+    const targetNode = graph.nodes.find((n) => n.id === e.target)
+    if (sourceNode?.type === 'split' || targetNode?.type === 'join') return e
+
+    const handles = pickHandles(sourcePos, targetPos)
+    return {
+      ...e,
+      sourceHandle: handles.sourceHandle,
+      targetHandle: handles.targetHandle,
+    }
+  })
 
   return {
     ...graph,
@@ -71,5 +111,6 @@ export function autoLayout(graph: RecipeGraph): RecipeGraph {
       ...n,
       position: positions.get(n.id) ?? { x: 0, y: 0 },
     })),
+    edges: edgesWithHandles,
   }
 }

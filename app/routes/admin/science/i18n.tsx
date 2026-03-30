@@ -47,12 +47,12 @@ function I18nEditor() {
                 <div className="text-xs font-mono text-muted-foreground mb-1">{key}</div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-[10px] font-semibold text-blue-600 uppercase">EN</span>
-                    <div className="text-foreground">{en[key] ?? <span className="text-red-400 italic">missing</span>}</div>
+                    <span className="text-[10px] font-semibold text-info uppercase">EN</span>
+                    <div className="text-foreground">{en[key] ?? <span className="text-destructive/60 italic">missing</span>}</div>
                   </div>
                   <div>
-                    <span className="text-[10px] font-semibold text-green-600 uppercase">IT</span>
-                    <div className="text-foreground">{it[key] ?? <span className="text-red-400 italic">missing</span>}</div>
+                    <span className="text-[10px] font-semibold text-success uppercase">IT</span>
+                    <div className="text-foreground">{it[key] ?? <span className="text-destructive/60 italic">missing</span>}</div>
                   </div>
                 </div>
               </div>

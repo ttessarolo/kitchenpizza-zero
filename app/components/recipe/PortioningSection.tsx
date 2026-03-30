@@ -26,7 +26,7 @@ function PlusMinusButton({ onClick, label }: { onClick: () => void; label: strin
       type="button"
       onClick={onClick}
       className={`w-[30px] h-[30px] rounded-[7px] border-[1.5px] border-primary text-base font-semibold cursor-pointer flex items-center justify-center min-h-8 ${
-        label === '+' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary'
+        label === '+' ? 'bg-primary text-primary-foreground' : 'bg-card text-primary'
       }`}
     >
       {label}
@@ -96,7 +96,7 @@ export function PortioningSection({
               className={`flex-1 py-2 border-none cursor-pointer text-xs min-h-11 ${
                 po.mode === tab.k
                   ? 'bg-primary text-primary-foreground font-bold'
-                  : 'bg-white text-muted-foreground font-normal'
+                  : 'bg-card text-muted-foreground font-normal'
               }`}
             >
               {tab.l}
@@ -202,7 +202,7 @@ export function PortioningSection({
 
                 {/* Foro di sfiato — only for materials that support it */}
                 {currentMaterial?.hasVent && (
-                  <label className="text-xs text-[#6a5a48] flex items-center gap-1 cursor-pointer">
+                  <label className="text-xs text-foreground flex items-center gap-1 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={po.tray.griglia || false}
@@ -229,7 +229,7 @@ export function PortioningSection({
                   // Should persist { key, label, l, w, h, material, griglia } to user's custom tray list
                   alert(t('btn_save_tray_soon'))
                 }}
-                className="text-[11px] font-medium text-primary border border-dashed border-primary rounded-lg py-1.5 hover:bg-primary/5"
+                className="text-[9px] font-medium text-primary border border-dashed border-primary rounded-lg py-1.5 hover:bg-primary/5"
               >
                 {t('btn_save_tray')} {po.tray.l}×{po.tray.w}×{po.tray.h}
               </button>
@@ -262,8 +262,8 @@ export function PortioningSection({
             </div>
 
             {/* Thickness slider */}
-            <div className="bg-[#fef6ed] rounded-lg p-2.5">
-              <div className="text-xs font-semibold text-[#8a6e40] uppercase tracking-[1px] mb-1">
+            <div className="bg-muted rounded-lg p-2.5">
+              <div className="text-xs font-semibold text-accent uppercase tracking-[1px] mb-1">
                 {t('label_dough_thickness')}
               </div>
               <input
@@ -328,7 +328,7 @@ export function PortioningSection({
         )}
 
         {/* Dough summary (hidden when managed by separate panel) */}
-        {!hideTotals && <div className="mt-2.5 p-2.5 bg-gradient-to-br from-[#f9f3ec] to-[#f5ede3] rounded-[7px]">
+        {!hideTotals && <div className="mt-2.5 p-2.5 bg-muted rounded-[7px]">
           <div className="flex justify-between items-center text-xs">
             <span className="text-muted-foreground">{t('label_total_dough')}</span>
             <div className="flex items-center gap-1">
@@ -338,7 +338,7 @@ export function PortioningSection({
                 step={10}
                 min={50}
                 onChange={(e) => onScaleAll(+e.target.value || 50)}
-                className="w-[70px] text-sm font-bold bg-white border-[1.5px] border-border rounded-md px-1.5 py-0.5 outline-none text-center min-h-9"
+                className="w-[70px] text-sm font-bold bg-card border-[1.5px] border-border rounded-md px-1.5 py-0.5 outline-none text-center min-h-9"
               />
               <span className="text-muted-foreground">g</span>
             </div>
@@ -350,7 +350,7 @@ export function PortioningSection({
               value={currentHydration}
               step={1}
               onChange={(e) => onSetHydration(+e.target.value || 0)}
-              className="w-[50px] text-xs font-bold text-accent bg-white border border-border rounded px-1.5 py-px outline-none text-center min-h-7"
+              className="w-[50px] text-xs font-bold text-accent bg-card border border-border rounded px-1.5 py-px outline-none text-center min-h-7"
             />
             <span>%</span>
           </div>

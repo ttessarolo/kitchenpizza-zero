@@ -154,7 +154,7 @@ export function StepsList() {
                 className={`px-2.5 py-2 text-xs rounded-lg border cursor-pointer text-left ${
                   newStepType === st.key
                     ? 'border-primary bg-primary/10 font-semibold'
-                    : 'border-border bg-white'
+                    : 'border-border bg-card'
                 }`}
               >
                 {st.icon} {t(st.labelKey)}
@@ -165,7 +165,7 @@ export function StepsList() {
             <button
               type="button"
               onClick={() => setAddStepOpen(false)}
-              className="px-3 py-1.5 text-xs border border-border rounded-md bg-white cursor-pointer"
+              className="px-3 py-1.5 text-xs border border-border rounded-md bg-card cursor-pointer"
             >
               Annulla
             </button>

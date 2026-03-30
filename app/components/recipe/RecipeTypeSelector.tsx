@@ -22,7 +22,7 @@ export function RecipeTypeSelector({
       <Card className="p-3">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[11px] text-muted-foreground font-semibold uppercase tracking-[1px]">
+            <label className="text-[9px] text-muted-foreground font-semibold uppercase tracking-[1px]">
               {t('section_type')}
             </label>
             <select
@@ -42,7 +42,7 @@ export function RecipeTypeSelector({
             </select>
           </div>
           <div>
-            <label className="text-[11px] text-muted-foreground font-semibold uppercase tracking-[1px]">
+            <label className="text-[9px] text-muted-foreground font-semibold uppercase tracking-[1px]">
               {t('section_subtype')}
             </label>
             <select

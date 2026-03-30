@@ -31,9 +31,9 @@ const TYPE_BADGES: Record<string, { label: string; color: string }> = {
   formula: { label: 'Formula', color: 'bg-blue-100 text-blue-800' },
   factor_chain: { label: 'Factor Chain', color: 'bg-purple-100 text-purple-800' },
   piecewise: { label: 'Piecewise', color: 'bg-orange-100 text-orange-800' },
-  classification: { label: 'Classification', color: 'bg-green-100 text-green-800' },
-  rule: { label: 'Rule', color: 'bg-amber-100 text-amber-800' },
-  catalog: { label: 'Catalog', color: 'bg-gray-100 text-gray-800' },
+  classification: { label: 'Classification', color: 'bg-success/10 text-success' },
+  rule: { label: 'Rule', color: 'bg-warning/10 text-warning' },
+  catalog: { label: 'Catalog', color: 'bg-muted text-muted-foreground' },
   defaults: { label: 'Defaults', color: 'bg-teal-100 text-teal-800' },
 }
 
@@ -75,7 +75,7 @@ function ScienceDashboard() {
           </h3>
           <div className="border rounded-lg divide-y">
             {items.map((item) => {
-              const badge = TYPE_BADGES[item.type] ?? { label: item.type, color: 'bg-gray-100' }
+              const badge = TYPE_BADGES[item.type] ?? { label: item.type, color: 'bg-muted' }
               return (
                 <Link
                   key={item.id}

@@ -48,18 +48,18 @@ export function DepEditor({ step: s }: DepEditorProps) {
         return (
           <div
             key={dep.id}
-            className="mb-2 p-2 bg-[#f9f5f0] rounded-lg border border-[#e8e0d5]"
+            className="mb-2 p-2 bg-muted rounded-lg border border-border"
           >
             {/* Parent title + remove */}
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-[#4a3628]">
+              <span className="text-xs font-semibold text-foreground">
                 {parentIcon} {parent.title}
               </span>
               {editMode && (
                 <button
                   type="button"
                   onClick={() => removeDep(s.id, dep.id)}
-                  className="w-5 h-5 rounded-full border-none bg-[#e8e2da] text-[#8a7a66] text-xs font-bold cursor-pointer flex items-center justify-center p-0"
+                  className="w-5 h-5 rounded-full border-none bg-muted text-muted-foreground text-xs font-bold cursor-pointer flex items-center justify-center p-0"
                 >
                   ✕
                 </button>
@@ -68,7 +68,7 @@ export function DepEditor({ step: s }: DepEditorProps) {
 
             {/* Time slider */}
             <div className="mb-1.5">
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-0.5">
+              <div className="flex items-center justify-between text-[9px] text-muted-foreground mb-0.5">
                 <span>{"⏱ " + t("dep_time_completed")}</span>
                 <span>
                   <b>{Math.round(dep.wait * 100)}%</b>
@@ -89,7 +89,7 @@ export function DepEditor({ step: s }: DepEditorProps) {
 
             {/* Grams slider */}
             <div>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-0.5">
+              <div className="flex items-center justify-between text-[9px] text-muted-foreground mb-0.5">
                 <span>{"📦 " + t("dep_qty_produced")}</span>
                 <span>
                   <b>{Math.round(dep.grams * 100)}%</b>

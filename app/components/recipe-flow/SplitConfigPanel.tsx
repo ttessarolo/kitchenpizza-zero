@@ -68,18 +68,18 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
       {/* Mode toggle */}
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t('label_mode')}</span>
-        <div className="flex rounded-md overflow-hidden border border-border text-[11px]">
+        <div className="flex rounded-md overflow-hidden border border-border text-[9px]">
           <button
             type="button"
             onClick={() => updateNodeData(nodeId, { splitMode: 'pct' })}
-            className={`px-2.5 py-1 ${mode === 'pct' ? 'bg-primary text-primary-foreground font-semibold' : 'bg-white text-muted-foreground'}`}
+            className={`px-2.5 py-1 ${mode === 'pct' ? 'bg-primary text-primary-foreground font-semibold' : 'bg-card text-muted-foreground'}`}
           >
             %
           </button>
           <button
             type="button"
             onClick={() => updateNodeData(nodeId, { splitMode: 'grams' })}
-            className={`px-2.5 py-1 ${mode === 'grams' ? 'bg-primary text-primary-foreground font-semibold' : 'bg-white text-muted-foreground'}`}
+            className={`px-2.5 py-1 ${mode === 'grams' ? 'bg-primary text-primary-foreground font-semibold' : 'bg-card text-muted-foreground'}`}
           >
             {t('label_grams')}
           </button>
@@ -92,7 +92,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
         const grams = mode === 'grams' ? o.value : (incomingWeight > 0 ? Math.round(incomingWeight * o.value / 100) : 0)
 
         return (
-          <div key={o.handle} className="flex items-center gap-1.5 bg-[#faf8f5] rounded-lg p-2">
+          <div key={o.handle} className="flex items-center gap-1.5 bg-panel-hover rounded-lg p-2">
             <div className="flex-1 min-w-0">
               <input
                 type="text"
@@ -109,7 +109,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
                   max={mode === 'pct' ? 100 : undefined}
                   step={mode === 'pct' ? 5 : 10}
                   onChange={(e) => updateOutput(i, { value: +e.target.value || 0 })}
-                  className="w-16 text-xs font-bold bg-white border border-border rounded px-1.5 py-0.5 outline-none text-center"
+                  className="w-16 text-xs font-bold bg-card border border-border rounded px-1.5 py-0.5 outline-none text-center"
                 />
                 <span className="text-[10px] text-muted-foreground">
                   {mode === 'pct' ? '%' : 'g'}
@@ -124,7 +124,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
               <button
                 type="button"
                 onClick={() => removeOutput(i)}
-                className="w-6 h-6 rounded text-xs text-red-500 hover:bg-red-50 flex items-center justify-center shrink-0"
+                className="w-6 h-6 rounded text-xs text-destructive hover:bg-destructive/10 flex items-center justify-center shrink-0"
               >
                 ✕
               </button>
@@ -135,7 +135,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
 
       {/* Totals + error */}
       {pctError && (
-        <div className="text-[10px] text-amber-600 font-medium">
+        <div className="text-[10px] text-warning font-medium">
           {t('validation_pct_sum', { total: Math.round(totalPct) })}
         </div>
       )}
@@ -144,7 +144,7 @@ export function SplitConfigPanel({ nodeId }: SplitConfigPanelProps) {
       <button
         type="button"
         onClick={addOutput}
-        className="w-full text-[11px] font-medium text-primary border border-dashed border-primary rounded-lg py-1.5 hover:bg-primary/5"
+        className="w-full text-[9px] font-medium text-primary border border-dashed border-primary rounded-lg py-1.5 hover:bg-primary/5"
       >
         {t('btn_add_part')}
       </button>

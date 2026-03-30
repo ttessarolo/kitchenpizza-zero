@@ -84,7 +84,7 @@ export function StepBody({ step: s }: StepBodyProps) {
     : null
 
   return (
-    <div className="px-3 pb-3 border-t border-[#f0e8df]">
+    <div className="px-3 pb-3 border-t border-border">
       {/* Type + Subtype + Group selectors */}
       <div className="flex gap-2 mb-1.5 flex-wrap">
         <MiniSelect
@@ -212,11 +212,11 @@ export function StepBody({ step: s }: StepBodyProps) {
       </div>
 
       {/* Description */}
-      {s.desc && <p className="text-sm leading-relaxed text-[#5a4538] my-1">{s.desc}</p>}
+      {s.desc && <p className="text-sm leading-relaxed text-foreground my-1">{s.desc}</p>}
 
       {/* Tangzhong warning */}
       {tangzhongWarning && (
-        <div className={`text-xs px-2 py-1.5 rounded-md mb-1.5 ${tangzhongWarning.type === 'warn' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+        <div className={`text-xs px-2 py-1.5 rounded-md mb-1.5 ${tangzhongWarning.type === 'warn' ? 'bg-warning/10 text-warning border border-warning/30' : 'bg-success/10 text-success border border-success/30'}`}>
           {tangzhongWarning.msg}
         </div>
       )}
@@ -245,8 +245,8 @@ export function StepBody({ step: s }: StepBodyProps) {
         }
 
         return (
-          <details className="mt-1.5 bg-[#fef8eb] rounded-lg border border-[#e8d8a0] group">
-            <summary className="p-2.5 cursor-pointer list-none text-xs font-semibold text-[#7a6020] uppercase tracking-[1px]">
+          <details className="mt-1.5 bg-muted rounded-lg border border-border group">
+            <summary className="p-2.5 cursor-pointer list-none text-xs font-semibold text-accent uppercase tracking-[1px]">
               <span className="inline-block transition-transform group-open:rotate-90">▸</span>{' '}
               {t("pf_config_title")} — {cfg.preFermentPct}% · {cfg.hydrationPct}% {t("pf_hyd_abbr")} · {rnd(actualWeight)}g
             </summary>
@@ -257,7 +257,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                   <span>{t("pf_label")}</span>
                   <span><b>{cfg.preFermentPct}%</b> · {rnd(actualWeight)}g</span>
                 </div>
-                <input type="range" min={pfRange[0]} max={pfRange[1]} step={1} value={cfg.preFermentPct} onChange={(e) => updateCfg('preFermentPct', +e.target.value)} className="w-full accent-[#7a6020]" />
+                <input type="range" min={pfRange[0]} max={pfRange[1]} step={1} value={cfg.preFermentPct} onChange={(e) => updateCfg('preFermentPct', +e.target.value)} className="w-full accent-accent" />
               </div>
 
               {/* Hydration % */}
@@ -266,7 +266,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                   <span>{t("pf_hydration")}</span>
                   <span><b>{cfg.hydrationPct}%</b>{isHydLocked && ` (${t("pf_hydration_locked")})`}</span>
                 </div>
-                <input type="range" min={hydRange[0]} max={hydRange[1]} step={1} value={cfg.hydrationPct} onChange={(e) => updateCfg('hydrationPct', +e.target.value)} disabled={isHydLocked} className="w-full accent-[#7a6020]" />
+                <input type="range" min={hydRange[0]} max={hydRange[1]} step={1} value={cfg.hydrationPct} onChange={(e) => updateCfg('hydrationPct', +e.target.value)} disabled={isHydLocked} className="w-full accent-accent" />
               </div>
 
               {/* Yeast (two-phase only) */}
@@ -293,7 +293,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                   <div className="text-xs text-muted-foreground mb-0.5">{t("pf_starter_type")}</div>
                   <div className="flex gap-1">
                     {[{ k: 'solid', l: t("pf_pasta_madre") }, { k: 'licoli', l: t("pf_licoli") }].map((f) => (
-                      <button key={f.k} type="button" onClick={() => { updateCfg('starterForm', f.k); updateCfg('hydrationPct', f.k === 'solid' ? 50 : 100) }} className={`flex-1 text-xs py-1 rounded border cursor-pointer ${cfg.starterForm === f.k ? 'bg-[#7a6020] text-white border-[#7a6020] font-semibold' : 'bg-white text-muted-foreground border-border'}`}>
+                      <button key={f.k} type="button" onClick={() => { updateCfg('starterForm', f.k); updateCfg('hydrationPct', f.k === 'solid' ? 50 : 100) }} className={`flex-1 text-xs py-1 rounded border cursor-pointer ${cfg.starterForm === f.k ? 'bg-accent text-accent-foreground border-accent font-semibold' : 'bg-card text-muted-foreground border-border'}`}>
                         {f.l}
                       </button>
                     ))}
@@ -324,15 +324,15 @@ export function StepBody({ step: s }: StepBodyProps) {
               )}
 
               {/* Computed values — show ACTUAL step ingredients */}
-              <div className="mt-2 p-2 bg-white rounded border border-[#e8d8a0] text-xs">
-                <div className="font-semibold text-[#7a6020] mb-1">{t("pf_computed_values")}</div>
+              <div className="mt-2 p-2 bg-card rounded border border-border text-xs">
+                <div className="font-semibold text-accent mb-1">{t("pf_computed_values")}</div>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-muted-foreground">
                   <span>{t("pf_weight")}</span><span className="font-semibold text-foreground">{rnd(actualWeight)}g</span>
                   <span>{t("pf_flour")}</span><span className="font-semibold text-foreground">{rnd(actualFlour)}g</span>
                   <span>{t("pf_water")}</span><span className="font-semibold text-foreground">{rnd(actualLiquid)}g</span>
                   {actualYeast > 0 && (<><span>{t("pf_yeast_amount")}</span><span className="font-semibold text-foreground">{rnd(actualYeast)}g</span></>)}
                 </div>
-                <div className="mt-1.5 pt-1.5 border-t border-[#e8d8a0] text-amber-700">
+                <div className="mt-1.5 pt-1.5 border-t border-border text-warning">
                   {t("pf_main_dough_reduction", { flour: rnd(actualFlour), water: rnd(actualLiquid) })}
                 </div>
               </div>
@@ -364,8 +364,8 @@ export function StepBody({ step: s }: StepBodyProps) {
         )
         if (preps.length === 0) return null
         return (
-          <div className="mt-1.5 p-2.5 bg-amber-50 rounded-lg border border-amber-200">
-            <div className="text-xs font-semibold text-amber-800 uppercase tracking-[1px] mb-1.5">
+          <div className="mt-1.5 p-2.5 bg-warning/10 rounded-lg border border-warning/30">
+            <div className="text-xs font-semibold text-warning uppercase tracking-[1px] mb-1.5">
               {t("dough_preps_to_add")}
             </div>
             {preps.map((prep) => {
@@ -381,13 +381,13 @@ export function StepBody({ step: s }: StepBodyProps) {
               return (
                 <div key={prep.id} className="mb-1 last:mb-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-amber-900">
+                    <span className="text-xs font-semibold text-warning">
                       {icon} {prep.title}
                     </span>
-                    <span className="text-xs font-bold text-amber-800">{rnd(weight)}g</span>
+                    <span className="text-xs font-bold text-warning">{rnd(weight)}g</span>
                   </div>
                   {parts.length > 0 && (
-                    <div className="text-[11px] text-amber-700 mt-0.5">
+                    <div className="text-[9px] text-warning mt-0.5">
                       {parts.join(' · ')}
                     </div>
                   )}
@@ -440,9 +440,9 @@ export function StepBody({ step: s }: StepBodyProps) {
                         onChange={(e) =>
                           onU('temp', tu === 'F' ? fahrenheitToCelsius(+e.target.value) : +e.target.value)
                         }
-                        className="w-full text-xs font-semibold text-[#8a6e55] bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                        className="w-full text-xs font-semibold text-muted-foreground bg-card border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
                       />
-                      <span className="text-xs text-[#b8a08a]">{tu === 'F' ? '°F' : '°C'}</span>
+                      <span className="text-xs text-muted-foreground">{tu === 'F' ? '°F' : '°C'}</span>
                     </div>
                     <div className="flex items-center gap-0.5">
                       <input
@@ -451,9 +451,9 @@ export function StepBody({ step: s }: StepBodyProps) {
                         step={0.1}
                         min={0}
                         onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
-                        className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                        className="w-full text-sm font-semibold text-foreground bg-card border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
                       />
-                      <span className="text-xs text-[#8a6e55]">g</span>
+                      <span className="text-xs text-muted-foreground">g</span>
                     </div>
                   </div>
                 </div>
@@ -495,9 +495,9 @@ export function StepBody({ step: s }: StepBodyProps) {
                       onChange={(e) =>
                         onU('temp', tu === 'F' ? fahrenheitToCelsius(+e.target.value) : +e.target.value)
                       }
-                      className="w-full text-xs font-semibold text-[#8a6e55] bg-white border border-border rounded-md px-1 py-1 outline-none min-h-8"
+                      className="w-full text-xs font-semibold text-muted-foreground bg-card border border-border rounded-md px-1 py-1 outline-none min-h-8"
                     />
-                    <span className="text-xs text-[#b8a08a]">{tu === 'F' ? '°F' : '°C'}</span>
+                    <span className="text-xs text-muted-foreground">{tu === 'F' ? '°F' : '°C'}</span>
                   </div>
                   <div className="flex items-center gap-0.5">
                     <input
@@ -506,9 +506,9 @@ export function StepBody({ step: s }: StepBodyProps) {
                       step={0.1}
                       min={0}
                       onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
-                      className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                      className="w-full text-sm font-semibold text-foreground bg-card border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
                     />
-                    <span className="text-xs text-[#8a6e55]">g</span>
+                    <span className="text-xs text-muted-foreground">g</span>
                   </div>
                 </div>
               )}
@@ -517,16 +517,16 @@ export function StepBody({ step: s }: StepBodyProps) {
 
           {/* Step hydration */}
           {sF > 0 && sL > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-[#fef6ed] rounded-[7px] text-xs">
-              <span className="text-[#8a6e40]">{t("label_hydration_short")}</span>
+            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-muted rounded-[7px] text-xs">
+              <span className="text-accent">{t("label_hydration_short")}</span>
               <input
                 type="number"
                 value={sH}
                 step={1}
                 onChange={(e) => setStepHydration(s.id, +e.target.value || 0)}
-                className="w-[54px] text-xs font-bold text-accent bg-white border border-border rounded-[5px] px-1.5 py-0.5 outline-none text-center min-h-7"
+                className="w-[54px] text-xs font-bold text-accent bg-card border border-border rounded-[5px] px-1.5 py-0.5 outline-none text-center min-h-7"
               />
-              <span className="text-[#8a6e40]">%</span>
+              <span className="text-accent">%</span>
             </div>
           )}
 
@@ -563,9 +563,9 @@ export function StepBody({ step: s }: StepBodyProps) {
                       step={0.1}
                       min={0}
                       onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
-                      className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                      className="w-full text-sm font-semibold text-foreground bg-card border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
                     />
-                    <span className="text-xs text-[#8a6e55]">{(item.unit as string) || 'g'}</span>
+                    <span className="text-xs text-muted-foreground">{(item.unit as string) || 'g'}</span>
                   </div>
                 </div>
               )}
@@ -691,9 +691,9 @@ export function StepBody({ step: s }: StepBodyProps) {
                         step={0.1}
                         min={0.1}
                         onChange={(e) => onU('g', parseFloat(e.target.value) || 0.1)}
-                        className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                        className="w-full text-sm font-semibold text-foreground bg-card border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
                       />
-                      <span className="text-xs text-[#8a6e55]">g</span>
+                      <span className="text-xs text-muted-foreground">g</span>
                     </div>
                   </div>
                 )
@@ -734,9 +734,9 @@ export function StepBody({ step: s }: StepBodyProps) {
                       step={0.1}
                       min={0}
                       onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
-                      className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                      className="w-full text-sm font-semibold text-foreground bg-card border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
                     />
-                    <span className="text-xs text-[#8a6e55]">g</span>
+                    <span className="text-xs text-muted-foreground">g</span>
                   </div>
                 </div>
               )}
@@ -776,9 +776,9 @@ export function StepBody({ step: s }: StepBodyProps) {
                       step={0.1}
                       min={0}
                       onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
-                      className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                      className="w-full text-sm font-semibold text-foreground bg-card border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
                     />
-                    <span className="text-xs text-[#8a6e55]">g</span>
+                    <span className="text-xs text-muted-foreground">g</span>
                   </div>
                 </div>
               )}
@@ -818,9 +818,9 @@ export function StepBody({ step: s }: StepBodyProps) {
                       step={0.1}
                       min={0}
                       onChange={(e) => onU('g', parseFloat(e.target.value) || 0)}
-                      className="w-full text-sm font-semibold text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+                      className="w-full text-sm font-semibold text-foreground bg-card border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
                     />
-                    <span className="text-xs text-[#8a6e55]">g</span>
+                    <span className="text-xs text-muted-foreground">g</span>
                   </div>
                 </div>
               )}
@@ -831,8 +831,8 @@ export function StepBody({ step: s }: StepBodyProps) {
 
       {/* Dough: Knead method + FDT */}
       {s.type === 'dough' && sF > 0 && (
-        <div className="mt-1.5 p-2.5 bg-[#f0eef5] rounded-lg border border-[#d8d0e5]">
-          <div className="text-xs font-semibold text-[#6050a0] uppercase tracking-[1px] mb-1">
+        <div className="mt-1.5 p-2.5 bg-muted rounded-lg border border-border">
+          <div className="text-xs font-semibold text-primary uppercase tracking-[1px] mb-1">
             {t("dough_knead_temp")}
           </div>
           <select
@@ -852,10 +852,10 @@ export function StepBody({ step: s }: StepBodyProps) {
             return (
               <div
                 className="text-xs font-bold"
-                style={{ color: ok ? '#3a7a3a' : fdt < 24 ? '#4060b0' : '#c45a3a' }}
+                style={{ color: ok ? 'hsl(var(--chart-2))' : fdt < 24 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))' }}
               >
                 🌡️ {dTf(Math.round(fdt))}{' '}
-                <span className="text-xs font-normal text-[#8a6e55]">
+                <span className="text-xs font-normal text-muted-foreground">
                   {t("fdt_ideal", { min: dTf(24), max: dTf(26) })}
                 </span>
               </div>
@@ -895,7 +895,7 @@ export function StepBody({ step: s }: StepBodyProps) {
             if (sugarPct > 8) tips.push(t("tip_sugar_high", { pct: sugarPct }))
             if (!tips.length) return null
             return (
-              <div className="mt-1.5 p-2 bg-amber-50 rounded border border-amber-200 text-xs text-amber-800">
+              <div className="mt-1.5 p-2 bg-warning/10 rounded border border-warning/30 text-xs text-warning">
                 <div className="font-semibold mb-0.5">{t("tip_header_salt_sugar")}</div>
                 {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
               </div>
@@ -911,7 +911,7 @@ export function StepBody({ step: s }: StepBodyProps) {
             if (s.fats && s.fats.some(f => f.type === 'burro')) tips.push(t("tip_fat_butter_water"))
             if (!tips.length) return null
             return (
-              <div className="mt-1.5 p-2 bg-amber-50 rounded border border-amber-200 text-xs text-amber-800">
+              <div className="mt-1.5 p-2 bg-warning/10 rounded border border-warning/30 text-xs text-warning">
                 <div className="font-semibold mb-0.5">{t("tip_header_fats")}</div>
                 {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
               </div>
@@ -959,7 +959,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                 </option>
               ))}
             </select>
-            <div className="text-xs text-[#8a6e55] mt-0.5">
+            <div className="text-xs text-muted-foreground mt-0.5">
               {t("label_duration_value")} <b>{fmtDuration(sDur(s))}</b>
             </div>
 
@@ -974,7 +974,7 @@ export function StepBody({ step: s }: StepBodyProps) {
               if (bp.fallingNumber > 0 && bp.fallingNumber < 220) tips.push(t('tip_rise_high_enzyme'))
               if (!tips.length) return null
               return (
-                <div className="mt-1.5 p-2 bg-amber-50 rounded border border-amber-200 text-xs text-amber-800">
+                <div className="mt-1.5 p-2 bg-warning/10 rounded border border-warning/30 text-xs text-warning">
                   <div className="font-semibold mb-0.5">{t("tip_header_warning")}</div>
                   {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
                 </div>
@@ -1172,7 +1172,7 @@ function GroupSelect({
 
   return (
     <div className="flex items-center gap-1">
-      <span className="text-[11px] text-[#b8a08a] font-medium">{t("label_group")}</span>
+      <span className="text-[9px] text-muted-foreground font-medium">{t("label_group")}</span>
       {adding ? (
         <div className="flex gap-0.5">
           <input
@@ -1189,7 +1189,7 @@ function GroupSelect({
                 setNewValue('')
               }
             }}
-            className="text-[11px] bg-primary text-primary-foreground border-none rounded px-1.5 py-0.5 cursor-pointer"
+            className="text-[9px] bg-primary text-primary-foreground border-none rounded px-1.5 py-0.5 cursor-pointer"
           >
             OK
           </button>
@@ -1202,7 +1202,7 @@ function GroupSelect({
               e.target.value === '__new__' ? setAdding(true) : onChange(e.target.value)
             }
             disabled={!editMode}
-            className="text-[11px] text-[#6a5a48] bg-[#f5f0ea] border border-border rounded px-1 py-0.5 cursor-pointer outline-none min-h-7"
+            className="text-[9px] text-foreground bg-muted border border-border rounded px-1 py-0.5 cursor-pointer outline-none min-h-7"
           >
             {groups.map((g) => (
               <option key={g} value={g}>{g}</option>
@@ -1228,7 +1228,7 @@ function GroupSelect({
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(null)}
-                    className="text-[10px] bg-[#e8e2da] text-[#8a7a66] border-none rounded px-1 py-0.5 cursor-pointer"
+                    className="text-[10px] bg-muted text-muted-foreground border-none rounded px-1 py-0.5 cursor-pointer"
                   >
                     No
                   </button>
@@ -1237,7 +1237,7 @@ function GroupSelect({
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(value)}
-                  className="w-5 h-5 rounded-full border-none bg-[#fde8e8] text-[#c45a3a] text-[10px] font-bold cursor-pointer flex items-center justify-center p-0"
+                  className="w-5 h-5 rounded-full border-none bg-destructive/10 text-destructive text-[10px] font-bold cursor-pointer flex items-center justify-center p-0"
                   title={t("group_delete_empty")}
                 >
                   ✕
@@ -1336,7 +1336,7 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
           <button
             type="button"
             onClick={() => setTU(tu === 'C' ? 'F' : 'C')}
-            className="text-xs text-[#a08060] bg-transparent border border-border rounded px-1 py-px cursor-pointer"
+            className="text-xs text-muted-foreground bg-transparent border border-border rounded px-1 py-px cursor-pointer"
           >
             {tu === 'C' ? '°F' : '°C'}
           </button>
@@ -1361,13 +1361,13 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
           <button
             type="button"
             onClick={() => ch('cieloPct', 100 - cfg.cieloPct)}
-            className="w-[22px] h-[22px] rounded-[5px] border border-border bg-white cursor-pointer flex items-center justify-center p-0"
+            className="w-[22px] h-[22px] rounded-[5px] border border-border bg-card cursor-pointer flex items-center justify-center p-0"
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M4 2v12" stroke="#8a6e55" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M2 4.5L4 2l2 2.5" stroke="#8a6e55" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M12 14V2" stroke="#8a6e55" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M10 11.5l2 2.5 2-2.5" stroke="#8a6e55" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M4 2v12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M2 4.5L4 2l2 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M12 14V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M10 11.5l2 2.5 2-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
@@ -1422,7 +1422,7 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
       {cfg.ovenMode === 'steam' && (
         <div className="mt-2">
           <div className="flex items-center justify-between text-xs mb-0.5">
-            <span className="text-[#8a6e55] font-semibold uppercase tracking-[1px]">{t("oven_steam_pct")}</span>
+            <span className="text-muted-foreground font-semibold uppercase tracking-[1px]">{t("oven_steam_pct")}</span>
             <span className="font-bold text-foreground">{cfg.steamPct ?? 100}%</span>
           </div>
           <input
@@ -1438,7 +1438,7 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
       )}
 
       {sd !== bd && (
-        <div className="text-xs text-[#8a6e55] mt-1">
+        <div className="text-xs text-muted-foreground mt-1">
           {t("oven_cooking_duration", { dur: fmtDuration(sd), base: fmtDuration(bd) })}
         </div>
       )}
@@ -1774,10 +1774,10 @@ function CookingAdvisory({
             key={w.id}
             className={`p-2 rounded border text-xs ${
               w.severity === 'warning'
-                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                ? 'bg-warning/10 border-warning/30 text-warning'
                 : w.severity === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-800'
-                  : 'bg-blue-50 border-blue-200 text-blue-800'
+                  ? 'bg-destructive/10 border-destructive/30 text-destructive'
+                  : 'bg-info/10 border-info/30 text-info'
             }`}
           >
             <div>{t(w.messageKey, w.messageVars)}</div>

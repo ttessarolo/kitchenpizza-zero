@@ -128,8 +128,8 @@ export interface StepTypeEntry {
 }
 
 export interface ColorMapEntry {
-  bg: string
-  tx: string
+  bgVar: string
+  txVar: string
   lbKey: string
 }
 

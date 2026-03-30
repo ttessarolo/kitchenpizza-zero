@@ -4,25 +4,25 @@ import { useT } from '~/hooks/useTranslation'
 
 const SEVERITY_STYLES = {
   error: {
-    bg: 'bg-red-50',
-    border: 'border-red-300',
-    text: 'text-red-800',
+    bg: 'bg-destructive/10',
+    border: 'border-destructive/30',
+    text: 'text-destructive',
     icon: '🔴',
-    btnBg: 'bg-red-600 hover:bg-red-700',
+    btnBg: 'bg-destructive hover:bg-destructive/90',
   },
   warning: {
-    bg: 'bg-amber-50',
-    border: 'border-amber-300',
-    text: 'text-amber-800',
+    bg: 'bg-warning/10',
+    border: 'border-warning/30',
+    text: 'text-warning',
     icon: '⚠️',
-    btnBg: 'bg-amber-600 hover:bg-amber-700',
+    btnBg: 'bg-warning hover:bg-warning/80',
   },
   info: {
-    bg: 'bg-sky-50',
-    border: 'border-sky-300',
-    text: 'text-sky-800',
+    bg: 'bg-info/10',
+    border: 'border-info/30',
+    text: 'text-info',
     icon: '💡',
-    btnBg: 'bg-sky-600 hover:bg-sky-700',
+    btnBg: 'bg-info hover:bg-info/80',
   },
 }
 

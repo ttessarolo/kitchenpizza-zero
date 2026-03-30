@@ -60,13 +60,13 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
       >
         <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
           {t(cur.labelKey)}{' '}
-          <span className="text-xs text-[#a08060]">{t(cur.subKey)}</span>
+          <span className="text-xs text-muted-foreground">{t(cur.subKey)}</span>
         </span>
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 z-50 bg-white border-[1.5px] border-[#d4c4b0] rounded-[10px] mt-1 shadow-lg max-h-[280px] overflow-hidden flex flex-col">
-          <div className="p-2 border-b border-[#f0e8df]">
+        <div className="absolute top-full left-0 right-0 z-50 bg-card border-[1.5px] border-border rounded-[10px] mt-1 shadow-lg max-h-[280px] overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-border">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -81,7 +81,7 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
               if (!items.length) return null
               return (
                 <div key={g}>
-                  <div className="text-[11px] font-bold text-[#b8845a] uppercase tracking-[1.5px] px-3 pt-2 pb-0.5 sticky top-0 bg-white">
+                  <div className="text-[9px] font-bold text-accent uppercase tracking-[1.5px] px-3 pt-2 pb-0.5 sticky top-0 bg-card">
                     {t(g)}
                   </div>
                   {items.map((f) => (
@@ -94,11 +94,11 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
                         setSearch('')
                       }}
                       className={`block w-full text-left px-3 py-1.5 border-none cursor-pointer text-xs text-foreground min-h-8 ${
-                        f.key === value ? 'bg-[#fef6ed]' : 'bg-transparent hover:bg-[#faf6f1]'
+                        f.key === value ? 'bg-muted' : 'bg-transparent hover:bg-muted'
                       }`}
                     >
                       {t(f.labelKey)}{' '}
-                      <span className="text-xs text-[#a08060]">{t(f.subKey)}</span>
+                      <span className="text-xs text-muted-foreground">{t(f.subKey)}</span>
                     </button>
                   ))}
                 </div>
@@ -107,7 +107,7 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
           </div>
           {/* Create custom flour button */}
           {onAddCustomFlour && (
-            <div className="p-2 border-t border-[#f0e8df]">
+            <div className="p-2 border-t border-border">
               <button
                 type="button"
                 onClick={() => { setOpen(false); setCreateOpen(true) }}
@@ -123,18 +123,18 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
       {/* Properties display — 2 rows */}
       <div className="flex flex-wrap gap-1 mt-1">
         {[
-          { l: 'Prot', v: cur.protein + '%', c: '#5a6070' },
-          { l: 'W', v: String(cur.W || '—'), c: '#d4a54a' },
-          { l: 'P/L', v: String(cur.PL || '—'), c: '#7a5090' },
-          { l: 'Ass.', v: cur.absorption + '%', c: '#5090c0' },
-          { l: 'Cen.', v: cur.ash + '%', c: '#8a6e55' },
-          { l: 'Fibra', v: cur.fiber + '%', c: '#507a40' },
-          { l: 'FN', v: String(cur.fallingNumber ?? '—'), c: '#a06040' },
-          { l: 'Vel.', v: String(cur.fermentSpeed), c: '#606060' },
+          { l: 'Prot', v: cur.protein + '%', c: 'hsl(var(--primary))' },
+          { l: 'W', v: String(cur.W || '—'), c: 'hsl(var(--accent))' },
+          { l: 'P/L', v: String(cur.PL || '—'), c: 'hsl(280 55% 60%)' },
+          { l: 'Ass.', v: cur.absorption + '%', c: 'hsl(210 65% 55%)' },
+          { l: 'Cen.', v: cur.ash + '%', c: 'hsl(var(--muted-foreground))' },
+          { l: 'Fibra', v: cur.fiber + '%', c: 'hsl(150 50% 40%)' },
+          { l: 'FN', v: String(cur.fallingNumber ?? '—'), c: 'hsl(20 65% 50%)' },
+          { l: 'Vel.', v: String(cur.fermentSpeed), c: 'hsl(var(--muted-foreground))' },
         ].map((it) => (
           <span
             key={it.l}
-            className="text-[11px] bg-[#f5f2ee] rounded px-1.5 py-px"
+            className="text-[9px] bg-muted rounded px-1.5 py-px"
             style={{ color: it.c }}
           >
             {it.l}: <b>{it.v}</b>
@@ -250,7 +250,7 @@ function CreateFlourDialog({
           </div>
         </div>
         <DialogFooter>
-          <button type="button" onClick={() => onOpenChange(false)} className="px-3 py-1.5 text-xs border border-border rounded-md bg-white cursor-pointer">Annulla</button>
+          <button type="button" onClick={() => onOpenChange(false)} className="px-3 py-1.5 text-xs border border-border rounded-md bg-card cursor-pointer">Annulla</button>
           <button type="button" onClick={handleSave} disabled={!canSave} className="px-3 py-1.5 text-xs border-none rounded-md bg-primary text-primary-foreground cursor-pointer font-semibold disabled:opacity-40">Crea</button>
         </DialogFooter>
       </DialogContent>

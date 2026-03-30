@@ -21,7 +21,7 @@ export function MiniSelect({ label, value, onChange, options, onNew, className }
 
   return (
     <div className={cn('flex items-center gap-1', className)}>
-      <span className="text-[11px] text-[#b8a08a] font-medium">{label}:</span>
+      <span className="text-[9px] text-muted-foreground font-medium">{label}:</span>
       {adding ? (
         <div className="flex gap-0.5">
           <input
@@ -38,7 +38,7 @@ export function MiniSelect({ label, value, onChange, options, onNew, className }
                 setNewValue('')
               }
             }}
-            className="text-[11px] bg-primary text-primary-foreground border-none rounded px-1.5 py-0.5 cursor-pointer"
+            className="text-[9px] bg-primary text-primary-foreground border-none rounded px-1.5 py-0.5 cursor-pointer"
           >
             OK
           </button>
@@ -49,7 +49,7 @@ export function MiniSelect({ label, value, onChange, options, onNew, className }
           onChange={(e) =>
             e.target.value === '__new__' ? setAdding(true) : onChange(e.target.value)
           }
-          className="text-[11px] text-[#6a5a48] bg-[#f5f0ea] border border-border rounded px-1 py-0.5 cursor-pointer outline-none min-h-7"
+          className="text-[9px] text-foreground bg-muted border border-border rounded px-1 py-0.5 cursor-pointer outline-none min-h-7"
         >
           {options.map((o) => (
             <option key={o.k} value={o.k}>

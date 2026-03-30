@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect } from 'react'
 import { useT } from '~/hooks/useTranslation'
+import { getResolvedColor } from '~/lib/theme-colors'
 import {
   ReactFlow,
   Background,
@@ -147,7 +148,7 @@ export function RecipeFlowCanvas() {
           <button
             type="button"
             onClick={() => setConfirmUndo(true)}
-            className="h-8 px-3 rounded-lg bg-white border border-border shadow-sm text-xs font-medium text-[#8a7a66] hover:bg-[#faf8f5] flex items-center gap-1"
+            className="h-8 px-3 rounded-lg bg-card border border-border shadow-sm text-xs font-medium text-panel-header hover:bg-panel-hover flex items-center gap-1"
             title={t('btn_undo_title')}
           >
             {t('btn_undo')}
@@ -157,7 +158,7 @@ export function RecipeFlowCanvas() {
           <button
             type="button"
             onClick={() => setConfirmReset(true)}
-            className="h-8 px-3 rounded-lg bg-white border border-border shadow-sm text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-1"
+            className="h-8 px-3 rounded-lg bg-card border border-border shadow-sm text-xs font-medium text-destructive hover:bg-destructive/10 flex items-center gap-1"
           >
             {t('btn_restart')}
           </button>
@@ -166,8 +167,8 @@ export function RecipeFlowCanvas() {
 
       {/* Confirm undo dialog */}
       {confirmUndo && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl shadow-xl p-5 max-w-sm mx-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/50">
+          <div className="bg-card rounded-xl shadow-xl p-5 max-w-sm mx-4">
             <div className="text-base font-bold text-foreground mb-2">{t('dialog_undo_title')}</div>
             <p className="text-sm text-muted-foreground mb-4">
               {t('dialog_undo_message')}
@@ -176,7 +177,7 @@ export function RecipeFlowCanvas() {
               <button
                 type="button"
                 onClick={() => setConfirmUndo(false)}
-                className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-[#faf8f5]"
+                className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-panel-hover"
               >
                 {t('dialog_undo_keep')}
               </button>
@@ -197,8 +198,8 @@ export function RecipeFlowCanvas() {
 
       {/* Confirm reset dialog */}
       {confirmReset && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl shadow-xl p-5 max-w-sm mx-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/50">
+          <div className="bg-card rounded-xl shadow-xl p-5 max-w-sm mx-4">
             <div className="text-base font-bold text-foreground mb-2">{t('dialog_restart_title')}</div>
             <p className="text-sm text-muted-foreground mb-4">
               {t('dialog_restart_message')}
@@ -207,7 +208,7 @@ export function RecipeFlowCanvas() {
               <button
                 type="button"
                 onClick={() => setConfirmReset(false)}
-                className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-[#faf8f5]"
+                className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-panel-hover"
               >
                 {t('btn_cancel')}
               </button>
@@ -217,7 +218,7 @@ export function RecipeFlowCanvas() {
                   resetRecipe()
                   setConfirmReset(false)
                 }}
-                className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                className="text-sm font-bold px-4 py-2 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {t('dialog_delete_all')}
               </button>
@@ -245,28 +246,23 @@ export function RecipeFlowCanvas() {
         fitView
         fitViewOptions={{ padding: 0.2 }}
         proOptions={{ hideAttribution: true }}
-        className="bg-[#faf8f5]"
+        className="bg-canvas"
       >
-        <Background color="#e0d5c8" gap={20} size={1} />
+        <Background color="hsl(var(--canvas-dot))" gap={20} size={1} />
         <Controls
           position="bottom-left"
           showInteractive={false}
-          className="!bg-white !border-border !shadow-sm !rounded-lg"
+          className="!bg-card !border-border !shadow-sm !rounded-lg"
         />
         <MiniMap
           position="bottom-right"
           nodeColor={(n) => {
             const type = n.type || 'dough'
-            const colors: Record<string, string> = {
-              pre_dough: '#f5eef8', pre_ferment: '#fef8eb', dough: '#eef0f5',
-              rest: '#f5f0ea', rise: '#fef6ed', shape: '#f0eef5',
-              pre_bake: '#fef5ee', bake: '#fdeee8', done: '#eaf5ea',
-              post_bake: '#f5eef0', prep: '#edf7ed', split: '#f0e8f5', join: '#f0e8f5',
-            }
-            return colors[type] || '#eef0f5'
+            const varName = `step-${type.replace(/_/g, '-')}-bg`
+            return getResolvedColor(varName)
           }}
-          className="!bg-white/80 !border-border !rounded-lg"
-          maskColor="rgba(250,248,245,0.7)"
+          className="!bg-card/80 !border-border !rounded-lg"
+          maskColor="hsl(var(--canvas-bg) / 0.7)"
         />
       </ReactFlow>
     </>

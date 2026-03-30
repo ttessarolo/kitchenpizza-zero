@@ -8,6 +8,7 @@ import { ClerkProvider } from '@clerk/tanstack-react-start'
 import { itIT } from '@clerk/localizations'
 import appCss from '~/styles/globals.css?url'
 import { useLocale, useSyncLocaleFromCookie } from '~/hooks/useTranslation'
+import { useSyncThemeFromStorage, useTheme } from '~/hooks/useTheme'
 
 const clerkLocales: Record<string, typeof itIT | undefined> = {
   it: itIT,
@@ -33,10 +34,12 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   useSyncLocaleFromCookie() // Restore locale from cookie AFTER hydration (no SSR mismatch)
+  useSyncThemeFromStorage() // Restore theme from localStorage AFTER hydration
   const locale = useLocale()
+  const theme = useTheme()
 
   return (
-    <RootDocument locale={locale}>
+    <RootDocument locale={locale} theme={theme}>
       <ClerkProvider
         localization={clerkLocales[locale]}
         signInFallbackRedirectUrl="/main"
@@ -48,11 +51,13 @@ function RootComponent() {
   )
 }
 
-function RootDocument({ children, locale }: { children: React.ReactNode; locale: string }) {
+function RootDocument({ children, locale, theme }: { children: React.ReactNode; locale: string; theme: string }) {
   return (
-    <html lang={locale}>
+    <html lang={locale} className={theme === 'dark' ? 'dark' : ''}>
       <head>
         <HeadContent />
+        {/* FOUC prevention: set dark class before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');if(t==='light')return;document.documentElement.classList.add('dark')})()` }} />
       </head>
       <body>
         {children}

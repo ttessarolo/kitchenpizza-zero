@@ -228,6 +228,9 @@ export interface RecipeEdgeData {
   scheduleQtyRatio: number
 
   label?: string
+
+  /** Visual curvature of the bezier edge (0.05–1.5, default 0.25) */
+  curvature?: number
 }
 
 // ── Recipe Edge ─────────────────────────────────────────────────

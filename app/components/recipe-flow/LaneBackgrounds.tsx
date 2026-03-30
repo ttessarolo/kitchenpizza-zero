@@ -1,17 +1,14 @@
 import { useMemo } from 'react'
 import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
+import { stepColor } from '~/lib/theme-colors'
 
-const LANE_COLORS: Record<string, string> = {
-  main: 'rgba(212,165,116,0.06)',
-  // Auto-generated lanes use pastel colors
+/** Map lane IDs to their associated step type for color derivation */
+const LANE_STEP_TYPES: Record<string, string> = {
+  main: 'dough',
 }
 
-const PASTEL_COLORS = [
-  'rgba(46,110,46,0.06)',   // green (prep)
-  'rgba(112,64,160,0.06)',  // purple (split)
-  'rgba(138,64,96,0.06)',   // rose (post_bake)
-  'rgba(90,100,112,0.06)',  // gray-blue
-  'rgba(122,106,32,0.06)',  // olive
+const FALLBACK_STEP_TYPES = [
+  'prep', 'split', 'post-bake', 'shape', 'rest',
 ]
 
 export function LaneBackgrounds() {
@@ -43,7 +40,11 @@ export function LaneBackgrounds() {
   return (
     <>
       {Object.entries(laneBounds).map(([laneId, b], i) => {
-        const color = LANE_COLORS[laneId] || PASTEL_COLORS[i % PASTEL_COLORS.length]
+        const stepType = LANE_STEP_TYPES[laneId] || FALLBACK_STEP_TYPES[i % FALLBACK_STEP_TYPES.length]
+        const bgColor = stepColor(`step-${stepType}-tx`, 0.06)
+        const borderColor = stepColor(`step-${stepType}-tx`, 0.2)
+        const labelColor = stepColor(`step-${stepType}-tx`, 0.6)
+
         return (
           <div
             key={laneId}
@@ -53,13 +54,13 @@ export function LaneBackgrounds() {
               top: b.minY,
               width: b.maxX - b.minX,
               height: b.maxY - b.minY,
-              backgroundColor: color,
-              border: `1px dashed ${color.replace(/[\d.]+\)$/, '0.2)')}`,
+              backgroundColor: bgColor,
+              border: `1px dashed ${borderColor}`,
             }}
           >
             <span
-              className="absolute -top-3 left-3 text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/80"
-              style={{ color: color.replace(/[\d.]+\)$/, '0.6)') }}
+              className="absolute -top-3 left-3 text-[9px] font-semibold font-sketch uppercase tracking-wider px-1.5 py-0.5 rounded bg-card/80"
+              style={{ color: labelColor }}
             >
               {b.label}
             </span>

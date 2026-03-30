@@ -16,7 +16,7 @@ export function FatSelector({ value, onChange }: FatSelectorProps) {
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full text-xs font-normal text-foreground bg-white border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
+        className="w-full text-xs font-normal text-foreground bg-card border border-border rounded-md px-1.5 py-1 outline-none min-h-8"
       />
     )
   }

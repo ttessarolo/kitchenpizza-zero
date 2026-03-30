@@ -33,7 +33,7 @@ function AccordionSection({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-[#8a7a66] uppercase tracking-wider hover:bg-[#faf8f5] transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-panel-header uppercase tracking-wider hover:bg-panel-hover transition-colors"
       >
         <span>{icon}</span>
         <span className="flex-1 text-left">{title}</span>
@@ -101,26 +101,28 @@ export function RecipeToolbar() {
 
   if (collapsed) {
     return (
-      <button
-        type="button"
-        onClick={() => setCollapsed(false)}
-        className="absolute top-2 right-2 z-10 w-8 h-8 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-[#8a7a66] hover:bg-[#faf8f5]"
-        title={t("label_open_toolbar")}
-      >
-        ◀
-      </button>
+      <div className="relative w-10 shrink-0">
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          className="absolute top-2 right-1 z-10 w-8 h-8 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-panel-header hover:bg-panel-hover"
+          title={t("label_open_toolbar")}
+        >
+          ◀
+        </button>
+      </div>
     )
   }
 
   return (
-    <div className="w-[320px] shrink-0 bg-white border-l border-border overflow-y-auto flex flex-col">
+    <div className="w-[320px] shrink-0 bg-card border-l border-border overflow-y-auto flex flex-col">
       {/* Collapse button */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <span className="text-xs font-semibold text-[#8a7a66] uppercase tracking-wider">{t('section_configuration')}</span>
+        <span className="text-xs font-semibold text-panel-header uppercase tracking-wider">{t('section_configuration')}</span>
         <button
           type="button"
           onClick={() => setCollapsed(true)}
-          className="w-6 h-6 rounded flex items-center justify-center text-[#8a7a66] hover:bg-[#faf8f5] text-xs"
+          className="w-6 h-6 rounded flex items-center justify-center text-panel-header hover:bg-panel-hover text-xs"
           title={t('close_toolbar')}
         >
           ▶
@@ -276,7 +278,7 @@ export function RecipeToolbar() {
           <button
             type="button"
             onClick={generateDough}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-[#c4956a] text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity"
+            className="w-full py-2.5 rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity"
           >
             {t('btn_generate_dough')}
           </button>

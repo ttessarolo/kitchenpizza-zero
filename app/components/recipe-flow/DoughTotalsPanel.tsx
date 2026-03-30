@@ -51,7 +51,7 @@ export function DoughTotalsPanel() {
   const estFat = hasIngredients ? Math.round(totals.totalFat * 10) / 10 : Math.round(estFlour * fatPct / 100 * 10) / 10
 
   return (
-    <div className="bg-gradient-to-br from-[#f9f3ec] to-[#f5ede3] rounded-[7px] p-2.5">
+    <div className="bg-panel-hover rounded-[7px] p-2.5">
       <div className="flex justify-between items-center text-xs">
         <span className="text-muted-foreground font-medium">{t('label_total_dough')}</span>
         <div className="flex items-center gap-1">
@@ -62,7 +62,7 @@ export function DoughTotalsPanel() {
             onBlur={commitTotal}
             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
             disabled={locks.totalDough}
-            className="w-[70px] text-sm font-bold bg-white border-[1.5px] border-border rounded-md px-1.5 py-0.5 outline-none text-center min-h-9 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-[70px] text-sm font-bold bg-card border-[1.5px] border-border rounded-md px-1.5 py-0.5 outline-none text-center min-h-9 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <span className="text-muted-foreground">g</span>
         </div>

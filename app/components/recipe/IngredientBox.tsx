@@ -22,11 +22,11 @@ export function IngredientBox({
   return (
     <div
       className={cn(
-        'bg-[#f9f5f0] rounded-[7px] p-2 border border-[#e8e0d5]',
+        'bg-muted rounded-[7px] p-2 border border-border',
         className,
       )}
     >
-      <div className="text-[11px] font-semibold text-[#b8845a] uppercase tracking-[1px] mb-1">
+      <div className="text-[9px] font-semibold text-accent uppercase tracking-[1px] mb-1">
         {title}
       </div>
       {items.map((item) => (
@@ -38,7 +38,7 @@ export function IngredientBox({
             <button
               type="button"
               onClick={() => onRemove(item.id)}
-              className="w-4 h-4 rounded-full border-none bg-[#e8e2da] text-[#8a7a66] text-xs font-bold cursor-pointer flex items-center justify-center p-0 shrink-0 mt-0.5"
+              className="w-4 h-4 rounded-full border-none bg-muted text-muted-foreground text-xs font-bold cursor-pointer flex items-center justify-center p-0 shrink-0 mt-0.5"
             >
               x
             </button>
@@ -48,7 +48,7 @@ export function IngredientBox({
       <button
         type="button"
         onClick={onAdd}
-        className="text-[11px] text-primary bg-transparent border-none cursor-pointer p-0 font-semibold min-h-7"
+        className="text-[9px] text-primary bg-transparent border-none cursor-pointer p-0 font-semibold min-h-7"
       >
         + Aggiungi
       </button>

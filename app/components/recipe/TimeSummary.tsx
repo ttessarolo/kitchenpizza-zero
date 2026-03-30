@@ -17,10 +17,10 @@ export function TimeSummary({ timeSummary, hideHeader }: TimeSummaryProps) {
       {!hideHeader && <SectionHeader emoji="⏱️" title={t('section_times')} />}
       <Card className="p-3">
         <div className="grid grid-cols-2 gap-1.5">
-          <MetricBox label={t('time_total')} value={fmtDuration(timeSummary.total)} color="#2c1810" />
-          <MetricBox label={t('time_prep')} value={fmtDuration(timeSummary.prep)} color="#8892a8" />
-          <MetricBox label={t('time_rise')} value={fmtDuration(timeSummary.rise)} color="#d4a54a" />
-          <MetricBox label={t('time_bake')} value={fmtDuration(timeSummary.bake)} color="#d47a50" />
+          <MetricBox label={t('time_total')} value={fmtDuration(timeSummary.total)} color="hsl(var(--foreground))" />
+          <MetricBox label={t('time_prep')} value={fmtDuration(timeSummary.prep)} color="hsl(var(--muted-foreground))" />
+          <MetricBox label={t('time_rise')} value={fmtDuration(timeSummary.rise)} color="hsl(var(--muted-foreground))" />
+          <MetricBox label={t('time_bake')} value={fmtDuration(timeSummary.bake)} color="hsl(var(--muted-foreground))" />
         </div>
       </Card>
     </section>

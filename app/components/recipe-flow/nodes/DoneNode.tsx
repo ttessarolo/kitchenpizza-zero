@@ -4,9 +4,11 @@ import { fmtDuration } from '@commons/utils/format'
 import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
 import { computeSchedule } from '~/hooks/useGraphCalculator'
+import { stepColor } from '~/lib/theme-colors'
+import { SketchyNodeWrapper, hashStringToNumber } from '~/components/recipe-flow/sketchy'
 import type { BaseNodeData } from './BaseNode'
 
-function DoneNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
+function DoneNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
   const t = useT()
   const graph = useRecipeFlowStore(selectGraph)
   const meta = useRecipeFlowStore((s) => s.meta)
@@ -15,23 +17,63 @@ function DoneNodeInner({ data }: NodeProps<Node<BaseNodeData>>) {
   const { span } = computeSchedule(graph, meta.type, meta.subtype, portioning.thickness)
 
   return (
-    <div className="rounded-2xl border-2 border-[#5aaa5a30] bg-gradient-to-br from-[#eaf5ea] to-[#d8f0d8] w-[360px] py-5 text-center">
+    <SketchyNodeWrapper
+      width={360}
+      fillColor="step-done-bg"
+      strokeColor="step-done-tx"
+      strokeWidth={2}
+      roughness={1.2}
+      seed={hashStringToNumber(id)}
+      fillStyle="solid"
+      className="cursor-pointer"
+    >
       <Handle
         type="target"
         position={Position.Top}
         id="in"
-        className="!w-3.5 !h-3.5 !border-2 !bg-white !border-[#5aaa5a]"
+        className="!w-3.5 !h-3.5 !border-2 !bg-card"
+        style={{ borderColor: stepColor('step-done-tx') }}
       />
-      <div className="text-3xl">🎉</div>
-      <div className="text-lg font-bold text-[#3a7a3a] mt-1">
-        {data.nodeData.title || t('label_done_ready')}
-      </div>
-      {span > 0 && (
-        <div className="text-sm text-[#5a9a5a] mt-0.5">
-          {t('label_total_time')}: {fmtDuration(span)}
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="in_tl"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor('step-done-tx'), left: '20%' }}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="in_tr"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor('step-done-tx'), left: '80%' }}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="in_sl"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor('step-done-tx'), top: '25%' }}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="in_sr"
+        className="!w-2 !h-2 !border !bg-card/60"
+        style={{ borderColor: stepColor('step-done-tx'), top: '25%' }}
+      />
+      <div className="py-5 text-center">
+        <div className="text-3xl">🎉</div>
+        <div className="text-lg font-bold font-sketch mt-1" style={{ color: stepColor('step-done-tx') }}>
+          {data.nodeData.title || t('label_done_ready')}
         </div>
-      )}
-    </div>
+        {span > 0 && (
+          <div className="text-sm font-sketch opacity-70 mt-0.5" style={{ color: stepColor('step-done-tx') }}>
+            {t('label_total_time')}: {fmtDuration(span)}
+          </div>
+        )}
+      </div>
+    </SketchyNodeWrapper>
   )
 }
 

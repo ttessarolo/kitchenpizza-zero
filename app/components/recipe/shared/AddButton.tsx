@@ -12,7 +12,7 @@ export function AddButton({ label, onClick, className }: AddButtonProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        'text-[11px] font-semibold text-primary bg-transparent border border-dashed border-primary',
+        'text-[9px] font-semibold text-primary bg-transparent border border-dashed border-primary',
         'rounded-[5px] px-2 py-1 cursor-pointer min-h-7',
         className,
       )}
