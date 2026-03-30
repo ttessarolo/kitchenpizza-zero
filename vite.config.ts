@@ -12,6 +12,9 @@ export default defineConfig({
   server: {
     allowedHosts: ['promoted-perfectly-vulture.ngrok-free.app'],
   },
+  ssr: {
+    noExternal: ['@dagrejs/dagre'],
+  },
   plugins: [
     tanstackStart({
       srcDirectory: 'app',

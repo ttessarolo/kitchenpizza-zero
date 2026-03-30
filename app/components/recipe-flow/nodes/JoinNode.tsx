@@ -30,14 +30,14 @@ function JoinNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
         type="target"
         position={Position.Left}
         id="in_sl"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), top: '25%' }}
       />
       <Handle
         type="target"
         position={Position.Right}
         id="in_sr"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), top: '25%' }}
       />
 
@@ -82,28 +82,28 @@ function JoinNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
         type="source"
         position={Position.Bottom}
         id="out_bl"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), left: '20%' }}
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="out_br"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), left: '80%' }}
       />
       <Handle
         type="source"
         position={Position.Left}
         id="out_sl"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), top: '75%' }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="out_sr"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), top: '75%' }}
       />
     </SketchyNodeWrapper>

@@ -728,7 +728,12 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       peekNodeIds: s.peekNodeIds.filter((p) => p !== id),
     })),
 
-    closeAll: () => set({ expandedNodeId: null, peekNodeIds: [], lastAddedNodeId: null }),
+    closeAll: () => set((s) => ({
+      expandedNodeId: null,
+      peekNodeIds: [],
+      lastAddedNodeId: null,
+      ...rebuildAllFlowNodes({ ...s, expandedNodeId: null, peekNodeIds: [] }),
+    })),
 
     undoLastAdd: () => {
       const { lastAddedNodeId } = get()

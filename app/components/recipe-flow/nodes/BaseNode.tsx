@@ -62,7 +62,7 @@ function BaseNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
   const subtypeEntry = typeEntry?.subtypes?.find((s) => s.key === nodeSubtype)
   const preview = getPreview(nodeType, nodeData, t)
 
-  const sketchStrokeWidth = isCriticalPath || isError || isSelected ? 3 : isPeek ? 1.5 : 2
+  const sketchStrokeWidth = isSelected ? 5 : isCriticalPath || isError ? 3 : isPeek ? 1.5 : 2
   const sketchRoughness = isSelected || isCriticalPath ? 2.0 : isPeek ? 0.8 : 1.2
   const sketchFillStyle = layerLocked ? 'hachure' : 'solid' as const
   const sketchStrokeVar = isCriticalPath ? 'critical' : cm.txVar
@@ -104,28 +104,28 @@ function BaseNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
         type="target"
         position={Position.Top}
         id="in_tl"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), left: '20%' }}
       />
       <Handle
         type="target"
         position={Position.Top}
         id="in_tr"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), left: '80%' }}
       />
       <Handle
         type="target"
         position={Position.Left}
         id="in_sl"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), top: '25%' }}
       />
       <Handle
         type="target"
         position={Position.Right}
         id="in_sr"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), top: '25%' }}
       />
 
@@ -189,28 +189,28 @@ function BaseNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
         type="source"
         position={Position.Bottom}
         id="out_bl"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), left: '20%' }}
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="out_br"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), left: '80%' }}
       />
       <Handle
         type="source"
         position={Position.Left}
         id="out_sl"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), top: '75%' }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="out_sr"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor(cm.txVar), top: '75%' }}
       />
     </SketchyNodeWrapper>

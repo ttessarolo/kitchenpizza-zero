@@ -286,6 +286,16 @@
   }
 }
 
+/* ── Secondary handles: hidden until drag-to-connect is active ────── */
+.react-flow__handle.handle-secondary {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.react-flow.is-connecting .react-flow__handle.handle-secondary,
+.react-flow__node:hover .react-flow__handle.handle-secondary {
+  opacity: 1;
+}
+
 /* ── Warning pulse animation for error nodes ──────────────────────── */
 @keyframes pulse-warning {
   0%, 100% { opacity: 1; }

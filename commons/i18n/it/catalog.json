@@ -189,6 +189,21 @@
   "step_subtype_cool": "Raffreddamento",
   "step_subtype_assemble": "Assemblaggio",
 
+  "step_subtype_tangzhong": "Tangzhong",
+  "step_subtype_autolisi": "Autolisi",
+  "step_subtype_biga": "Biga",
+  "step_subtype_poolish": "Poolish",
+  "step_subtype_sponge": "Sponge",
+  "step_subtype_idrobiga": "Idrobiga",
+  "step_subtype_sourdough": "Lievito madre",
+  "step_subtype_old_dough": "Pasta di riporto",
+
+  "step_subtype_braid": "Intreccio",
+  "step_subtype_layer": "Stratificazione",
+  "step_subtype_fold": "Piegatura",
+  "step_subtype_enclose": "Avvolgimento",
+  "step_subtype_side_by_side": "Affiancamento",
+
   "colormap_pre_dough_lb": "Pre-Imp.",
   "colormap_pre_ferment_lb": "Preferm.",
   "colormap_dough_lb": "Impasto",

@@ -49,6 +49,7 @@ export function RecipeFlowCanvas() {
   const { fitView } = useReactFlow()
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmUndo, setConfirmUndo] = useState(false)
+  const [isConnecting, setIsConnecting] = useState(false)
 
   // Re-center viewport when switching between layer/panoramica
   useEffect(() => {
@@ -232,6 +233,8 @@ export function RecipeFlowCanvas() {
         onNodesChange={isPanoramica ? undefined : onNodesChange}
         onEdgesChange={isPanoramica ? undefined : onEdgesChange}
         onConnect={isPanoramica ? undefined : onConnect}
+        onConnectStart={() => setIsConnecting(true)}
+        onConnectEnd={() => setIsConnecting(false)}
         onNodeClick={isPanoramica ? undefined : handleNodeClick}
         onEdgeClick={isPanoramica ? undefined : onEdgeClick}
         onPaneClick={isPanoramica ? undefined : onPaneClick}
@@ -246,7 +249,7 @@ export function RecipeFlowCanvas() {
         fitView
         fitViewOptions={{ padding: 0.2 }}
         proOptions={{ hideAttribution: true }}
-        className="bg-canvas"
+        className={`bg-canvas ${isConnecting ? 'is-connecting' : ''}`}
       >
         <Background color="hsl(var(--canvas-dot))" gap={20} size={1} />
         <Controls

@@ -38,28 +38,28 @@ function DoneNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
         type="target"
         position={Position.Top}
         id="in_tl"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor('step-done-tx'), left: '20%' }}
       />
       <Handle
         type="target"
         position={Position.Top}
         id="in_tr"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor('step-done-tx'), left: '80%' }}
       />
       <Handle
         type="target"
         position={Position.Left}
         id="in_sl"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor('step-done-tx'), top: '25%' }}
       />
       <Handle
         type="target"
         position={Position.Right}
         id="in_sr"
-        className="!w-2 !h-2 !border !bg-card/60"
+        className="handle-secondary !w-2 !h-2 !border !bg-card/60"
         style={{ borderColor: stepColor('step-done-tx'), top: '25%' }}
       />
       <div className="py-5 text-center">

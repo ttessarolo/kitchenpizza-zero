@@ -36,13 +36,7 @@ export function NodeContextToolbar() {
                     if (selectedNodeId) {
                       addNode(selectedNodeId, st.key as NodeTypeKey, sub)
                     } else {
-                      const graph = selectGraph(useRecipeFlowStore.getState())
-                      const lastNonDone = [...graph.nodes].reverse().find((n) => n.type !== 'done')
-                      if (lastNonDone) {
-                        addNode(lastNonDone.id, st.key as NodeTypeKey, sub)
-                      } else {
-                        addRootNode(st.key as NodeTypeKey, sub)
-                      }
+                      addRootNode(st.key as NodeTypeKey, sub)
                     }
                     setMenuOpen(false)
                   }}
@@ -58,10 +52,8 @@ export function NodeContextToolbar() {
                         key={s.key}
                         type="button"
                         onClick={() => {
-                          const graph = selectGraph(useRecipeFlowStore.getState())
-                          const target = selectedNodeId || [...graph.nodes].reverse().find((n) => n.type !== 'done')?.id
-                          if (target) {
-                            addNode(target, st.key as NodeTypeKey, s.key)
+                          if (selectedNodeId) {
+                            addNode(selectedNodeId, st.key as NodeTypeKey, s.key)
                           } else {
                             addRootNode(st.key as NodeTypeKey, s.key)
                           }

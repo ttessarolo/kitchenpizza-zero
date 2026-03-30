@@ -189,6 +189,21 @@
   "step_subtype_cool": "Cooling",
   "step_subtype_assemble": "Assembling",
 
+  "step_subtype_tangzhong": "Tangzhong",
+  "step_subtype_autolisi": "Autolyse",
+  "step_subtype_biga": "Biga",
+  "step_subtype_poolish": "Poolish",
+  "step_subtype_sponge": "Sponge",
+  "step_subtype_idrobiga": "Idrobiga",
+  "step_subtype_sourdough": "Sourdough",
+  "step_subtype_old_dough": "Old dough (Pâte fermentée)",
+
+  "step_subtype_braid": "Braiding",
+  "step_subtype_layer": "Layering",
+  "step_subtype_fold": "Folding",
+  "step_subtype_enclose": "Enclosing",
+  "step_subtype_side_by_side": "Side by side",
+
   "colormap_pre_dough_lb": "Pre-D.",
   "colormap_pre_ferment_lb": "Preferm.",
   "colormap_dough_lb": "Dough",
