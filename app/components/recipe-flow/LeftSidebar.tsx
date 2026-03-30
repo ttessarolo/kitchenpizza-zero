@@ -1,9 +1,13 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { ModeToggle } from './ModeToggle'
 import { PanoramicaSummaryPanel } from './PanoramicaSummaryPanel'
 import { LayerTypePicker } from './LayerTypePicker'
+import { ActionableWarningBox } from './ActionableWarningBox'
+import { WarningCard } from './WarningCard'
+import { deduplicateWarnings } from '@commons/utils/warning-dedup'
+import { getActiveLayerWarnings, hasLayerWarnings } from '~/lib/warning-helpers'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,17 +61,30 @@ export function LeftSidebar() {
   const setInactiveLayerOpacity = useRecipeFlowStore((s) => s.setInactiveLayerOpacity)
   const meta = useRecipeFlowStore((s) => s.meta)
   const setMeta = useRecipeFlowStore((s) => s.setMeta)
+  const warnings = useRecipeFlowStore((s) => s.warnings)
+  const applyAllWarningActions = useRecipeFlowStore((s) => s.applyAllWarningActions)
+
+  // Warnings for the active layer (includes canonical warnings)
+  const activeLayerWarnings = useMemo(() =>
+    getActiveLayerWarnings(activeLayerId, warnings, layers),
+    [activeLayerId, warnings, layers],
+  )
+  const activeDeduped = useMemo(() => deduplicateWarnings(activeLayerWarnings), [activeLayerWarnings])
+  const activeActionable = useMemo(() => activeDeduped.filter(w => w.actions && w.actions.length > 0), [activeDeduped])
+  const activeInformational = useMemo(() => activeDeduped.filter(w => !w.actions || w.actions.length === 0), [activeDeduped])
 
   if (collapsed) {
     return (
-      <button
-        type="button"
-        onClick={() => setCollapsed(false)}
-        className="absolute top-2 left-2 z-10 w-8 h-8 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-panel-header hover:bg-panel-hover"
-        title={t('open_layers')}
-      >
-        ▶
-      </button>
+      <div className="w-10 shrink-0 bg-card border-r border-border flex flex-col items-center pt-2">
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          className="w-7 h-7 rounded-md flex items-center justify-center text-panel-header hover:bg-panel-hover text-xs"
+          title={t('open_layers')}
+        >
+          ▶
+        </button>
+      </div>
     )
   }
 
@@ -150,7 +167,7 @@ export function LeftSidebar() {
                   min={20} max={80} step={5}
                   value={Math.round(inactiveLayerOpacity * 100)}
                   onChange={(e) => setInactiveLayerOpacity(+e.target.value / 100)}
-                  className="flex-1 accent-primary h-1"
+                  className="flex-1"
                 />
                 <span className="text-[9px] text-muted-foreground tabular-nums w-7 text-right">
                   {Math.round(inactiveLayerOpacity * 100)}%
@@ -170,15 +187,19 @@ export function LeftSidebar() {
                       layer.locked
                         ? 'bg-muted border border-border text-muted-foreground'
                         : isActive
-                          ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+                          ? 'bg-accent/10 text-accent ring-1 ring-accent/30'
                           : 'text-foreground hover:bg-muted/50'
                     }`}
                   >
-                    <span
-                      className="w-3 h-3 rounded-sm shrink-0"
-                      style={{ backgroundColor: layer.color }}
-                    />
-                    <span className="flex-1 text-xs font-medium truncate">{layer.name}</span>
+                    {hasLayerWarnings(layer.id, warnings, layers) ? (
+                      <span className="w-3 h-3 shrink-0 text-[11px] leading-none">⚠️</span>
+                    ) : (
+                      <span
+                        className="w-3 h-3 rounded-sm shrink-0"
+                        style={{ backgroundColor: layer.color }}
+                      />
+                    )}
+                    <span className={`flex-1 text-sm truncate ${isActive ? 'font-bold' : 'font-semibold'}`}>{layer.name}</span>
                     <div className="flex items-center gap-0.5">
                       {/* Visibility toggle */}
                       <button
@@ -209,19 +230,17 @@ export function LeftSidebar() {
                         {layer.locked ? '\u{1F512}' : '\u{1F513}'}
                       </button>
                       {/* Delete */}
-                      {layers.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDeleteLayerId(layer.id)
-                          }}
-                          className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          title={t('remove_layer')}
-                        >
-                          ✕
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeleteLayerId(layer.id)
+                        }}
+                        className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        title={t('remove_layer')}
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
                 )
@@ -231,6 +250,24 @@ export function LeftSidebar() {
 
           {/* Layer type picker modal */}
           {showPicker && <LayerTypePicker onClose={() => setShowPicker(false)} />}
+        </details>
+      )}
+
+      {/* Active layer warnings — reveal "Criticità" */}
+      {viewMode !== 'panoramica' && (activeActionable.length > 0 || activeInformational.length > 0) && (
+        <details open className="border-t border-border">
+          <summary className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
+            {t('section_warnings')}
+            <span className="text-[8px]">▾</span>
+          </summary>
+          <div className="px-2 pb-2 space-y-1.5 overflow-y-auto">
+            {activeActionable.length > 0 && (
+              <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} />
+            )}
+            {activeInformational.map((w) => (
+              <WarningCard key={w.id} warning={w} count={w.count} />
+            ))}
+          </div>
         </details>
       )}
 

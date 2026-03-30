@@ -1,5 +1,6 @@
 import { Card } from '~/components/ui/card'
 import { SectionHeader } from './shared/SectionHeader'
+import { SegmentedToggle } from '~/components/ui/SegmentedToggle'
 import { TRAY_PRESETS, TRAY_MATERIALS } from '@/local_data'
 import { rnd, thicknessLabel } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
@@ -84,24 +85,15 @@ export function PortioningSection({
       {!hideHeader && <SectionHeader emoji="📐" title={t('section_portioning')} />}
       <Card className="p-3">
         {/* Mode toggle */}
-        <div className="flex rounded-[7px] overflow-hidden border-[1.5px] border-border mb-2.5">
-          {([
-            { k: 'tray' as const, l: t('tab_tray') },
-            { k: 'ball' as const, l: t('tab_balls') },
-          ]).map((tab) => (
-            <button
-              key={tab.k}
-              type="button"
-              onClick={() => onPortioningChange({ ...po, mode: tab.k })}
-              className={`flex-1 py-2 border-none cursor-pointer text-xs min-h-11 ${
-                po.mode === tab.k
-                  ? 'bg-primary text-primary-foreground font-bold'
-                  : 'bg-card text-muted-foreground font-normal'
-              }`}
-            >
-              {tab.l}
-            </button>
-          ))}
+        <div className="mb-2.5">
+          <SegmentedToggle
+            options={[
+              { key: 'tray' as const, label: t('tab_tray') },
+              { key: 'ball' as const, label: t('tab_balls') },
+            ]}
+            value={po.mode}
+            onChange={(mode) => onPortioningChange({ ...po, mode })}
+          />
         </div>
 
         {po.mode === 'tray' ? (
@@ -270,7 +262,7 @@ export function PortioningSection({
                 type="range"
                 min={0.1}
                 max={2}
-                step={0.1}
+                step={0.01}
                 value={po.thickness}
                 onChange={(e) =>
                   onPortioningChange({ ...po, thickness: +e.target.value })

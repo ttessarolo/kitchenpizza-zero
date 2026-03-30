@@ -14,6 +14,7 @@ interface GenerateOptions {
   meta: RecipeMeta
   portioning: Portioning
   totalDough: number
+  t: (key: string, vars?: Record<string, unknown>) => string
 }
 
 let idCounter = 0
@@ -23,7 +24,7 @@ function uid(prefix: string) {
 
 export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
   idCounter = 0
-  const { meta, portioning, totalDough } = opts
+  const { meta, portioning, totalDough, t } = opts
   const { targetHyd, yeastPct, saltPct, fatPct, preImpasto, preFermento, doughHours } = portioning
 
   // Calculate ingredient amounts from composition
@@ -74,7 +75,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
       position: { x: 0, y: 0 },
       lane: 'main',
       data: {
-        title: pfSubtype?.labelKey || 'Pre-fermento',
+        title: t(pfSubtype?.labelKey || 'step_pre_ferment'),
         desc: '',
         group,
         baseDur: 15,
@@ -107,7 +108,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
       position: { x: 0, y: 0 },
       lane: 'main',
       data: {
-        title: `Maturazione ${pfSubtype?.labelKey || 'Pre-fermento'}`,
+        title: t('gen_maturation', { name: t(pfSubtype?.labelKey || 'step_pre_ferment') }),
         desc: '',
         group,
         baseDur: pfDefaults.fermentDur || 720,
@@ -141,7 +142,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
       position: { x: 0, y: 0 },
       lane: 'main',
       data: {
-        title: piSubtype?.labelKey || 'Pre-impasto',
+        title: t(piSubtype?.labelKey || 'step_pre_dough'),
         desc: '',
         group,
         baseDur: piSubtype?.defaults?.baseDur || 30,
@@ -176,7 +177,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
     position: { x: 0, y: 0 },
     lane: 'main',
     data: {
-      title: preFermento || preImpasto ? 'Impasto Finale' : 'Impasto',
+      title: preFermento || preImpasto ? t('gen_dough_final') : t('gen_dough'),
       desc: '',
       group,
       baseDur: 20,
@@ -203,7 +204,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
     position: { x: 0, y: 0 },
     lane: 'main',
     data: {
-      title: '1ª Lievitazione',
+      title: t('gen_first_rise'),
       desc: '',
       group,
       baseDur: Math.max(30, Math.round(doughHours * 60 * 0.3)), // ~30% of total time for bulk
@@ -226,7 +227,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
     position: { x: 0, y: 0 },
     lane: 'main',
     data: {
-      title: portioning.mode === 'tray' ? 'Stesura in Teglia' : 'Formatura',
+      title: portioning.mode === 'tray' ? t('gen_tray_spread') : t('gen_shaping'),
       desc: '',
       group,
       baseDur: 10,
@@ -250,7 +251,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
       position: { x: 0, y: 0 },
       lane: 'main',
       data: {
-        title: 'Lievitazione in Teglia',
+        title: t('gen_tray_rise'),
         desc: '',
         group,
         baseDur: Math.max(30, Math.round(doughHours * 60 * 0.2)),
@@ -296,7 +297,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
     position: { x: 0, y: 0 },
     lane: 'main',
     data: {
-      title: 'Cottura',
+      title: t('gen_bake'),
       desc: '',
       group,
       baseDur: bakeDur,
@@ -317,7 +318,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
     position: { x: 0, y: 0 },
     lane: 'main',
     data: {
-      title: 'Buon Appetito!',
+      title: t('gen_done'),
       desc: '',
       group,
       baseDur: 0,
@@ -331,6 +332,6 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
   return autoLayout({
     nodes,
     edges,
-    lanes: [{ id: 'main', label: 'Panificazione', isMain: true, origin: { type: 'user' } }],
+    lanes: [{ id: 'main', label: t('gen_lane_label'), isMain: true, origin: { type: 'user' } }],
   })
 }

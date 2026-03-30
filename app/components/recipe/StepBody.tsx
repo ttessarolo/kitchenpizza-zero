@@ -257,7 +257,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                   <span>{t("pf_label")}</span>
                   <span><b>{cfg.preFermentPct}%</b> · {rnd(actualWeight)}g</span>
                 </div>
-                <input type="range" min={pfRange[0]} max={pfRange[1]} step={1} value={cfg.preFermentPct} onChange={(e) => updateCfg('preFermentPct', +e.target.value)} className="w-full accent-accent" />
+                <input type="range" min={pfRange[0]} max={pfRange[1]} step={1} value={cfg.preFermentPct} onChange={(e) => updateCfg('preFermentPct', +e.target.value)} className="w-full" />
               </div>
 
               {/* Hydration % */}
@@ -266,7 +266,7 @@ export function StepBody({ step: s }: StepBodyProps) {
                   <span>{t("pf_hydration")}</span>
                   <span><b>{cfg.hydrationPct}%</b>{isHydLocked && ` (${t("pf_hydration_locked")})`}</span>
                 </div>
-                <input type="range" min={hydRange[0]} max={hydRange[1]} step={1} value={cfg.hydrationPct} onChange={(e) => updateCfg('hydrationPct', +e.target.value)} disabled={isHydLocked} className="w-full accent-accent" />
+                <input type="range" min={hydRange[0]} max={hydRange[1]} step={1} value={cfg.hydrationPct} onChange={(e) => updateCfg('hydrationPct', +e.target.value)} disabled={isHydLocked} className="w-full" />
               </div>
 
               {/* Yeast (two-phase only) */}
@@ -1459,7 +1459,7 @@ function OvenEditor({ cfg, tu, setTU, dT, onChange: ch, stepDur: sd, baseDur: bd
 // ── Shared editor styles ──────────────────────────────────────
 const editorLabel = "text-xs font-semibold text-muted-foreground uppercase tracking-[1px] mb-0.5"
 const editorSelect = "w-full text-xs font-medium text-foreground bg-background border-[1.5px] border-border rounded-lg py-1.5 pl-2 pr-7 cursor-pointer outline-none appearance-none min-h-8"
-const editorSlider = "flex-1 accent-primary"
+const editorSlider = "flex-1"
 const editorRow = "mt-1"
 const editorCheckLabel = "flex items-center gap-1.5 text-xs text-foreground cursor-pointer"
 

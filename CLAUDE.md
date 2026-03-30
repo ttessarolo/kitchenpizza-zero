@@ -165,6 +165,36 @@ Se crei un nuovo testo, aggiungi SEMPRE la chiave in `commons/i18n/it/*.json` E 
 
 ---
 
+## New Recipe Onboarding Flow
+
+When a user creates a new (empty) recipe:
+
+1. **Immediate LayerTypePicker dialog** — The editor opens with the 3-step layer picker shown immediately. No left or right sidebars are visible.
+
+2. **3-step picker** — LayerTypePicker always uses 3 steps:
+   - Step 1: Choose LayerType (Impasto, Sauce, Prep, Ferment, Pastry)
+   - Step 2: Choose Subtype (e.g., Pizza, Focaccia, Pane for Impasto)
+   - Step 3: Choose Variant (e.g., Napoletana, Romana Tonda for Pizza)
+   - All 3 steps are always shown, even if there's only 1 variant.
+
+3. **Recipe templates** — After layer selection, the app creates a base recipe with pre-populated nodes:
+   - For **impasto**: uses `generateDoughGraph()` to create full node sequences
+   - For **other types**: starts empty (future: declarative templates in `commons/constants/layer-templates.ts`)
+   - Template lookup: `resolveTemplate(type, subtype, variant)` checks `type:subtype:variant` → `type:subtype` → `type` → null
+
+4. **Panels appear after layer creation** — Left sidebar (layers) and right sidebar (config) only render when `layers.length > 0`.
+
+5. **Skip flow** — User can dismiss the picker → empty canvas with a ghost [+] button (low contrast `text-muted-foreground/30`) to add layers later. No sidebars in this state.
+
+**Key files:**
+- `commons/constants/layer-templates.ts` — Template registry + `resolveTemplate()`
+- `app/lib/generate-layer-graph.ts` — Template instantiation
+- `app/components/recipe-flow/LayerTypePicker.tsx` — 3-step picker with `mode: 'inline' | 'onboarding'`
+- `app/components/recipe/Recipe.tsx` — Conditional layout (onboarding / empty / normal)
+- `app/stores/recipe-flow-store.ts` — `showOnboarding` state, `dismissOnboarding()`, `addLayer()` with template population
+
+---
+
 ## Quick Start for New Project
 
 1. **Init monorepo:** `pnpm init` + create `pnpm-workspace.yaml` with `".", "commons", "native"`

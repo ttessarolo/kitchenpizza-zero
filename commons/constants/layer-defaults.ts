@@ -11,6 +11,7 @@ export interface LayerTypeMeta {
   defaultColor: string
   labelKey: string
   descriptionKey: string
+  disabled?: boolean
 }
 
 export const LAYER_TYPE_META: Record<LayerType, LayerTypeMeta> = {
@@ -37,12 +38,14 @@ export const LAYER_TYPE_META: Record<LayerType, LayerTypeMeta> = {
     defaultColor: '#7C3AED',
     labelKey: 'layer_type_ferment',
     descriptionKey: 'layer_type_ferment_desc',
+    disabled: true,
   },
   pastry: {
     icon: 'cake-slice',
     defaultColor: '#EC4899',
     labelKey: 'layer_type_pastry',
     descriptionKey: 'layer_type_pastry_desc',
+    disabled: true,
   },
 }
 

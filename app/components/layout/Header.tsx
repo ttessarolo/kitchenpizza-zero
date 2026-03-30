@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Sun, Moon } from 'lucide-react'
+import { useAuth, useSession, UserButton } from '@clerk/tanstack-react-start'
 import { useLocale, useSetLocale, useT, type SupportedLocale } from '~/hooks/useTranslation'
 import { useTheme, useToggleTheme } from '~/hooks/useTheme'
 
@@ -15,10 +16,24 @@ export function Header() {
   const theme = useTheme()
   const toggleTheme = useToggleTheme()
 
+  // Debug: log all auth metadata to find how roles are exposed
+  const authData = useAuth()
+  const { session } = useSession()
+
+  // Try multiple paths where Clerk might expose roles
+  const sessionClaims = (authData.sessionClaims ?? session?.publicUserData ?? {}) as Record<string, unknown>
+  const publicMetadata = (session?.user?.publicMetadata ?? {}) as Record<string, unknown>
+
+  // Check roles from sessionClaims.roles OR publicMetadata.role/roles
+  const claimRoles = (sessionClaims?.roles as string[]) ?? []
+  const metaRole = publicMetadata?.role as string | undefined
+  const metaRoles = (publicMetadata?.roles as string[]) ?? []
+  const showAdmin = claimRoles.includes('admin') || metaRole === 'admin' || metaRoles.includes('admin')
+
   return (
     <header className="border-b bg-background px-4 py-2.5 flex items-center gap-4">
-      <Link to="/main" className="text-lg font-bold text-foreground hover:opacity-80">
-        {t('app_title')}
+      <Link to="/main" className="hover:opacity-80 shrink-0">
+        <img src="/logo-small.png" alt={t('app_title')} className="h-7" />
       </Link>
 
       <nav className="flex items-center gap-3 flex-1">
@@ -29,6 +44,15 @@ export function Header() {
         >
           {t('nav_home')}
         </Link>
+        {showAdmin && (
+          <Link
+            to="/admin"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            activeProps={{ className: 'text-sm text-foreground font-medium' }}
+          >
+            {t('nav_admin')}
+          </Link>
+        )}
       </nav>
 
       {/* Theme toggle */}
@@ -58,6 +82,15 @@ export function Header() {
           </button>
         ))}
       </div>
+
+      {/* Clerk user button */}
+      <UserButton
+        appearance={{
+          elements: {
+            avatarBox: 'w-8 h-8',
+          },
+        }}
+      />
     </header>
   )
 }

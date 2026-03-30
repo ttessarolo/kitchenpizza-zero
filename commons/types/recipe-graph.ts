@@ -131,6 +131,29 @@ export interface SplitOutput {
   value: number         // % or grams depending on splitMode
 }
 
+// ── Visual Style (persisted per-node/edge) ──────────────────────
+
+export interface NodeStyle {
+  strokeColor?: string                                    // hex color
+  fillColor?: string                                      // hex color
+  fillPattern?: 'solid' | 'hachure' | 'cross-hatch'
+  strokeWidth?: 'thin' | 'medium' | 'thick'              // → 1.5 / 2 / 3
+  strokeStyle?: 'solid' | 'dashed' | 'dotted'
+  roughness?: 'low' | 'medium' | 'high'                  // → 0.5 / 1.2 / 2.5
+  borderRadius?: 'small' | 'large'                        // → 10 / 20
+  opacity?: number                                        // 0-100
+}
+
+export interface EdgeStyle {
+  strokeColor?: string                                    // hex color
+  strokeWidth?: 'thin' | 'medium' | 'thick'
+  strokeStyle?: 'solid' | 'dashed' | 'dotted'
+  roughness?: 'low' | 'medium' | 'high'
+  arrowType?: 'straight' | 'curved' | 's-curve'
+  arrowHead?: 'none' | 'arrow'
+  opacity?: number                                        // 0-100
+}
+
 // ── Node Data ───────────────────────────────────────────────────
 
 export interface NodeData {
@@ -188,6 +211,8 @@ export interface NodeData {
   userOverrideDuration?: boolean
   /** ID of the advisory rule that created this node (via addNodeAfter action). */
   advisorySourceId?: string
+  /** Per-node visual style overrides (persisted in recipe) */
+  style?: NodeStyle
 }
 
 // ── Recipe Node ─────────────────────────────────────────────────
@@ -229,8 +254,10 @@ export interface RecipeEdgeData {
 
   label?: string
 
-  /** Visual curvature of the bezier edge (0.05–1.5, default 0.25) */
+  /** Visual curvature of the bezier edge (0.05–2.5, default 0.25) */
   curvature?: number
+  /** Per-edge visual style overrides (persisted in recipe) */
+  style?: EdgeStyle
 }
 
 // ── Recipe Edge ─────────────────────────────────────────────────

@@ -54,7 +54,7 @@ function getPreview(type: NodeTypeKey, d: NodeData, t: (key: string, vars?: Reco
 
 function BaseNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
   const t = useT()
-  const { nodeData, nodeType, nodeSubtype, duration, isSelected, isPeek, isError, isCriticalPath, layerColor, layerLocked } = data
+  const { nodeData, nodeType, nodeSubtype, duration, isSelected, isPeek, isError, layerColor, layerLocked } = data
   const inFlow = data.inFlow ?? []
   const outFlow = data.outFlow ?? []
   const cm = COLOR_MAP[nodeType] || COLOR_MAP.dough
@@ -62,11 +62,21 @@ function BaseNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
   const subtypeEntry = typeEntry?.subtypes?.find((s) => s.key === nodeSubtype)
   const preview = getPreview(nodeType, nodeData, t)
 
-  const sketchStrokeWidth = isSelected ? 5 : isCriticalPath || isError ? 3 : isPeek ? 1.5 : 2
-  const sketchRoughness = isSelected || isCriticalPath ? 2.0 : isPeek ? 0.8 : 1.2
-  const sketchFillStyle = layerLocked ? 'hachure' : 'solid' as const
-  const sketchStrokeVar = isCriticalPath ? 'critical' : cm.txVar
-  const sketchFillVar = layerLocked ? 'muted' : cm.bgVar
+  // Per-node style overrides (from NodeStyle persisted in data)
+  const ns = nodeData.style
+  const STROKE_W_MAP = { thin: 1.5, medium: 2, thick: 3 } as const
+  const ROUGH_MAP = { low: 0.5, medium: 1.2, high: 2.5 } as const
+  const RADIUS_MAP = { small: 10, large: 20 } as const
+
+  const baseStrokeW = ns?.strokeWidth ? STROKE_W_MAP[ns.strokeWidth] : 2
+  const sketchStrokeWidth = isSelected ? 5 : isError ? 3 : isPeek ? 1.5 : baseStrokeW
+  const sketchRoughness = isSelected ? 2.0 : isPeek ? 0.8 : (ns?.roughness ? ROUGH_MAP[ns.roughness] : 1.2)
+  const sketchFillStyle = layerLocked ? 'hachure' : (ns?.fillPattern ?? 'solid') as 'solid' | 'hachure' | 'cross-hatch'
+  const sketchStrokeVar = ns?.strokeColor ?? cm.txVar
+  const sketchFillVar = layerLocked ? 'muted' : (ns?.fillColor ?? cm.bgVar)
+  const sketchBorderRadius = ns?.borderRadius ? RADIUS_MAP[ns.borderRadius] : undefined
+  const nodeOpacity = ns?.opacity != null ? ns.opacity / 100 : 1
+  const sketchStrokeStyle = ns?.strokeStyle
 
   return (
     <SketchyNodeWrapper
@@ -77,7 +87,10 @@ function BaseNodeInner({ id, data }: NodeProps<Node<BaseNodeData>>) {
       roughness={sketchRoughness}
       seed={hashStringToNumber(id)}
       fillStyle={sketchFillStyle}
+      borderRadius={sketchBorderRadius}
+      strokeStyle={sketchStrokeStyle}
       className="cursor-pointer"
+      style={{ opacity: nodeOpacity }}
       pulse={!!data.isError}
     >
       {/* Layer color indicator */}

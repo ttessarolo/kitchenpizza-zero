@@ -44,7 +44,9 @@ function SliderRow({
         </div>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(+e.target.value)} disabled={isDisabled} className="w-full accent-primary disabled:cursor-not-allowed" />
+        onChange={(e) => onChange(+e.target.value)} disabled={isDisabled}
+        className="w-full disabled:cursor-not-allowed"
+        suppressHydrationWarning />
       {suggestion && <div className="text-[10px] text-muted-foreground mt-0.5 italic">{suggestion}</div>}
     </div>
   )
@@ -317,6 +319,18 @@ function GlobalCompositionSettings() {
     <div>
       {/* Flour mix selector */}
       <FlourMixSelector />
+
+      {/* Hydration % — editable target */}
+      <div className="mb-3">
+        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+          {t("label_hydration_pct")}
+          <LockButton locked={locks.hydration} onToggle={() => toggleLock('hydration')} />
+        </label>
+        <input type="number" value={targetHyd} min={30} max={100} step={1}
+          onChange={(e) => update({ targetHyd: +e.target.value || 60 })}
+          disabled={locks.hydration}
+          className="w-full text-xs font-bold bg-card border border-border rounded-lg px-2 py-1.5 mt-0.5 outline-none disabled:opacity-50 disabled:cursor-not-allowed" />
+      </div>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>

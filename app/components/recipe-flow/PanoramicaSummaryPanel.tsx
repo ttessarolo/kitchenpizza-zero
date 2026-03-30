@@ -1,10 +1,18 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { computePanoramica } from '@commons/utils/panoramica-manager'
 import { staticProvider } from '@commons/utils/science/static-science-provider'
+import { getFlour } from '@commons/utils/flour-manager'
+import { FLOUR_CATALOG, YEAST_TYPES } from '@/local_data'
+import { FAT_TYPES } from '@/local_data/fat-catalog'
+import { getAllLayerWarnings } from '~/lib/warning-helpers'
+import { deduplicateWarnings } from '@commons/utils/warning-dedup'
+import { WarningCard } from './WarningCard'
+import { ActionableWarningBox } from './ActionableWarningBox'
 import type { RecipeLayer } from '@commons/types/recipe-layers'
 import type { NodeData } from '@commons/types/recipe-graph'
+import type { FlourCatalogEntry } from '@commons/types/recipe'
 import type { FlourIngredient, LiquidIngredient, ExtraIngredient, YeastIngredient, SaltIngredient, SugarIngredient, FatIngredient } from '@commons/types/recipe'
 
 function formatDuration(minutes: number): string {
@@ -91,6 +99,8 @@ interface TimelineEntry {
   layerColor: string
   nodeId: string
   nodeTitle: string
+  nodeDesc: string
+  nodeData: NodeData
   duration: number
   topoLevel: number
   isCriticalPath: boolean
@@ -144,13 +154,16 @@ function buildTimeline(
     for (const nodeId of layerSummary.criticalPath) {
       const node = layer.nodes.find((n) => n.id === nodeId)
       if (!node) continue
+      const d = node.data as NodeData
       entries.push({
         layerId: layer.id,
         layerName: layer.name,
         layerColor: layer.color,
         nodeId: node.id,
-        nodeTitle: node.data.title || nodeId,
-        duration: (node.data as NodeData).baseDur + (node.data as NodeData).restDur,
+        nodeTitle: d.title || nodeId,
+        nodeDesc: d.desc || '',
+        nodeData: d,
+        duration: d.baseDur + d.restDur,
         topoLevel: topoLevel.get(nodeId) ?? 0,
         isCriticalPath: criticalSet.has(nodeId),
       })
@@ -159,13 +172,16 @@ function buildTimeline(
     // Add non-critical nodes (for completeness)
     for (const node of layer.nodes) {
       if (criticalSet.has(node.id)) continue
+      const d = node.data as NodeData
       entries.push({
         layerId: layer.id,
         layerName: layer.name,
         layerColor: layer.color,
         nodeId: node.id,
-        nodeTitle: node.data.title || node.id,
-        duration: (node.data as NodeData).baseDur + (node.data as NodeData).restDur,
+        nodeTitle: d.title || node.id,
+        nodeDesc: d.desc || '',
+        nodeData: d,
+        duration: d.baseDur + d.restDur,
         topoLevel: topoLevel.get(node.id) ?? 0,
         isCriticalPath: false,
       })
@@ -178,12 +194,207 @@ function buildTimeline(
   return entries
 }
 
+// ── Cronoprogramma with detail toggle ─────────────────────────
+
+interface CronoprogrammaSectionProps {
+  timeline: TimelineEntry[]
+  names: ReturnType<typeof useIngredientNames>
+  t: (key: string, vars?: Record<string, unknown>) => string
+}
+
+function CronoprogrammaSection({ timeline, names, t }: CronoprogrammaSectionProps) {
+  const [showDetails, setShowDetails] = useState(false)
+
+  return (
+    <details open className="border-b border-border">
+      <summary className="p-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">
+          {t('panoramica_cronoprogramma')}
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); setShowDetails(!showDetails) }}
+            className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border transition-colors normal-case tracking-normal ${
+              showDetails
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-muted/30 text-muted-foreground border-border hover:bg-muted/50'
+            }`}
+          >
+            {t('cronoprogramma_details')}
+          </button>
+        </span>
+        <span className="text-[8px] transition-transform [[open]>&]:rotate-180">&#9662;</span>
+      </summary>
+
+      <div className="px-3 pb-3">
+        <div className="relative">
+          <div className="absolute left-[5px] top-1 bottom-1 w-px bg-border" />
+          <div className={showDetails ? 'space-y-4' : 'space-y-1'}>
+            {(() => {
+              let cumulativeMinutes = 0
+              let currentDay = 0
+              const elements: React.ReactNode[] = []
+
+              elements.push(
+                <div key="day-0" className="flex items-center gap-2 py-1">
+                  <div className="flex-1 h-px bg-muted-foreground/30" />
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1">Oggi</span>
+                  <div className="flex-1 h-px bg-muted-foreground/30" />
+                </div>
+              )
+
+              for (let idx = 0; idx < timeline.length; idx++) {
+                const entry = timeline[idx]
+
+                const newDay = Math.floor(cumulativeMinutes / 1440)
+                if (newDay > currentDay) {
+                  currentDay = newDay
+                  const dayLabel = newDay === 1 ? 'Domani' : `+${newDay}gg`
+                  elements.push(
+                    <div key={`day-${newDay}`} className="flex items-center gap-2 py-1">
+                      <div className="flex-1 h-px bg-muted-foreground/30" />
+                      <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1">{dayLabel}</span>
+                      <div className="flex-1 h-px bg-muted-foreground/30" />
+                    </div>
+                  )
+                }
+
+                const isParallel =
+                  idx > 0 &&
+                  timeline[idx - 1].topoLevel === entry.topoLevel &&
+                  timeline[idx - 1].layerId !== entry.layerId
+
+                const d = entry.nodeData
+                const hasIngr = d.flours.length > 0 || d.liquids.length > 0 || d.salts.length > 0 || d.sugars.length > 0 || d.fats.length > 0 || d.yeasts.length > 0 || d.extras.length > 0
+
+                elements.push(
+                  <div key={`${entry.layerId}:${entry.nodeId}`} className="relative pl-5">
+                    {/* Timeline dot */}
+                    <span
+                      className={`absolute left-0 top-[3px] w-[11px] h-[11px] rounded-full border-2 border-white flex-shrink-0 ${
+                        entry.isCriticalPath ? 'ring-1 ring-critical' : ''
+                      }`}
+                      style={{ backgroundColor: entry.layerColor }}
+                    />
+
+                    {/* Header row */}
+                    <div className={`flex items-center gap-2 ${entry.isCriticalPath ? 'font-bold' : ''}`}>
+                      {isParallel && (
+                        <span className="text-[9px] text-violet-500 font-medium mr-0.5">{'\u2225'}</span>
+                      )}
+                      <span className={`flex-1 truncate ${entry.isCriticalPath ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {entry.nodeTitle}
+                      </span>
+                      {entry.duration > 0 && (
+                        <span className="text-muted-foreground font-mono tabular-nums text-[10px] flex-shrink-0">
+                          {formatDuration(entry.duration)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Expanded details */}
+                    {showDetails && (
+                      <div className="mt-1 ml-1 space-y-1.5">
+                        {entry.nodeDesc && (
+                          <div className="text-[10px] italic text-muted-foreground">{entry.nodeDesc}</div>
+                        )}
+                        {hasIngr && (
+                          <div>
+                            <div className="text-[9px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-0.5">
+                              {t('panoramica_ingredients')}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground space-y-px">
+                              {d.flours.map((f) => (
+                                <div key={f.type} className="flex justify-between">
+                                  <span className="truncate">{names.flour(f.type)}</span>
+                                  <span className="font-mono tabular-nums ml-2">{Math.round(f.g)}g</span>
+                                </div>
+                              ))}
+                              {d.liquids.map((l) => (
+                                <div key={l.type} className="flex justify-between">
+                                  <span className="truncate">{names.liquid(l.type)}</span>
+                                  <span className="font-mono tabular-nums ml-2">{Math.round(l.g)}g</span>
+                                </div>
+                              ))}
+                              {d.salts.map((s) => (
+                                <div key={s.type} className="flex justify-between">
+                                  <span className="truncate">{names.salt(s.type)}</span>
+                                  <span className="font-mono tabular-nums ml-2">{Math.round(s.g)}g</span>
+                                </div>
+                              ))}
+                              {d.sugars.map((s) => (
+                                <div key={s.type} className="flex justify-between">
+                                  <span className="truncate">{names.sugar(s.type)}</span>
+                                  <span className="font-mono tabular-nums ml-2">{Math.round(s.g)}g</span>
+                                </div>
+                              ))}
+                              {d.fats.map((f) => (
+                                <div key={f.type} className="flex justify-between">
+                                  <span className="truncate">{names.fat(f.type)}</span>
+                                  <span className="font-mono tabular-nums ml-2">{Math.round(f.g)}g</span>
+                                </div>
+                              ))}
+                              {d.yeasts.map((y) => (
+                                <div key={y.type} className="flex justify-between">
+                                  <span className="truncate">{names.yeast(y.type)}</span>
+                                  <span className="font-mono tabular-nums ml-2">{Math.round(y.g * 100) / 100}g</span>
+                                </div>
+                              ))}
+                              {d.extras.map((e) => (
+                                <div key={e.name} className="flex justify-between">
+                                  <span className="truncate">{e.name}</span>
+                                  <span className="font-mono tabular-nums ml-2">{Math.round(e.g)}g</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+
+                if (entry.isCriticalPath) {
+                  cumulativeMinutes += entry.duration
+                }
+              }
+
+              return elements
+            })()}
+          </div>
+        </div>
+      </div>
+    </details>
+  )
+}
+
+// ── Ingredient name resolvers ──────────────────────────────────
+
+function useIngredientNames() {
+  const t = useT()
+  return {
+    flour: (type: string) => t(getFlour(type, FLOUR_CATALOG as unknown as FlourCatalogEntry[]).labelKey),
+    liquid: (type: string) => t(`liquid_${type.toLowerCase()}`),
+    salt: (type: string) => t(`salt_${type.toLowerCase()}`),
+    sugar: (type: string) => t(`sugar_${type.toLowerCase()}`),
+    fat: (type: string) => t(FAT_TYPES.find((ft) => ft.key === type)?.labelKey ?? `fat_${type}`),
+    yeast: (type: string) => t(YEAST_TYPES.find((yt) => yt.key === type)?.labelKey ?? `yeast_${type}`),
+  }
+}
+
 // ── Component ──────────────────────────────────────────────────
 
 export function PanoramicaSummaryPanel() {
   const t = useT()
+  const names = useIngredientNames()
   const layers = useRecipeFlowStore((s) => s.layers)
   const crossEdges = useRecipeFlowStore((s) => s.crossEdges)
+  const warnings = useRecipeFlowStore((s) => s.warnings)
+  const applyAllWarningActions = useRecipeFlowStore((s) => s.applyAllWarningActions)
+
+  const warningsByLayer = useMemo(() =>
+    getAllLayerWarnings(warnings, layers),
+    [warnings, layers],
+  )
 
   const result = useMemo(() => {
     if (layers.length === 0) return null
@@ -263,12 +474,46 @@ export function PanoramicaSummaryPanel() {
           <span className="text-[8px] transition-transform [[open]>&]:rotate-180">&#9662;</span>
         </summary>
         <div className="px-3 pb-3">
-          <div className="text-xl font-bold text-primary">{formatDuration(result.totalDuration)}</div>
+          <div className="text-xl font-bold text-foreground">{formatDuration(result.totalDuration)}</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">
             {result.layers.length} {t('layers')} &middot; {result.layers.reduce((a, l) => a + l.nodeCount, 0)} {t('nodes')}
           </div>
         </div>
       </details>
+
+      {/* Per-layer warnings */}
+      {warningsByLayer.size > 0 && (
+        <details open className="border-b border-border">
+          <summary className="p-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-1">⚠️ {t('section_warnings')}</span>
+            <span className="text-[8px] transition-transform [[open]>&]:rotate-180">&#9662;</span>
+          </summary>
+          <div className="px-3 pb-3 space-y-3">
+            {layers.filter(l => warningsByLayer.has(l.id)).map((layer) => {
+              const lw = warningsByLayer.get(layer.id)!
+              const deduped = deduplicateWarnings(lw)
+              const actionable = deduped.filter(w => w.actions && w.actions.length > 0)
+              const informational = deduped.filter(w => !w.actions || w.actions.length === 0)
+              return (
+                <div key={layer.id}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: layer.color }} />
+                    <span className="text-[10px] font-semibold text-foreground">{layer.name}</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {actionable.length > 0 && (
+                      <ActionableWarningBox warnings={actionable} onApplyAll={applyAllWarningActions} />
+                    )}
+                    {informational.map(w => (
+                      <WarningCard key={w.id} warning={w} count={w.count} />
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </details>
+      )}
 
       {/* Ingredienti */}
       {ingredientsByLayer.size > 0 && (
@@ -284,37 +529,37 @@ export function PanoramicaSummaryPanel() {
             <div className="space-y-0.5 text-muted-foreground mb-3">
               {totalIngredients.flours.map((f) => (
                 <div key={`total-flour-${f.type}`} className="flex justify-between">
-                  <span className="truncate">{f.type}</span>
+                  <span className="truncate">{names.flour(f.type)}</span>
                   <span className="font-mono tabular-nums ml-2">{Math.round(f.g)}g</span>
                 </div>
               ))}
               {totalIngredients.liquids.map((l) => (
                 <div key={`total-liquid-${l.type}`} className="flex justify-between">
-                  <span className="truncate">{l.type}</span>
+                  <span className="truncate">{names.liquid(l.type)}</span>
                   <span className="font-mono tabular-nums ml-2">{Math.round(l.g)}g</span>
                 </div>
               ))}
               {totalIngredients.salts.map((s) => (
                 <div key={`total-salt-${s.type}`} className="flex justify-between">
-                  <span className="truncate">{s.type}</span>
+                  <span className="truncate">{names.salt(s.type)}</span>
                   <span className="font-mono tabular-nums ml-2">{Math.round(s.g)}g</span>
                 </div>
               ))}
               {totalIngredients.sugars.map((s) => (
                 <div key={`total-sugar-${s.type}`} className="flex justify-between">
-                  <span className="truncate">{s.type}</span>
+                  <span className="truncate">{names.sugar(s.type)}</span>
                   <span className="font-mono tabular-nums ml-2">{Math.round(s.g)}g</span>
                 </div>
               ))}
               {totalIngredients.fats.map((f) => (
                 <div key={`total-fat-${f.type}`} className="flex justify-between">
-                  <span className="truncate">{f.type}</span>
+                  <span className="truncate">{names.fat(f.type)}</span>
                   <span className="font-mono tabular-nums ml-2">{Math.round(f.g)}g</span>
                 </div>
               ))}
               {totalIngredients.yeasts.map((y) => (
                 <div key={`total-yeast-${y.type}`} className="flex justify-between">
-                  <span className="truncate">{y.type}</span>
+                  <span className="truncate">{names.yeast(y.type)}</span>
                   <span className="font-mono tabular-nums ml-2">{Math.round(y.g * 100) / 100}g</span>
                 </div>
               ))}
@@ -347,37 +592,37 @@ export function PanoramicaSummaryPanel() {
                     <div className="ml-3.5 space-y-0.5">
                       {agg.flours.map((f) => (
                         <div key={`flour-${f.type}`} className="flex justify-between">
-                          <span className="truncate">{f.type}</span>
+                          <span className="truncate">{names.flour(f.type)}</span>
                           <span className="font-mono tabular-nums ml-2">{Math.round(f.g)}g</span>
                         </div>
                       ))}
                       {agg.liquids.map((l) => (
                         <div key={`liquid-${l.type}`} className="flex justify-between">
-                          <span className="truncate">{l.type}</span>
+                          <span className="truncate">{names.liquid(l.type)}</span>
                           <span className="font-mono tabular-nums ml-2">{Math.round(l.g)}g</span>
                         </div>
                       ))}
                       {agg.salts.map((s) => (
                         <div key={`salt-${s.type}`} className="flex justify-between">
-                          <span className="truncate">{s.type}</span>
+                          <span className="truncate">{names.salt(s.type)}</span>
                           <span className="font-mono tabular-nums ml-2">{Math.round(s.g)}g</span>
                         </div>
                       ))}
                       {agg.sugars.map((s) => (
                         <div key={`sugar-${s.type}`} className="flex justify-between">
-                          <span className="truncate">{s.type}</span>
+                          <span className="truncate">{names.sugar(s.type)}</span>
                           <span className="font-mono tabular-nums ml-2">{Math.round(s.g)}g</span>
                         </div>
                       ))}
                       {agg.fats.map((f) => (
                         <div key={`fat-${f.type}`} className="flex justify-between">
-                          <span className="truncate">{f.type}</span>
+                          <span className="truncate">{names.fat(f.type)}</span>
                           <span className="font-mono tabular-nums ml-2">{Math.round(f.g)}g</span>
                         </div>
                       ))}
                       {agg.yeasts.map((y) => (
                         <div key={`yeast-${y.type}`} className="flex justify-between">
-                          <span className="truncate">{y.type}</span>
+                          <span className="truncate">{names.yeast(y.type)}</span>
                           <span className="font-mono tabular-nums ml-2">{Math.round(y.g * 100) / 100}g</span>
                         </div>
                       ))}
@@ -399,102 +644,7 @@ export function PanoramicaSummaryPanel() {
 
       {/* Cronoprogramma (Timeline) */}
       {timeline.length > 0 && (
-        <details open className="border-b border-border">
-          <summary className="p-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
-            {t('panoramica_cronoprogramma')}
-            <span className="text-[8px] transition-transform [[open]>&]:rotate-180">&#9662;</span>
-          </summary>
-          <div className="px-3 pb-3">
-          <div className="relative">
-            {/* Vertical timeline line */}
-            <div className="absolute left-[5px] top-1 bottom-1 w-px bg-border" />
-
-            <div className="space-y-1">
-              {(() => {
-                let cumulativeMinutes = 0
-                let currentDay = 0
-                const elements: React.ReactNode[] = []
-
-                // Insert initial day separator
-                elements.push(
-                  <div key="day-0" className="flex items-center gap-2 py-1">
-                    <div className="flex-1 h-px bg-muted-foreground/30" />
-                    <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1">Oggi</span>
-                    <div className="flex-1 h-px bg-muted-foreground/30" />
-                  </div>
-                )
-
-                for (let idx = 0; idx < timeline.length; idx++) {
-                  const entry = timeline[idx]
-
-                  // Check if cumulative duration crosses a new day boundary
-                  const newDay = Math.floor(cumulativeMinutes / 1440)
-                  if (newDay > currentDay) {
-                    currentDay = newDay
-                    const dayLabel = newDay === 1 ? 'Domani' : `+${newDay}gg`
-                    elements.push(
-                      <div key={`day-${newDay}`} className="flex items-center gap-2 py-1">
-                        <div className="flex-1 h-px bg-muted-foreground/30" />
-                        <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1">{dayLabel}</span>
-                        <div className="flex-1 h-px bg-muted-foreground/30" />
-                      </div>
-                    )
-                  }
-
-                  const isParallel =
-                    idx > 0 &&
-                    timeline[idx - 1].topoLevel === entry.topoLevel &&
-                    timeline[idx - 1].layerId !== entry.layerId
-
-                  elements.push(
-                    <div
-                      key={`${entry.layerId}:${entry.nodeId}`}
-                      className={`flex items-center gap-2 pl-3 relative ${
-                        entry.isCriticalPath ? 'font-bold' : ''
-                      }`}
-                    >
-                      {/* Timeline dot */}
-                      <span
-                        className={`absolute left-0 w-[11px] h-[11px] rounded-full border-2 border-white flex-shrink-0 ${
-                          entry.isCriticalPath ? 'ring-1 ring-critical' : ''
-                        }`}
-                        style={{ backgroundColor: entry.layerColor }}
-                      />
-
-                      {/* Parallel indicator */}
-                      {isParallel && (
-                        <span className="text-[9px] text-violet-500 font-medium mr-0.5">{'\u2225'}</span>
-                      )}
-
-                      <span
-                        className={`flex-1 truncate ${
-                          entry.isCriticalPath ? 'text-foreground' : 'text-muted-foreground'
-                        }`}
-                        style={entry.isCriticalPath ? { borderLeft: '2px solid hsl(var(--critical))', paddingLeft: 4 } : undefined}
-                      >
-                        {entry.nodeTitle}
-                      </span>
-
-                      {entry.duration > 0 && (
-                        <span className="text-muted-foreground font-mono tabular-nums text-[10px] flex-shrink-0">
-                          {formatDuration(entry.duration)}
-                        </span>
-                      )}
-                    </div>
-                  )
-
-                  // Accumulate duration only for critical path entries (they define the timeline progression)
-                  if (entry.isCriticalPath) {
-                    cumulativeMinutes += entry.duration
-                  }
-                }
-
-                return elements
-              })()}
-            </div>
-          </div>
-          </div>
-        </details>
+        <CronoprogrammaSection timeline={timeline} names={names} t={t} />
       )}
 
       {/* Cross-layer dependencies (compact) */}

@@ -27,6 +27,8 @@ export function ActionableWarningBox({ warnings, onApplyAll }: ActionableWarning
         </button>
       </div>
 
+      <div className="border-t border-warning/30" />
+
       <div className="space-y-1.5">
         {warnings.map((w) => (
           <WarningCard key={w.id} warning={w} count={w.count} />

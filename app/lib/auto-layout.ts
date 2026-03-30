@@ -28,7 +28,7 @@ export function autoLayout(graph: RecipeGraph): RecipeGraph {
 
   // Step 1: dagre for topological order + parallel branch positioning
   const g = new dagre.graphlib.Graph()
-  g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80, marginx: 20, marginy: 20 })
+  g.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 140, marginx: 20, marginy: 20 })
   g.setDefaultEdgeLabel(() => ({}))
 
   for (const node of graph.nodes) {
@@ -50,8 +50,8 @@ export function autoLayout(graph: RecipeGraph): RecipeGraph {
     .map((x) => x.node)
 
   // Step 3: Serpentine — alternating left/right, flowing top to bottom
-  const ZIGZAG_OFFSET = 480 // horizontal offset between left and right positions
-  const ROW_GAP = 90        // vertical gap between nodes
+  const ZIGZAG_OFFSET = 420 // horizontal offset between left and right positions
+  const ROW_GAP = 160       // vertical gap between nodes (room for edge curves)
   const LEFT_X = 0
   const RIGHT_X = ZIGZAG_OFFSET
 

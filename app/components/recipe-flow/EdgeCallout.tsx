@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
+import { EdgeStylePanel } from './EdgeStylePanel'
 
 export function EdgeCallout() {
   const t = useT()
@@ -39,7 +40,7 @@ export function EdgeCallout() {
   return (
     <div
       ref={ref}
-      className="absolute z-40 bg-card border border-border rounded-xl shadow-xl p-3 w-[260px]"
+      className="absolute z-40 bg-card border border-border rounded-xl shadow-xl p-3 w-[340px]"
       style={{
         left: edgeCalloutPos ? edgeCalloutPos.x : '50%',
         top: edgeCalloutPos ? edgeCalloutPos.y + 10 : undefined,
@@ -87,7 +88,7 @@ export function EdgeCallout() {
           step={5}
           value={Math.round(edge.data.scheduleTimeRatio * 100)}
           onChange={(e) => updateEdgeData(selectedEdgeId, { scheduleTimeRatio: +e.target.value / 100 })}
-          className="w-full accent-primary"
+          className="w-full"
         />
       </div>
 
@@ -104,9 +105,15 @@ export function EdgeCallout() {
           step={1}
           value={Math.round(edge.data.scheduleQtyRatio * 100)}
           onChange={(e) => updateEdgeData(selectedEdgeId, { scheduleQtyRatio: +e.target.value / 100 })}
-          className="w-full accent-primary"
+          className="w-full"
         />
       </div>
+
+      {/* Visual style reveal */}
+      <EdgeStylePanel
+        style={edge.data.style}
+        onChange={(s) => updateEdgeData(selectedEdgeId, { style: s })}
+      />
     </div>
   )
 }

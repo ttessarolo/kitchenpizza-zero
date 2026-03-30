@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect } from 'react'
+import { Plus } from 'lucide-react'
 import { useT } from '~/hooks/useTranslation'
 import { getResolvedColor } from '~/lib/theme-colors'
 import {
@@ -20,6 +21,7 @@ import { useRecipeFlowStore, selectGraph } from '~/stores/recipe-flow-store'
 import { NodeContextToolbar } from './NodeContextToolbar'
 import { UndoToast } from './UndoToast'
 import { EdgeCallout } from './EdgeCallout'
+import { LayerTypePicker } from './LayerTypePicker'
 
 const edgeTypes: EdgeTypes = {
   recipe: RecipeFlowEdge,
@@ -44,12 +46,15 @@ export function RecipeFlowCanvas() {
   const undo = useRecipeFlowStore((s) => s.undo)
   const canUndo = useRecipeFlowStore((s) => s.canUndo)
   const viewMode = useRecipeFlowStore((s) => s.viewMode)
+  const showOnboarding = useRecipeFlowStore((s) => s.showOnboarding)
   const hasNodes = useRecipeFlowStore((s) => selectGraph(s).nodes.length > 0)
+  const isEmpty = layers.length === 0 && !showOnboarding
   const isPanoramica = viewMode === 'panoramica'
   const { fitView } = useReactFlow()
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmUndo, setConfirmUndo] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
+  const [showInlinePicker, setShowInlinePicker] = useState(false)
 
   // Re-center viewport when switching between layer/panoramica
   useEffect(() => {
@@ -139,32 +144,34 @@ export function RecipeFlowCanvas() {
 
   return (
     <>
-      <NodeContextToolbar />
-      <UndoToast />
+      {!isPanoramica && <NodeContextToolbar />}
+      {!isPanoramica && <UndoToast />}
       <EdgeCallout />
 
-      {/* Top-right buttons */}
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
-        {canUndo && (
-          <button
-            type="button"
-            onClick={() => setConfirmUndo(true)}
-            className="h-8 px-3 rounded-lg bg-card border border-border shadow-sm text-xs font-medium text-panel-header hover:bg-panel-hover flex items-center gap-1"
-            title={t('btn_undo_title')}
-          >
-            {t('btn_undo')}
-          </button>
-        )}
-        {hasNodes && (
-          <button
-            type="button"
-            onClick={() => setConfirmReset(true)}
-            className="h-8 px-3 rounded-lg bg-card border border-border shadow-sm text-xs font-medium text-destructive hover:bg-destructive/10 flex items-center gap-1"
-          >
-            {t('btn_restart')}
-          </button>
-        )}
-      </div>
+      {/* Top-right buttons — hidden in panoramica */}
+      {!isPanoramica && (
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
+          {canUndo && (
+            <button
+              type="button"
+              onClick={() => setConfirmUndo(true)}
+              className="h-8 px-3 rounded-lg bg-card border border-border shadow-sm text-xs font-medium text-panel-header hover:bg-panel-hover flex items-center gap-1"
+              title={t('btn_undo_title')}
+            >
+              {t('btn_undo')}
+            </button>
+          )}
+          {hasNodes && (
+            <button
+              type="button"
+              onClick={() => setConfirmReset(true)}
+              className="h-8 px-3 rounded-lg bg-card border border-border shadow-sm text-xs font-medium text-destructive hover:bg-destructive/10 flex items-center gap-1"
+            >
+              {t('btn_restart')}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Confirm undo dialog */}
       {confirmUndo && (
@@ -227,10 +234,33 @@ export function RecipeFlowCanvas() {
           </div>
         </div>
       )}
+      {/* Empty state: ghost button to add first layer */}
+      {isEmpty && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => setShowInlinePicker(true)}
+            className="flex flex-col items-center gap-3 text-muted-foreground/30 hover:text-muted-foreground/50 transition-colors cursor-pointer group"
+          >
+            <Plus className="size-12 stroke-1" />
+            <span className="text-base font-medium">{t('empty_canvas_add_layer')}</span>
+            <span className="text-xs">{t('empty_canvas_hint')}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Inline picker when clicking ghost button */}
+      {showInlinePicker && (
+        <LayerTypePicker
+          mode="inline"
+          onClose={() => setShowInlinePicker(false)}
+        />
+      )}
+
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
-        onNodesChange={isPanoramica ? undefined : onNodesChange}
+        onNodesChange={onNodesChange}
         onEdgesChange={isPanoramica ? undefined : onEdgesChange}
         onConnect={isPanoramica ? undefined : onConnect}
         onConnectStart={() => setIsConnecting(true)}
@@ -240,7 +270,7 @@ export function RecipeFlowCanvas() {
         onPaneClick={isPanoramica ? undefined : onPaneClick}
         onReconnect={isPanoramica ? undefined : onReconnect}
         edgesReconnectable={!isPanoramica}
-        nodesDraggable={!isPanoramica}
+        nodesDraggable
         nodesConnectable={!isPanoramica}
         elementsSelectable={!isPanoramica}
         nodeTypes={customNodeTypes}
@@ -252,21 +282,25 @@ export function RecipeFlowCanvas() {
         className={`bg-canvas ${isConnecting ? 'is-connecting' : ''}`}
       >
         <Background color="hsl(var(--canvas-dot))" gap={20} size={1} />
-        <Controls
-          position="bottom-left"
-          showInteractive={false}
-          className="!bg-card !border-border !shadow-sm !rounded-lg"
-        />
-        <MiniMap
-          position="bottom-right"
-          nodeColor={(n) => {
-            const type = n.type || 'dough'
-            const varName = `step-${type.replace(/_/g, '-')}-bg`
-            return getResolvedColor(varName)
-          }}
-          className="!bg-card/80 !border-border !rounded-lg"
-          maskColor="hsl(var(--canvas-bg) / 0.7)"
-        />
+        {!isEmpty && (
+          <>
+            <Controls
+              position="bottom-left"
+              showInteractive={false}
+              className="!bg-card !border-border !shadow-sm !rounded-lg"
+            />
+            <MiniMap
+              position="bottom-right"
+              nodeColor={(n) => {
+                const type = n.type || 'dough'
+                const varName = `step-${type.replace(/_/g, '-')}-bg`
+                return getResolvedColor(varName)
+              }}
+              className="!bg-card/80 !border-border !rounded-lg"
+              maskColor="hsl(var(--canvas-bg) / 0.7)"
+            />
+          </>
+        )}
       </ReactFlow>
     </>
   )

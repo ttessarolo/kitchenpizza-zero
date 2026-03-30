@@ -45,8 +45,10 @@ function AccordionSection({
   )
 }
 
-export function RecipeToolbar() {
-  const [collapsed, setCollapsed] = useState(false)
+export function RecipeToolbar({ collapsed, onToggleCollapse }: { collapsed?: boolean; onToggleCollapse?: () => void }) {
+  const [internalCollapsed, setInternalCollapsed] = useState(false)
+  const isCollapsed = collapsed ?? internalCollapsed
+  const toggleCollapse = onToggleCollapse ?? (() => setInternalCollapsed(!internalCollapsed))
   const meta = useRecipeFlowStore((s) => s.meta)
   const portioning = useRecipeFlowStore(selectPortioning)
   const graph = useRecipeFlowStore(selectGraph)
@@ -99,20 +101,7 @@ export function RecipeToolbar() {
     ? totals.totalLiquid
     : Math.round(estimatedFlour * portioning.targetHyd / 100)
 
-  if (collapsed) {
-    return (
-      <div className="relative w-10 shrink-0">
-        <button
-          type="button"
-          onClick={() => setCollapsed(false)}
-          className="absolute top-2 right-1 z-10 w-8 h-8 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-panel-header hover:bg-panel-hover"
-          title={t("label_open_toolbar")}
-        >
-          ◀
-        </button>
-      </div>
-    )
-  }
+  if (isCollapsed) return null
 
   return (
     <div className="w-[320px] shrink-0 bg-card border-l border-border overflow-y-auto flex flex-col">
@@ -121,7 +110,7 @@ export function RecipeToolbar() {
         <span className="text-xs font-semibold text-panel-header uppercase tracking-wider">{t('section_configuration')}</span>
         <button
           type="button"
-          onClick={() => setCollapsed(true)}
+          onClick={toggleCollapse}
           className="w-6 h-6 rounded flex items-center justify-center text-panel-header hover:bg-panel-hover text-xs"
           title={t('close_toolbar')}
         >

@@ -30,6 +30,9 @@ import {
 import { graphToRecipeV1, stepToNodeData } from '@commons/utils/graph-adapter'
 import { computeGraphTotals, scaleNodeData } from '~/hooks/useGraphCalculator'
 import { generateDoughGraph } from '~/lib/generate-dough'
+import { resolveTemplate } from '@commons/constants/layer-templates'
+import { generateLayerGraph } from '~/lib/generate-layer-graph'
+import { useLocaleStore, getMessages } from '~/hooks/useTranslation'
 import { RECIPE_SUBTYPES } from '@/local_data'
 import { getDoughDefaults, calcYeastPct, estimateBlendW } from '@commons/utils/dough-manager'
 import { reconcileGraph } from '~/server/services/graph-reconciler.service'
@@ -105,6 +108,9 @@ interface RecipeFlowState {
   flowNodes: Node<BaseNodeData>[]
   flowEdges: Edge[]
 
+  // Onboarding (empty recipe flow)
+  showOnboarding: boolean
+
   // UI state
   selectedNodeId: string | null
   expandedNodeId: string | null
@@ -140,7 +146,7 @@ interface RecipeFlowState {
   updateNodeWithReconcile: (id: string, fn: (step: RecipeStep) => RecipeStep) => void
 
   // Edge actions
-  updateEdgeData: (edgeId: string, patch: { scheduleTimeRatio?: number; scheduleQtyRatio?: number }) => void
+  updateEdgeData: (edgeId: string, patch: { scheduleTimeRatio?: number; scheduleQtyRatio?: number; style?: import('@commons/types/recipe-graph').EdgeStyle }) => void
   updateEdgeCurvature: (edgeId: string, curvature: number) => void
   removeEdge: (edgeId: string) => void
   addDep: (nodeId: string, parentId: string) => void
@@ -165,6 +171,9 @@ interface RecipeFlowState {
   addNode: (afterNodeId: string, type: NodeTypeKey, subtype?: string | null) => void
   removeNode: (id: string) => void
   runAutoLayout: () => void
+
+  // Onboarding
+  dismissOnboarding: () => void
 
   // Layer CRUD
   setActiveLayer: (layerId: string) => void
@@ -529,6 +538,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     crossEdges: [],
     viewMode: 'layer' as const,
     inactiveLayerOpacity: 0.5,
+    showOnboarding: false,
     flowNodes: [],
     flowEdges: [],
     selectedNodeId: null,
@@ -633,7 +643,27 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     loadRecipe: (recipe) => {
       const v3 = ensureRecipeV3(recipe as RecipeV2 | RecipeV3)
       const activeLayer = v3.layers[0]
-      if (!activeLayer) return
+
+      // Empty recipe: show onboarding picker
+      if (!activeLayer) {
+        set({
+          ...get(),
+          meta: v3.meta,
+          ingredientGroups: v3.ingredientGroups,
+          layers: [],
+          activeLayerId: '',
+          crossEdges: v3.crossEdges ?? [],
+          viewMode: 'layer',
+          showOnboarding: true,
+          warnings: [],
+          selectedNodeId: null,
+          expandedNodeId: null,
+          peekNodeIds: [],
+          flowNodes: [],
+          flowEdges: [],
+        })
+        return
+      }
 
       const graph: RecipeGraph = { nodes: activeLayer.nodes, edges: activeLayer.edges, lanes: activeLayer.lanes }
       const portioning = activeLayer.masterConfig.type === 'impasto'
@@ -670,6 +700,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         activeLayerId: activeLayer.id,
         crossEdges: v3.crossEdges,
         viewMode: 'layer',
+        showOnboarding: false,
         warnings: result.warnings,
         selectedNodeId: null,
         expandedNodeId: null,
@@ -1152,58 +1183,18 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
 
     // ── Reset recipe to empty state with defaults ──────────────
     resetRecipe: () => {
-      set((s) => {
-        const doughDefs = getDoughDefaults(s.meta.type, s.meta.subtype)
-        const subs = RECIPE_SUBTYPES[s.meta.type] || []
-        const sub = subs.find((x) => x.key === s.meta.subtype)
-        const d = sub?.defaults
-
-        const np: Portioning = {
-          mode: d?.mode || 'ball',
-          tray: { preset: 'teglia_40x30', l: 40, w: 30, h: 2, material: 'alu', griglia: false, count: 1 },
-          ball: { weight: d?.ballG || 250, count: 4 },
-          thickness: d?.thickness || 0.5,
-          targetHyd: d?.hyd || 65,
-          doughHours: doughDefs.defaultDoughHours,
-          yeastPct: calcYeastPct(staticProvider, doughDefs.defaultDoughHours, d?.hyd || 65, 24, undefined, estimateBlendW([])),
-          saltPct: doughDefs.saltPctDefault,
-          fatPct: doughDefs.fatPctDefault,
-          preImpasto: null,
-          preFermento: null,
-          flourMix: [],
-          autoCorrect: false,
-          reasoningLevel: 'medium',
-        }
-
-        const freshLayerId = `layer_impasto_${Date.now().toString(36)}`
-        const freshLayer: RecipeLayer = {
-          id: freshLayerId,
-          type: 'impasto',
-          subtype: 'pane',
-          variant: 'pane_comune',
-          name: 'Impasto',
-          color: LAYER_TYPE_META.impasto.defaultColor,
-          icon: LAYER_TYPE_META.impasto.icon,
-          position: 0,
-          visible: true,
-          locked: false,
-          masterConfig: { type: 'impasto', config: np },
-          nodes: [],
-          edges: [],
-          lanes: [],
-        }
-
-        return {
-          layers: [freshLayer],
-          activeLayerId: freshLayerId,
-          crossEdges: [],
-          flowNodes: [],
-          flowEdges: [],
-          expandedNodeId: null,
-          peekNodeIds: [],
-          selectedEdgeId: null,
-          lastAddedNodeId: null,
-        }
+      set({
+        layers: [],
+        activeLayerId: '',
+        crossEdges: [],
+        flowNodes: [],
+        flowEdges: [],
+        expandedNodeId: null,
+        peekNodeIds: [],
+        selectedEdgeId: null,
+        lastAddedNodeId: null,
+        showOnboarding: true,
+        warnings: [],
       })
     },
 
@@ -1215,10 +1206,23 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         const portioningTarget = portioning.mode === 'tray'
           ? Math.round(portioning.thickness * portioning.tray.l * portioning.tray.w * portioning.tray.count)
           : portioning.ball.weight * portioning.ball.count
+        // Build t() from current locale for node title generation
+        const locale = useLocaleStore.getState().locale
+        const dict = getMessages(locale)
+        const enDict = getMessages('en')
+        const t = (key: string, vars?: Record<string, unknown>): string => {
+          const template = dict[key] ?? enDict[key] ?? key
+          if (!vars) return template
+          return template.replace(/\{\{(\w+)\}\}/g, (_, k) => {
+            const v = vars[k]
+            return v !== undefined && v !== null ? String(v) : ''
+          })
+        }
         const graph = generateDoughGraph({
           meta: s.meta,
           portioning,
           totalDough: portioningTarget,
+          t,
         })
         const newLayers = withGraphUpdate(s, graph)
         return {
@@ -1410,6 +1414,12 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       })
     },
 
+    // ── Onboarding ──────────────────────────────────────────────
+
+    dismissOnboarding: () => {
+      set({ showOnboarding: false })
+    },
+
     // ── Layer CRUD ────────────────────────────────────────────────
 
     setActiveLayer: (layerId) => {
@@ -1430,26 +1440,82 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     addLayer: (type, subtype, variant, name) => {
       saveSnapshot()
       set((s) => {
-        const meta = LAYER_TYPE_META[type]
+        const layerMeta = LAYER_TYPE_META[type]
         const layerId = `layer_${type}_${Date.now().toString(36)}`
+        const masterConfig = getDefaultMasterConfig(type, subtype)
         const newLayer: RecipeLayer = {
           id: layerId,
           type,
           subtype,
           variant,
-          name: name ?? meta.labelKey,
-          color: meta.defaultColor,
-          icon: meta.icon,
+          name: name ?? layerMeta.labelKey,
+          color: layerMeta.defaultColor,
+          icon: layerMeta.icon,
           position: s.layers.length,
           visible: true,
           locked: false,
-          masterConfig: getDefaultMasterConfig(type, subtype),
+          masterConfig,
           nodes: [],
           edges: [],
           lanes: [],
         }
+
+        // Try to populate from template
+        const template = resolveTemplate(type, subtype, variant)
+        if (template) {
+          // Build t() from current locale
+          const locale = useLocaleStore.getState().locale
+          const dict = getMessages(locale)
+          const enDict = getMessages('en')
+          const t = (key: string, vars?: Record<string, unknown>): string => {
+            const tpl = dict[key] ?? enDict[key] ?? key
+            if (!vars) return tpl
+            return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => {
+              const v = vars[k]
+              return v !== undefined && v !== null ? String(v) : ''
+            })
+          }
+
+          // For impasto, update meta to match the layer's subtype/variant
+          const recipeMeta = type === 'impasto'
+            ? { ...s.meta, type: subtype, subtype: variant }
+            : s.meta
+
+          const graph = generateLayerGraph({
+            template,
+            layerType: type,
+            subtype,
+            variant,
+            masterConfig,
+            meta: recipeMeta,
+            t,
+          })
+          if (graph) {
+            newLayer.nodes = graph.nodes
+            newLayer.edges = graph.edges
+            newLayer.lanes = graph.lanes
+          }
+        }
+
+        const newLayers = [...s.layers, newLayer]
+        const newState = {
+          ...s,
+          layers: newLayers,
+          activeLayerId: layerId,
+          showOnboarding: false,
+          expandedNodeId: null,
+          peekNodeIds: [] as string[],
+          // Update meta for impasto layers
+          ...(type === 'impasto' ? { meta: { ...s.meta, type: subtype, subtype: variant } } : {}),
+        }
         return {
-          layers: [...s.layers, newLayer],
+          layers: newLayers,
+          activeLayerId: layerId,
+          showOnboarding: false,
+          expandedNodeId: null,
+          peekNodeIds: [],
+          ...(type === 'impasto' ? { meta: { ...s.meta, type: subtype, subtype: variant } } : {}),
+          ...rebuildAllFlowNodes(newState),
         }
       })
     },
@@ -1495,15 +1561,29 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       saveSnapshot()
       set((s) => {
         const filtered = s.layers.filter(l => l.id !== layerId)
-        if (filtered.length === 0) return s // Never remove the last layer
-        const newActiveId = s.activeLayerId === layerId
-          ? filtered[0].id
-          : s.activeLayerId
 
         // Remove cross-edges referencing this layer
         const newCrossEdges = s.crossEdges.filter(
           e => e.sourceLayerId !== layerId && e.targetLayerId !== layerId,
         )
+
+        // Removing last layer → show onboarding
+        if (filtered.length === 0) {
+          return {
+            layers: [],
+            activeLayerId: '',
+            crossEdges: [],
+            showOnboarding: true,
+            flowNodes: [],
+            flowEdges: [],
+            expandedNodeId: null,
+            peekNodeIds: [],
+          }
+        }
+
+        const newActiveId = s.activeLayerId === layerId
+          ? filtered[0].id
+          : s.activeLayerId
 
         // If active layer changed, rebuild flow
         if (newActiveId !== s.activeLayerId) {
@@ -1604,10 +1684,21 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         // Compute panoramica for critical path info
         const panoramica = computePanoramica(staticProvider, s.layers, s.crossEdges)
         const criticalNodeIds = new Set<string>()
+        const criticalEdgeIds = new Set<string>()
         const criticalLayer = panoramica.layers.find(l => l.layerId === panoramica.criticalLayerId)
         if (criticalLayer) {
           for (const nodeId of criticalLayer.criticalPath) {
             criticalNodeIds.add(`${criticalLayer.layerId}:${nodeId}`)
+          }
+          // Build set of edges on the critical path (connecting consecutive critical nodes)
+          for (let i = 0; i < criticalLayer.criticalPath.length - 1; i++) {
+            const src = criticalLayer.criticalPath[i]
+            const tgt = criticalLayer.criticalPath[i + 1]
+            const layer = s.layers.find(l => l.id === criticalLayer.layerId)
+            if (layer) {
+              const edge = layer.edges.find(e => e.source === src && e.target === tgt)
+              if (edge) criticalEdgeIds.add(`${layer.id}:${edge.id}`)
+            }
           }
         }
 
@@ -1620,22 +1711,22 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
               id: namespacedId,
               type: node.type,
               position: { x: node.position.x + layer.position * 400, y: node.position.y },
-              draggable: false,
+              draggable: true,
               connectable: false,
               data: {
                 ...toFlowNode(node, dur, () => {}).data,
-                layerColor: layer.color,
                 isCriticalPath: criticalNodeIds.has(namespacedId),
               },
             })
           }
           for (const edge of layer.edges) {
+            const edgeNsId = `${layer.id}:${edge.id}`
             mergedEdges.push({
-              id: `${layer.id}:${edge.id}`,
+              id: edgeNsId,
               source: `${layer.id}:${edge.source}`,
               target: `${layer.id}:${edge.target}`,
               type: 'recipe',
-              data: edge.data,
+              data: { ...edge.data, isCriticalPath: criticalEdgeIds.has(edgeNsId) },
             })
           }
         }

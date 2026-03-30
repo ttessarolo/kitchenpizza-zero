@@ -5,13 +5,16 @@ interface SketchyNodeWrapperProps {
   children: ReactNode
   width: number
   height?: number
-  fillColor: string      // CSS var name e.g. 'step-dough-bg'
-  strokeColor: string    // CSS var name e.g. 'step-dough-tx'
+  fillColor: string      // CSS var name OR hex color
+  strokeColor: string    // CSS var name OR hex color
   strokeWidth?: number
   roughness?: number
   seed: number
   fillStyle?: 'solid' | 'hachure' | 'cross-hatch'
+  borderRadius?: number  // corner radius in px (default 20)
+  strokeStyle?: 'solid' | 'dashed' | 'dotted'
   className?: string
+  style?: React.CSSProperties
   pulse?: boolean
 }
 
@@ -30,10 +33,12 @@ function roundedRectPath(x: number, y: number, w: number, h: number, r: number):
   return `M ${x + r} ${y} L ${x + w - r} ${y} Q ${x + w} ${y} ${x + w} ${y + r} L ${x + w} ${y + h - r} Q ${x + w} ${y + h} ${x + w - r} ${y + h} L ${x + r} ${y + h} Q ${x} ${y + h} ${x} ${y + h - r} L ${x} ${y + r} Q ${x} ${y} ${x + r} ${y} Z`
 }
 
-function resolveColor(varName: string): string {
+function resolveColor(varNameOrHex: string): string {
   if (typeof document === 'undefined') return 'transparent'
+  // Direct hex/rgb color
+  if (varNameOrHex.startsWith('#') || varNameOrHex.startsWith('rgb')) return varNameOrHex
   const hsl = getComputedStyle(document.documentElement)
-    .getPropertyValue(`--${varName}`).trim()
+    .getPropertyValue(`--${varNameOrHex}`).trim()
   return hsl ? `hsl(${hsl})` : 'transparent'
 }
 
@@ -47,7 +52,10 @@ export function SketchyNodeWrapper({
   roughness = 1.2,
   seed,
   fillStyle = 'solid',
+  borderRadius = 20,
+  strokeStyle,
   className = '',
+  style: wrapperStyle,
   pulse = false,
 }: SketchyNodeWrapperProps) {
   const svgRef = useRef<SVGSVGElement>(null)
@@ -97,8 +105,13 @@ export function SketchyNodeWrapper({
 
     const rc = rough.svg(svg)
     const padding = 2
+    const dashMap: Record<string, number[] | undefined> = {
+      solid: undefined,
+      dashed: [8, 5],
+      dotted: [3, 4],
+    }
     const node = rc.path(
-      roundedRectPath(padding, padding, width - padding * 2, resolvedHeight - padding * 2, 20),
+      roundedRectPath(padding, padding, width - padding * 2, resolvedHeight - padding * 2, borderRadius),
       {
         fill: resolveColor(fillColor),
         fillStyle,
@@ -107,10 +120,11 @@ export function SketchyNodeWrapper({
         roughness,
         seed,
         bowing: 1,
+        strokeLineDash: strokeStyle ? dashMap[strokeStyle] : undefined,
       },
     )
     svg.appendChild(node)
-  }, [width, resolvedHeight, fillColor, strokeColor, strokeWidth, roughness, seed, fillStyle, themeKey])
+  }, [width, resolvedHeight, fillColor, strokeColor, strokeWidth, roughness, seed, fillStyle, borderRadius, strokeStyle, themeKey])
 
   useEffect(() => {
     draw()
@@ -120,7 +134,7 @@ export function SketchyNodeWrapper({
     <div
       ref={wrapperRef}
       className={`relative ${pulse ? 'animate-pulse-warning' : ''} ${className}`}
-      style={{ width }}
+      style={{ width, ...wrapperStyle }}
     >
       {resolvedHeight > 0 && (
         <svg

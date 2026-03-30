@@ -1,7 +1,8 @@
-import { Outlet, createFileRoute, isRedirect, redirect } from '@tanstack/react-router'
+import { Outlet, createFileRoute, isRedirect, redirect, Link } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { auth } from '@clerk/tanstack-react-start/server'
 import { isAdmin } from '~/lib/auth'
+import { useT } from '~/hooks/useTranslation'
 
 const getAdminAuth = createServerFn().handler(async () => {
   const { userId, sessionClaims } = await auth()
@@ -22,12 +23,32 @@ export const Route = createFileRoute('/admin')({
 })
 
 function AdminLayout() {
+  const t = useT()
+
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="border-b bg-background px-6 py-3 flex items-center gap-4">
-        <a href="/main" className="text-sm text-muted-foreground hover:text-foreground">&larr; App</a>
-        <h1 className="text-lg font-bold">Admin</h1>
-        <a href="/admin/science" className="text-sm text-primary font-medium">Science</a>
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card px-6 py-3 flex items-center gap-6">
+        <Link to="/main" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          &larr; {t('admin_back_to_app')}
+        </Link>
+        <h1 className="text-lg font-bold text-foreground">{t('nav_admin')}</h1>
+        <nav className="flex items-center gap-4 flex-1">
+          <Link
+            to="/admin"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            activeOptions={{ exact: true }}
+            activeProps={{ className: 'text-sm text-foreground font-medium' }}
+          >
+            {t('admin_dashboard_title')}
+          </Link>
+          <Link
+            to="/admin/science"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            activeProps={{ className: 'text-sm text-foreground font-medium' }}
+          >
+            {t('admin_section_science_nav')}
+          </Link>
+        </nav>
       </header>
       <Outlet />
     </div>

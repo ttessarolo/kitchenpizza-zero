@@ -1,5 +1,6 @@
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
+import { SegmentedToggle } from '~/components/ui/SegmentedToggle'
 
 export function ModeToggle() {
   const t = useT()
@@ -7,29 +8,13 @@ export function ModeToggle() {
   const setViewMode = useRecipeFlowStore((s) => s.setViewMode)
 
   return (
-    <div className="flex rounded-lg border border-border bg-muted/30 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setViewMode('layer')}
-        className={`flex-1 px-3 py-1.5 text-xs font-medium transition-colors ${
-          viewMode === 'layer'
-            ? 'bg-primary text-primary-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-        }`}
-      >
-        {t('mode_layer')}
-      </button>
-      <button
-        type="button"
-        onClick={() => setViewMode('panoramica')}
-        className={`flex-1 px-3 py-1.5 text-xs font-medium transition-colors ${
-          viewMode === 'panoramica'
-            ? 'bg-primary text-primary-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-        }`}
-      >
-        {t('mode_panoramica')}
-      </button>
-    </div>
+    <SegmentedToggle
+      options={[
+        { key: 'layer' as const, label: t('mode_layer') },
+        { key: 'panoramica' as const, label: t('mode_panoramica') },
+      ]}
+      value={viewMode}
+      onChange={setViewMode}
+    />
   )
 }

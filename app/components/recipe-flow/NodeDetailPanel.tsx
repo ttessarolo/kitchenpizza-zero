@@ -10,6 +10,7 @@ import { RecipeProvider } from '~/components/recipe/RecipeContext'
 import { StepBody } from '~/components/recipe/StepBody'
 import { SplitConfigPanel } from './SplitConfigPanel'
 import { JoinConfigPanel } from './JoinConfigPanel'
+import { NodeStylePanel } from './NodeStylePanel'
 import { COLOR_MAP, STEP_TYPES, KNEAD_METHODS } from '@/local_data'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -275,6 +276,12 @@ function SinglePanel({
         {node.type === 'join' && (
           <JoinConfigPanel nodeId={nodeId} />
         )}
+
+        {/* Visual style reveal */}
+        <NodeStylePanel
+          style={node.data.style}
+          onChange={(s) => updateNodeCosmetic(nodeId, { style: s })}
+        />
       </div>
 
       {/* Footer — Delete node */}
