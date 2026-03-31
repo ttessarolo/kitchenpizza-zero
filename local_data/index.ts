@@ -21,3 +21,6 @@ export {
   type RecipeListEntry,
 } from './recipes'
 export { DEFAULT_RECIPE_V2, RECIPE_2_V2, RECIPE_3_V2 } from './recipes/recipes-v2'
+
+export { LLM_PROMPTS, DEFAULT_TEMPLATES } from './llm-prompts'
+export type { LlmPromptEntry } from './llm-prompts'

@@ -2,6 +2,7 @@ import { getFlags } from '../../lib/feature-flags'
 import type { LlmProvider } from './noop-provider'
 import { NoopProvider } from './noop-provider'
 import { HfApiProvider } from './hf-api-provider'
+import { OllamaProvider } from './ollama-provider'
 
 let cachedProvider: LlmProvider | null = null
 
@@ -15,6 +16,9 @@ function getProvider(): LlmProvider {
   }
 
   switch (flags.LLM_PROVIDER) {
+    case 'ollama':
+      cachedProvider = new OllamaProvider()
+      break
     case 'hf_api':
       cachedProvider = new HfApiProvider()
       break
@@ -28,6 +32,11 @@ function getProvider(): LlmProvider {
 /** Reset cached provider (useful for testing or config changes) */
 export function resetLlmProvider(): void {
   cachedProvider = null
+}
+
+/** Get the current provider instance (for admin panel inspection) */
+export function getCurrentProvider(): LlmProvider {
+  return getProvider()
 }
 
 export const llmService = {

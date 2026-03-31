@@ -8,36 +8,13 @@ import {
   checkCompatOutputSchema,
 } from '../schemas/llm'
 import { llmService } from '../services/llm/llm-service'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
-
-function loadPrompt(name: string): string {
-  try {
-    return readFileSync(
-      resolve(process.cwd(), `app/server/prompts/${name}.md`),
-      'utf-8',
-    )
-  } catch {
-    return ''
-  }
-}
-
-function fillTemplate(
-  template: string,
-  vars: Record<string, string>,
-): string {
-  let result = template
-  for (const [key, value] of Object.entries(vars)) {
-    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value)
-  }
-  return result
-}
+import { getPromptTemplate, fillTemplate } from '../services/llm/prompt-store'
 
 export const explainWarning = baseProcedure
   .input(explainWarningInputSchema)
   .output(explainWarningOutputSchema)
   .handler(async ({ input }) => {
-    const template = loadPrompt('explain-warning')
+    const template = getPromptTemplate('explain_warning')
     if (!template) return { explanation: null, source: 'fallback' as const }
 
     const prompt = fillTemplate(template, {
@@ -57,7 +34,7 @@ export const nlToConstraints = baseProcedure
   .input(nlToConstraintsInputSchema)
   .output(nlToConstraintsOutputSchema)
   .handler(async ({ input }) => {
-    const template = loadPrompt('nl-to-constraints')
+    const template = getPromptTemplate('nl_to_constraints')
     if (!template) return { constraints: null, source: 'fallback' as const }
 
     const prompt = fillTemplate(template, {
@@ -79,7 +56,7 @@ export const checkCompat = baseProcedure
   .input(checkCompatInputSchema)
   .output(checkCompatOutputSchema)
   .handler(async ({ input }) => {
-    const template = loadPrompt('cross-layer-compat')
+    const template = getPromptTemplate('cross_layer_compat')
     if (!template) return { result: null, source: 'fallback' as const }
 
     const prompt = fillTemplate(template, {

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { llmVerificationResultSchema } from './llm-verification'
 
 // ── Minimal graph schemas for oRPC validation ───────────────────
 // These are intentionally loose — the reconciler handles detailed validation.
@@ -110,10 +111,14 @@ export const reconcileInputSchema = z.object({
   graph: recipeGraphSchema,
   portioning: portioningSchema,
   meta: recipeMetaSchema,
+  locale: z.string().default('it'),
+  llmVerify: z.boolean().default(true),
+  autoResolve: z.boolean().default(false),
 })
 
 export const reconcileOutputSchema = z.object({
   graph: recipeGraphSchema,
   portioning: portioningSchema,
   warnings: z.array(warningSchema),
+  llmVerification: llmVerificationResultSchema.nullable().optional(),
 })
