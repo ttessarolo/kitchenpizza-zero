@@ -64,6 +64,7 @@ export function LeftSidebar() {
   const setMeta = useRecipeFlowStore((s) => s.setMeta)
   const warnings = useRecipeFlowStore((s) => s.warnings)
   const isReconciling = useRecipeFlowStore((s) => s.isReconciling)
+  const llmVerification = useRecipeFlowStore((s) => s.llmVerification)
   const applyAllWarningActions = useRecipeFlowStore((s) => s.applyAllWarningActions)
 
   // Warnings for the active layer (includes canonical warnings)
@@ -71,6 +72,17 @@ export function LeftSidebar() {
     getActiveLayerWarnings(activeLayerId, warnings, layers),
     [activeLayerId, warnings, layers],
   )
+  // Build a map of warningId → llmVerdict for quick lookup
+  const llmVerdictMap = useMemo(() => {
+    const map = new Map<string, { llmVerdict: string; llmReason?: string; suggestedAction?: number }>()
+    if (llmVerification?.verifiedWarnings) {
+      for (const vw of llmVerification.verifiedWarnings) {
+        map.set(vw.warningId, vw)
+      }
+    }
+    return map
+  }, [llmVerification])
+
   const activeDeduped = useMemo(() => deduplicateWarnings(activeLayerWarnings), [activeLayerWarnings])
   const activeActionable = useMemo(() => activeDeduped.filter(w => w.actions && w.actions.length > 0), [activeDeduped])
   const activeInformational = useMemo(() => activeDeduped.filter(w => !w.actions || w.actions.length === 0), [activeDeduped])
@@ -270,10 +282,10 @@ export function LeftSidebar() {
               </div>
             )}
             {!isReconciling && activeActionable.length > 0 && (
-              <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} />
+              <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} llmVerdictMap={llmVerdictMap} />
             )}
             {!isReconciling && activeInformational.map((w) => (
-              <WarningCard key={w.id} warning={w} count={w.count} />
+              <WarningCard key={w.id} warning={w} count={w.count} llmVerdict={llmVerdictMap.get(w.id)} />
             ))}
           </div>
         </details>
