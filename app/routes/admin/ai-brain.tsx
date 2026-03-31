@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
+import { Sparkles } from 'lucide-react'
 import { useT } from '~/hooks/useTranslation'
 import { orpc } from '~/lib/orpc'
 import {
@@ -53,7 +54,10 @@ function AiBrainPage() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       {/* Page header */}
       <div>
-        <h2 className="text-2xl font-bold text-foreground">{t('admin.ai.title')}</h2>
+        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Sparkles className="w-6 h-6 text-purple-500" />
+          {t('admin.ai.title')}
+        </h2>
       </div>
 
       {/* Section 1: Model Configuration */}

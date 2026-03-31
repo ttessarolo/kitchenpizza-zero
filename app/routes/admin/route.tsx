@@ -1,6 +1,7 @@
 import { Outlet, createFileRoute, isRedirect, redirect, Link } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { auth } from '@clerk/tanstack-react-start/server'
+import { Sparkles } from 'lucide-react'
 import { isAdmin } from '~/lib/auth'
 import { useT } from '~/hooks/useTranslation'
 
@@ -53,6 +54,7 @@ function AdminLayout() {
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             activeProps={{ className: 'text-sm text-foreground font-medium' }}
           >
+            <Sparkles className="w-3.5 h-3.5 inline-block mr-1 text-purple-500" />
             {t('admin.ai.title')}
           </Link>
         </nav>

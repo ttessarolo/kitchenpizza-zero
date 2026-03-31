@@ -1,6 +1,7 @@
 import type { ActionableWarning } from '@commons/types/recipe-graph'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
+import { Sparkles } from 'lucide-react'
 
 const SEVERITY_STYLES = {
   error: {
@@ -68,7 +69,8 @@ export function WarningCard({ warning, count, appliedAdvisoryIds, onDismiss, llm
 
             {/* LLM verdict badge */}
             {llmVerdict && verdictStyle && (
-              <span className={`inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${verdictStyle.bg} ${verdictStyle.text}`}>
+              <span className={`inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${verdictStyle.bg} ${verdictStyle.text}`}>
+                <Sparkles className="w-2.5 h-2.5" />
                 {t(`warning_ai_${llmVerdict.llmVerdict}`)}
               </span>
             )}
