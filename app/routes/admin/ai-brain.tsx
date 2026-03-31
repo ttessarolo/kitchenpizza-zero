@@ -25,7 +25,7 @@ import {
 
 // ── Server functions ────────────────────────────────────────
 import { getFlags } from '~/server/lib/feature-flags'
-import { getCurrentProvider, resetLlmProvider } from '~/server/services/llm/llm-service'
+import { resetLlmProvider } from '~/server/services/llm/llm-service'
 import { OllamaProvider } from '~/server/services/llm/ollama-provider'
 import { getAllPrompts, getPromptTemplate, updatePrompt as updatePromptStore, resetPrompt as resetPromptStore, fillTemplate } from '~/server/services/llm/prompt-store'
 import { llmService } from '~/server/services/llm/llm-service'
@@ -45,16 +45,14 @@ const loadAiBrainData = createServerFn().handler(async () => {
 })
 
 const serverTestConnection = createServerFn().handler(async () => {
+  // Always test Ollama directly, regardless of LLM_ENABLED flag.
+  // The admin panel needs to show connection status even when LLM is disabled.
+  const testProvider = new OllamaProvider()
   const start = Date.now()
-  const provider = getCurrentProvider()
-  const available = await provider.isAvailable()
+  const available = await testProvider.isAvailable()
   const latencyMs = Date.now() - start
-  let models: Array<{ name: string; size: number; modified_at: string }> = []
-  let currentModel = process.env.OLLAMA_MODEL || 'qwen3.5:0.8b'
-  if (provider instanceof OllamaProvider) {
-    models = await provider.listModels()
-    currentModel = provider.getModel()
-  }
+  const models = await testProvider.listModels()
+  const currentModel = testProvider.getModel()
   return { available, models, currentModel, latencyMs }
 })
 
