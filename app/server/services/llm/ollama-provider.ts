@@ -94,12 +94,12 @@ export class OllamaProvider implements LlmProvider {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: this.model,
-          prompt: prompt + '\n\nRespond ONLY with valid JSON.',
+          prompt: prompt + '\n\nRespond ONLY with valid JSON. Be concise in llmReason fields (max 1 sentence).',
           stream: false,
           format: 'json',
-          think: false, // Disable thinking mode — JSON goes to 'response' field
+          think: false,
           options: {
-            num_predict: this.maxTokens,
+            num_predict: Math.max(this.maxTokens, 2048), // JSON needs more tokens than text
             temperature: 0.1,
           },
         }),
