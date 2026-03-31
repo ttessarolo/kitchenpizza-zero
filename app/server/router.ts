@@ -11,6 +11,7 @@ import { reconcileLayerProcedure } from './procedures/layer'
 import { computePanoramica } from './procedures/panoramica'
 import { getDefaultBakeConfig } from './procedures/bake'
 import { autoCorrect } from './procedures/auto-correct'
+import { explainWarning, nlToConstraints, checkCompat } from './procedures/llm'
 
 export const appRouter = os.router({
   health: healthCheck,
@@ -62,6 +63,11 @@ export const appRouter = os.router({
   }),
   panoramica: os.router({
     compute: computePanoramica,
+  }),
+  llm: os.router({
+    explainWarning,
+    nlToConstraints,
+    checkCompat,
   }),
 })
 
