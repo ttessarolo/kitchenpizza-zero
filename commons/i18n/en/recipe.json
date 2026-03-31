@@ -440,7 +440,7 @@
   "style_s_curve": "S-Curve",
   "style_none": "None",
   "style_arrow": "Arrow",
-  "warning_ai_confirmed": "AI: confirmed",
+  "warning_ai_confirmed": "AI dixit",
   "warning_ai_dismissed": "AI: dismissed",
   "warning_ai_upgraded": "AI: upgraded",
   "warning_ai_downgraded": "AI: downgraded",

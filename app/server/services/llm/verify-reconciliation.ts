@@ -57,6 +57,10 @@ export async function verifyReconciliation(
   const template = getPromptTemplate('verify_reconciliation')
   if (!template) return null
 
+  // Map locale code to full language name for tiny LLM
+  const LOCALE_NAMES: Record<string, string> = { it: 'ITALIANO', en: 'ENGLISH', fr: 'FRANÇAIS', de: 'DEUTSCH', es: 'ESPAÑOL' }
+  const localeName = LOCALE_NAMES[locale] ?? locale
+
   const prompt = fillTemplate(template, {
     recipeSummary: buildRecipeSummary(graph, portioning, meta),
     recipeType: meta.type,
@@ -67,7 +71,7 @@ export async function verifyReconciliation(
     flourW: '280', // TODO: extract from dough node flour blend
     doughHours: String(portioning.doughHours),
     warningsSummary: buildWarningsSummary(warnings),
-    locale,
+    locale: localeName,
   })
 
   const result = await llmService.generateJSON(prompt, llmVerificationResultSchema)
