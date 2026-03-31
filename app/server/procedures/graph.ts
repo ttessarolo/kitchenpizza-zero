@@ -44,8 +44,9 @@ export const reconcile = baseProcedure
           result.warnings,
           locale,
         )
-      } catch {
-        // LLM failure is non-blocking — ignore
+      } catch (e) {
+        // LLM failure is non-blocking — log and continue
+        console.warn('[Brain 3] LLM verification failed:', (e as Error).message)
       }
     }
 

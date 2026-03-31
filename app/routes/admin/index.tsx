@@ -10,8 +10,11 @@ import {
   BookOpen,
   Shield,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react'
 import { useT } from '~/hooks/useTranslation'
+import { getFlags } from '~/server/lib/feature-flags'
+import { OllamaProvider } from '~/server/services/llm/ollama-provider'
 
 const loadAdminStats = createServerFn().handler(async () => {
   const provider = new FileScienceProvider(
@@ -21,9 +24,23 @@ const loadAdminStats = createServerFn().handler(async () => {
   const blocks = provider.listAll()
   const rules = blocks.filter((b) => b.type === 'rule')
 
+  // Check LLM/Ollama status
+  const flags = getFlags()
+  let ollamaStatus: 'ok' | 'error' = 'error'
+  let ollamaModel = process.env.OLLAMA_MODEL || 'qwen3.5:0.8b'
+  try {
+    const ollamaProvider = new OllamaProvider()
+    ollamaStatus = (await ollamaProvider.isAvailable()) ? 'ok' : 'error'
+    ollamaModel = ollamaProvider.getModel()
+  } catch { /* ignore */ }
+
   return {
     scienceBlocks: blocks.length,
     scienceRules: rules.length,
+    llmEnabled: flags.LLM_ENABLED,
+    llmProvider: flags.LLM_PROVIDER,
+    ollamaStatus,
+    ollamaModel,
   }
 })
 
@@ -165,6 +182,27 @@ function AdminDashboard() {
         </div>
       </div>
 
+      {/* AI Brain status card */}
+      <div className={`border rounded-xl p-5 flex items-start gap-4 ${stats.llmEnabled ? 'bg-purple-500/5 border-purple-500/20' : 'bg-muted/50 border-border'}`}>
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${stats.llmEnabled ? 'bg-purple-500/15 text-purple-500' : 'bg-muted text-muted-foreground'}`}>
+          <Sparkles className="size-5" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">{t('admin.ai.title')}</span>
+            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${stats.llmEnabled ? 'bg-emerald-500/15 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
+              {stats.llmEnabled ? 'ON' : 'OFF'}
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {stats.llmEnabled
+              ? `Provider: ${stats.llmProvider} · Model: ${stats.ollamaModel} · Ollama: ${stats.ollamaStatus === 'ok' ? 'Connected' : 'Disconnected'}`
+              : 'LLM_ENABLED=false — Brain 3 disabled. Set LLM_ENABLED=true in .env to activate.'
+            }
+          </div>
+        </div>
+      </div>
+
       {/* System status */}
       <div className="bg-card border border-border rounded-xl p-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
@@ -175,6 +213,8 @@ function AdminDashboard() {
           <StatusRow label="i18n (IT/EN)" status="ok" />
           <StatusRow label="Auth (Clerk)" status="ok" />
           <StatusRow label="Database (Neon)" status="ok" />
+          <StatusRow label={`Ollama (${stats.ollamaModel})`} status={stats.ollamaStatus} />
+          <StatusRow label="AI Brain (LLM)" status={stats.llmEnabled ? (stats.ollamaStatus === 'ok' ? 'ok' : 'warning') : 'warning'} />
         </div>
       </div>
     </div>

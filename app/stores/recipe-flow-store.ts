@@ -533,7 +533,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     const locale = s.meta.locale || 'it'
     reconcileGraphRPC(newGraph, newPortioning, newMeta, locale, {
       debounceMs: 300,
-      llmVerify: false,
+      llmVerify: true,
       autoResolve: get().autoResolveEnabled,
     })
       .then((result) => {
