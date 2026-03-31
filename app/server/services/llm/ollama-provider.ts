@@ -60,6 +60,7 @@ export class OllamaProvider implements LlmProvider {
           model: this.model,
           prompt,
           stream: false,
+          think: false, // Disable thinking mode — output goes to 'response' field
           options: {
             num_predict: options?.maxTokens ?? this.maxTokens,
             temperature: options?.temperature ?? 0.3,
@@ -74,9 +75,8 @@ export class OllamaProvider implements LlmProvider {
         return null
       }
 
-      const data = await response.json() as { response?: string; thinking?: string }
-      // Qwen3.5 models put content in 'thinking' field, others use 'response'
-      return data.response || data.thinking || null
+      const data = await response.json() as { response?: string }
+      return data.response || null
     } catch (e) {
       console.error('Ollama API error:', (e as Error).message)
       return null
@@ -97,6 +97,7 @@ export class OllamaProvider implements LlmProvider {
           prompt: prompt + '\n\nRespond ONLY with valid JSON.',
           stream: false,
           format: 'json',
+          think: false, // Disable thinking mode — JSON goes to 'response' field
           options: {
             num_predict: this.maxTokens,
             temperature: 0.1,
@@ -108,12 +109,11 @@ export class OllamaProvider implements LlmProvider {
 
       if (!response.ok) return null
 
-      const data = await response.json() as { response?: string; thinking?: string }
-      // Qwen3.5 models use 'thinking' field for structured output
-      const text = data.response || data.thinking
-      if (!text) return null
+      const data = await response.json() as { response?: string }
+      if (!data.response) return null
 
-      const parsed = JSON.parse(text)
+      console.log('[Ollama RAW]', data.response)
+      const parsed = JSON.parse(data.response)
       return schema.parse(parsed)
     } catch (e) {
       console.error('Failed to parse Ollama JSON output:', (e as Error).message)

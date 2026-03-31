@@ -20,9 +20,9 @@ export const llmAutoActionSchema = z.object({
 })
 
 export const llmVerificationResultSchema = z.object({
-  verifiedWarnings: z.array(llmVerifiedWarningSchema),
-  additionalInsights: z.array(llmInsightSchema),
-  autoActions: z.array(llmAutoActionSchema),
+  verifiedWarnings: z.array(llmVerifiedWarningSchema).default([]),
+  additionalInsights: z.array(llmInsightSchema).default([]),
+  autoActions: z.array(llmAutoActionSchema).default([]),
 })
 
 export type LlmVerificationResult = z.infer<typeof llmVerificationResultSchema>
