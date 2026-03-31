@@ -7,6 +7,8 @@ import { FileScienceProvider } from '@commons/utils/science/science-provider'
 import { getFlags } from '../lib/feature-flags'
 import { verifyReconciliation } from '../services/llm/verify-reconciliation'
 import { applyWarningActionPure } from '@commons/utils/graph-mutation-engine'
+import { applyLlmPerimeter } from '../services/llm/apply-perimeter'
+import { getActivePerimeter } from '../../../local_data/llm-perimeter'
 
 const provider = new FileScienceProvider(
   resolve(process.cwd(), 'science'),
@@ -35,7 +37,6 @@ export const reconcile = baseProcedure
 
     // Step 2: Brain 3 LLM verification (optional)
     let llmVerification = null
-    let llmError: string | null = null
     const shouldVerify = flags.LLM_ENABLED && llmVerify && result.warnings.length > 0
     if (shouldVerify) {
       try {
@@ -46,8 +47,8 @@ export const reconcile = baseProcedure
           result.warnings,
           locale,
         )
-      } catch (e) {
-        llmError = (e as Error).message
+      } catch {
+        // LLM verification failed — continue with science-only warnings
       }
     }
 
@@ -87,17 +88,17 @@ export const reconcile = baseProcedure
       }
     }
 
+    // Step 4: Apply perimeter constraints to LLM verdicts
+    let llmInsights: Array<{ category: string; severity: 'info' | 'warning'; explanation: string }> = []
+    if (llmVerification) {
+      const perimeter = getActivePerimeter()
+      const perimeterResult = applyLlmPerimeter(result.warnings, llmVerification, perimeter)
+      result = { ...result, warnings: perimeterResult.warnings }
+      llmInsights = perimeterResult.insights
+    }
+
     return {
       ...result,
-      ...(llmVerification ? { llmVerification } : {}),
-      _llmDebug: {
-        enabled: flags.LLM_ENABLED,
-        provider: flags.LLM_PROVIDER,
-        llmVerifyRequested: llmVerify,
-        warningsCount: result.warnings.length,
-        verificationAttempted: shouldVerify,
-        verificationResult: llmVerification ? 'success' : 'null',
-        error: llmError,
-      },
+      llmInsights,
     }
   })

@@ -112,7 +112,6 @@ export class OllamaProvider implements LlmProvider {
       const data = await response.json() as { response?: string }
       if (!data.response) return null
 
-      console.log('[Ollama RAW]', data.response)
       const parsed = JSON.parse(data.response)
       return schema.parse(parsed)
     } catch (e) {

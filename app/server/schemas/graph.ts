@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { llmVerificationResultSchema } from './llm-verification'
 
 // ── Minimal graph schemas for oRPC validation ───────────────────
 // These are intentionally loose — the reconciler handles detailed validation.
@@ -103,6 +102,8 @@ const warningSchema = z.object({
   messageVars: z.record(z.string(), z.unknown()).optional(),
   _ctx: z.record(z.string(), z.unknown()).optional(),
   actions: z.array(warningActionSchema).optional(),
+  _llmVerdict: z.enum(['confirmed', 'downgraded', 'upgraded']).optional(),
+  _llmReason: z.string().optional(),
 })
 
 // ── Public schemas ──────────────────────────────────────────────
@@ -120,14 +121,9 @@ export const reconcileOutputSchema = z.object({
   graph: recipeGraphSchema,
   portioning: portioningSchema,
   warnings: z.array(warningSchema),
-  llmVerification: llmVerificationResultSchema.nullable().optional(),
-  _llmDebug: z.object({
-    enabled: z.boolean(),
-    provider: z.string(),
-    llmVerifyRequested: z.boolean(),
-    warningsCount: z.number(),
-    verificationAttempted: z.boolean(),
-    verificationResult: z.string(),
-    error: z.string().nullable(),
-  }).optional(),
+  llmInsights: z.array(z.object({
+    category: z.string(),
+    severity: z.enum(['info', 'warning']),
+    explanation: z.string(),
+  })).optional(),
 })

@@ -444,5 +444,6 @@
   "warning_ai_dismissed": "AI: dismissed",
   "warning_ai_upgraded": "AI: upgraded",
   "warning_ai_downgraded": "AI: downgraded",
-  "warning_ai_auto_resolved": "Auto-resolved"
+  "warning_ai_auto_resolved": "Auto-resolved",
+  "section_ai_insights": "AI Insights"
 }

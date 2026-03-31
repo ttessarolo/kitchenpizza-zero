@@ -64,7 +64,7 @@ export function LeftSidebar() {
   const setMeta = useRecipeFlowStore((s) => s.setMeta)
   const warnings = useRecipeFlowStore((s) => s.warnings)
   const isReconciling = useRecipeFlowStore((s) => s.isReconciling)
-  const llmVerification = useRecipeFlowStore((s) => s.llmVerification)
+  const llmInsights = useRecipeFlowStore((s) => s.llmInsights)
   const applyAllWarningActions = useRecipeFlowStore((s) => s.applyAllWarningActions)
 
   // Warnings for the active layer (includes canonical warnings)
@@ -72,42 +72,10 @@ export function LeftSidebar() {
     getActiveLayerWarnings(activeLayerId, warnings, layers),
     [activeLayerId, warnings, layers],
   )
-  // Build a lookup for llmVerdict.
-  // The LLM returns warningId which is the `id` field from the warning summary.
-  // After dedup + layer filter, the visible warning may have a different id
-  // (e.g. per-node suffix like "equivalent_time_exceeds_w_capacity_r1").
-  // Strategy: match by exact id, messageKey, or substring containment in both directions.
-  const getLlmVerdict = useMemo(() => {
-    if (!llmVerification?.verifiedWarnings?.length) return () => undefined
-
-    const verdicts = llmVerification.verifiedWarnings as Array<{
-      warningId: string; llmVerdict: string; llmReason?: string; suggestedAction?: number
-    }>
-
-    return (w: { id: string; messageKey: string }) => {
-      for (const v of verdicts) {
-        const vid = v.warningId
-        // Exact match on id or messageKey
-        if (vid === w.id || vid === w.messageKey) return v
-        // Substring: LLM id is contained in warning id/messageKey or vice versa
-        if (w.id.includes(vid) || vid.includes(w.id)) return v
-        if (w.messageKey.includes(vid) || vid.includes(w.messageKey)) return v
-      }
-      return undefined
-    }
-  }, [llmVerification])
 
   const activeDeduped = useMemo(() => deduplicateWarnings(activeLayerWarnings), [activeLayerWarnings])
   const activeActionable = useMemo(() => activeDeduped.filter(w => w.actions && w.actions.length > 0), [activeDeduped])
   const activeInformational = useMemo(() => activeDeduped.filter(w => !w.actions || w.actions.length === 0), [activeDeduped])
-
-  // Debug: verify LLM verdict matching
-  if (llmVerification?.verifiedWarnings?.length) {
-    const matched = activeDeduped.filter(w => getLlmVerdict(w))
-    console.log('[LeftSidebar] LLM verdicts:', llmVerification.verifiedWarnings.map((v: any) => v.warningId))
-    console.log('[LeftSidebar] visible warnings:', activeDeduped.map(w => `${w.id} (${w.messageKey})`))
-    console.log('[LeftSidebar] matched:', matched.map(w => w.id))
-  }
 
   if (collapsed) {
     return (
@@ -304,10 +272,33 @@ export function LeftSidebar() {
               </div>
             )}
             {!isReconciling && activeActionable.length > 0 && (
-              <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} getLlmVerdict={getLlmVerdict} />
+              <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} />
             )}
             {!isReconciling && activeInformational.map((w) => (
-              <WarningCard key={w.id} warning={w} count={w.count} llmVerdict={getLlmVerdict(w)} />
+              <WarningCard key={w.id} warning={w} count={w.count} />
+            ))}
+          </div>
+        </details>
+      )}
+
+      {/* AI Insights */}
+      {viewMode !== 'panoramica' && llmInsights && llmInsights.length > 0 && (
+        <details open className="border-t border-border">
+          <summary className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-purple-500" />
+              {t('section_ai_insights')}
+            </span>
+            <span className="text-[8px]">▾</span>
+          </summary>
+          <div className="px-2 pb-2 space-y-1.5">
+            {llmInsights.map((insight: any, i: number) => (
+              <div key={i} className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 text-xs text-purple-300">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="w-3 h-3 text-purple-500 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">{insight.explanation}</p>
+                </div>
+              </div>
             ))}
           </div>
         </details>

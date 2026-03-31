@@ -24,3 +24,6 @@ export { DEFAULT_RECIPE_V2, RECIPE_2_V2, RECIPE_3_V2 } from './recipes/recipes-v
 
 export { LLM_PROMPTS, DEFAULT_TEMPLATES } from './llm-prompts'
 export type { LlmPromptEntry } from './llm-prompts'
+
+export { PERIMETER_PRESETS, getActivePerimeter, getActivePresetKey, setActivePreset, updateActivePerimeter } from './llm-perimeter'
+export type { LlmPerimeter } from './llm-perimeter'

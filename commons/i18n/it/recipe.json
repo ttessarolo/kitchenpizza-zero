@@ -444,5 +444,6 @@
   "warning_ai_dismissed": "AI: escluso",
   "warning_ai_upgraded": "AI: aggravato",
   "warning_ai_downgraded": "AI: declassato",
-  "warning_ai_auto_resolved": "Auto-risolto"
+  "warning_ai_auto_resolved": "Auto-risolto",
+  "section_ai_insights": "Consigli AI"
 }

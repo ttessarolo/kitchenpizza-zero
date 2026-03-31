@@ -34,27 +34,22 @@ const VERDICT_STYLES: Record<string, { bg: string; text: string }> = {
   downgraded: { bg: 'bg-amber-500/15', text: 'text-amber-600 dark:text-amber-400' },
 }
 
-interface LlmVerdict {
-  llmVerdict: string
-  llmReason?: string
-  suggestedAction?: number
-}
-
 interface WarningCardProps {
   warning: ActionableWarning
   count?: number
   appliedAdvisoryIds?: Set<string>
   onDismiss?: () => void
-  llmVerdict?: LlmVerdict
 }
 
-export function WarningCard({ warning, count, appliedAdvisoryIds, onDismiss, llmVerdict }: WarningCardProps) {
+export function WarningCard({ warning, count, appliedAdvisoryIds, onDismiss }: WarningCardProps) {
   const t = useT()
   const applyWarningAction = useRecipeFlowStore((s) => s.applyWarningAction)
   const style = SEVERITY_STYLES[warning.severity]
   const alreadyApplied = appliedAdvisoryIds?.has(warning.id) ?? false
 
-  const verdictStyle = llmVerdict ? VERDICT_STYLES[llmVerdict.llmVerdict] ?? VERDICT_STYLES.confirmed : null
+  const llmVerdict = (warning as any)._llmVerdict as string | undefined
+  const llmReason = (warning as any)._llmReason as string | undefined
+  const verdictStyle = llmVerdict ? VERDICT_STYLES[llmVerdict] ?? null : null
 
   return (
     <div className={`${style.bg} ${style.border} border rounded-xl p-3 ${style.text}`}>
@@ -71,14 +66,14 @@ export function WarningCard({ warning, count, appliedAdvisoryIds, onDismiss, llm
             {llmVerdict && verdictStyle && (
               <span className={`inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${verdictStyle.bg} ${verdictStyle.text}`}>
                 <Sparkles className="w-2.5 h-2.5" />
-                {t(`warning_ai_${llmVerdict.llmVerdict}`)}
+                {t(`warning_ai_${llmVerdict}`)}
               </span>
             )}
           </div>
 
           {/* LLM reason */}
-          {llmVerdict?.llmReason && (
-            <p className="text-[10px] italic opacity-60 mt-0.5 leading-snug">{llmVerdict.llmReason}</p>
+          {llmReason && (
+            <p className="text-[10px] italic opacity-60 mt-0.5 leading-snug">{llmReason}</p>
           )}
 
           {/* Action buttons */}
