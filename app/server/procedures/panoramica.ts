@@ -1,64 +1,57 @@
+import { resolve } from 'path'
 import { baseProcedure } from '../middleware/auth'
 import { z } from 'zod'
+import { computePanoramica } from '@commons/utils/panoramica-manager'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import type { RecipeLayer, CrossLayerEdge } from '@commons/types/recipe-layers'
 
-/**
- * Panoramica (overview) procedure — computes a cross-layer summary.
- *
- * Accepts all layers and returns an aggregated timeline + summary.
- * The panoramica-manager will be implemented in commons/utils/;
- * for now this procedure provides the oRPC endpoint skeleton.
- */
+const provider = new FileScienceProvider(
+  resolve(process.cwd(), 'science'),
+  resolve(process.cwd(), 'commons/i18n'),
+)
 
 const layerSummarySchema = z.object({
-  id: z.string(),
+  layerId: z.string(),
+  layerType: z.string(),
   name: z.string(),
-  type: z.string(),
   nodeCount: z.number(),
-  totalDuration: z.number().nullable(),
-  warnings: z.number(),
+  totalDuration: z.number(),
+  criticalPath: z.array(z.string()),
 })
 
-const timelineEntrySchema = z.object({
-  layerId: z.string(),
-  layerName: z.string(),
-  nodeId: z.string(),
-  nodeTitle: z.string(),
-  startMin: z.number(),
-  durationMin: z.number(),
+const crossDependencySchema = z.object({
+  edgeId: z.string(),
+  sourceLayerId: z.string(),
+  sourceNodeId: z.string(),
+  targetLayerId: z.string(),
+  targetNodeId: z.string(),
+  label: z.string(),
 })
 
 const panoramicaOutputSchema = z.object({
   layers: z.array(layerSummarySchema),
-  timeline: z.array(timelineEntrySchema),
-  totalDurationMin: z.number().nullable(),
+  crossDependencies: z.array(crossDependencySchema),
+  totalDuration: z.number(),
+  criticalLayerId: z.string(),
 })
 
-export const computePanoramica = baseProcedure
-  .input(z.object({
-    layers: z.array(z.record(z.string(), z.unknown())),
-    meta: z.object({
-      name: z.string(),
-      author: z.string(),
-      type: z.string(),
-      subtype: z.string(),
-      locale: z.string(),
-    }),
-  }))
+const panoramicaInputSchema = z.object({
+  layers: z.array(z.record(z.string(), z.unknown())),
+  meta: z.object({
+    name: z.string(),
+    author: z.string(),
+    type: z.string(),
+    subtype: z.string(),
+    locale: z.string(),
+  }),
+  crossEdges: z.array(z.record(z.string(), z.unknown())).optional(),
+})
+
+export const computePanoramicaProcedure = baseProcedure
+  .input(panoramicaInputSchema)
   .output(panoramicaOutputSchema)
   .handler(async ({ input }) => {
-    // Skeleton: summarize layers without full manager yet
-    const layers = (input.layers as any[]).map((l) => ({
-      id: l.id ?? '',
-      name: l.name ?? '',
-      type: l.masterConfig?.type ?? 'unknown',
-      nodeCount: Object.keys(l.nodes ?? {}).length,
-      totalDuration: null,
-      warnings: 0,
-    }))
-
-    return {
-      layers,
-      timeline: [],
-      totalDurationMin: null,
-    }
+    const layers = input.layers as unknown as RecipeLayer[]
+    const crossEdges = (input.crossEdges ?? []) as unknown as CrossLayerEdge[]
+    return computePanoramica(provider, layers, crossEdges)
   })

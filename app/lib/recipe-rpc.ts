@@ -162,5 +162,5 @@ export async function computePanoramicaRPC(
   layers: RecipeLayer[], meta: RecipeMeta, crossEdges?: CrossLayerEdge[],
 ) {
   const client = await ensureClient()
-  return client.panoramica.compute({ layers, meta })
+  return client.panoramica.compute({ layers, meta, crossEdges: crossEdges ?? [] })
 }
