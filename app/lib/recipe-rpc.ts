@@ -21,7 +21,8 @@ async function getClient() {
     // Client-side: use fetch link
     const { createORPCClient } = await import('@orpc/client')
     const { RPCLink } = await import('@orpc/client/fetch')
-    return createORPCClient<any>(new RPCLink({ url: '/api/rpc' }))
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'
+    return createORPCClient<any>(new RPCLink({ url: `${baseUrl}/api/rpc` }))
   }
 }
 
