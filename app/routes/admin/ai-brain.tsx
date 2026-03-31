@@ -59,19 +59,16 @@ const serverTestConnection = createServerFn().handler(async () => {
 })
 
 const serverUpdatePrompt = (createServerFn() as any)
-  .validator((d: { key: string; template: string }) => d)
   .handler(async ({ data }: { data: { key: string; template: string } }) => {
     return updatePromptStore(data.key, data.template)
   })
 
 const serverResetPrompt = (createServerFn() as any)
-  .validator((d: { key: string }) => d)
   .handler(async ({ data }: { data: { key: string } }) => {
     return resetPromptStore(data.key)
   })
 
 const serverTestPrompt = (createServerFn() as any)
-  .validator((d: { key: string; variables: Record<string, string> }) => d)
   .handler(async ({ data }: { data: { key: string; variables: Record<string, string> } }) => {
     const template = getPromptTemplate(data.key)
     if (!template) return { output: null, latencyMs: 0, source: 'fallback' as const }
