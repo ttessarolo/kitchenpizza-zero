@@ -72,20 +72,42 @@ export function LeftSidebar() {
     getActiveLayerWarnings(activeLayerId, warnings, layers),
     [activeLayerId, warnings, layers],
   )
-  // Build a map of warningId → llmVerdict for quick lookup
-  const llmVerdictMap = useMemo(() => {
-    const map = new Map<string, { llmVerdict: string; llmReason?: string; suggestedAction?: number }>()
-    if (llmVerification?.verifiedWarnings) {
-      for (const vw of llmVerification.verifiedWarnings) {
-        map.set(vw.warningId, vw)
+  // Build a lookup for llmVerdict.
+  // The LLM returns warningId which is the `id` field from the warning summary.
+  // After dedup + layer filter, the visible warning may have a different id
+  // (e.g. per-node suffix like "equivalent_time_exceeds_w_capacity_r1").
+  // Strategy: match by exact id, messageKey, or substring containment in both directions.
+  const getLlmVerdict = useMemo(() => {
+    if (!llmVerification?.verifiedWarnings?.length) return () => undefined
+
+    const verdicts = llmVerification.verifiedWarnings as Array<{
+      warningId: string; llmVerdict: string; llmReason?: string; suggestedAction?: number
+    }>
+
+    return (w: { id: string; messageKey: string }) => {
+      for (const v of verdicts) {
+        const vid = v.warningId
+        // Exact match on id or messageKey
+        if (vid === w.id || vid === w.messageKey) return v
+        // Substring: LLM id is contained in warning id/messageKey or vice versa
+        if (w.id.includes(vid) || vid.includes(w.id)) return v
+        if (w.messageKey.includes(vid) || vid.includes(w.messageKey)) return v
       }
+      return undefined
     }
-    return map
   }, [llmVerification])
 
   const activeDeduped = useMemo(() => deduplicateWarnings(activeLayerWarnings), [activeLayerWarnings])
   const activeActionable = useMemo(() => activeDeduped.filter(w => w.actions && w.actions.length > 0), [activeDeduped])
   const activeInformational = useMemo(() => activeDeduped.filter(w => !w.actions || w.actions.length === 0), [activeDeduped])
+
+  // Debug: verify LLM verdict matching
+  if (llmVerification?.verifiedWarnings?.length) {
+    const matched = activeDeduped.filter(w => getLlmVerdict(w))
+    console.log('[LeftSidebar] LLM verdicts:', llmVerification.verifiedWarnings.map((v: any) => v.warningId))
+    console.log('[LeftSidebar] visible warnings:', activeDeduped.map(w => `${w.id} (${w.messageKey})`))
+    console.log('[LeftSidebar] matched:', matched.map(w => w.id))
+  }
 
   if (collapsed) {
     return (
@@ -282,10 +304,10 @@ export function LeftSidebar() {
               </div>
             )}
             {!isReconciling && activeActionable.length > 0 && (
-              <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} llmVerdictMap={llmVerdictMap} />
+              <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} getLlmVerdict={getLlmVerdict} />
             )}
             {!isReconciling && activeInformational.map((w) => (
-              <WarningCard key={w.id} warning={w} count={w.count} llmVerdict={llmVerdictMap.get(w.id)} />
+              <WarningCard key={w.id} warning={w} count={w.count} llmVerdict={getLlmVerdict(w)} />
             ))}
           </div>
         </details>

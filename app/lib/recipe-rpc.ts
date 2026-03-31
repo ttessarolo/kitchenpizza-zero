@@ -58,14 +58,17 @@ export async function reconcileGraphRPC(
     reconcileTimer = setTimeout(async () => {
       reconcileController = new AbortController()
       try {
+        console.log('[recipe-rpc] calling graph.reconcile...')
         const client = await ensureClient()
         const result = await client.graph.reconcile({
           graph, portioning, meta, locale,
           llmVerify: opts?.llmVerify ?? true,
           autoResolve: opts?.autoResolve ?? false,
         })
+        console.log('[recipe-rpc] graph.reconcile returned, keys:', Object.keys(result))
         resolve(result as ReconcileResult)
       } catch (e) {
+        console.error('[recipe-rpc] graph.reconcile ERROR:', (e as Error).message)
         if ((e as Error).name !== 'AbortError') reject(e)
       }
     }, opts?.debounceMs ?? 300)

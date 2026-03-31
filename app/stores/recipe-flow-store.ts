@@ -529,18 +529,19 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       }
     })
 
-    // Step 2: Reconcile via server (debounced 300ms, no LLM verify for rapid edits)
+    // Step 2: Reconcile via server (debounced 300ms)
     const locale = s.meta.locale || 'it'
+    console.log('[Brain 3] applyMutation calling reconcileGraphRPC...')
     reconcileGraphRPC(newGraph, newPortioning, newMeta, locale, {
       debounceMs: 300,
       llmVerify: true,
       autoResolve: get().autoResolveEnabled,
     })
       .then((result) => {
-        // Debug: show Brain 3 status in browser console
-        if ((result as any)._llmDebug) {
-          console.log('[Brain 3]', (result as any)._llmDebug)
-        }
+        console.log('[Brain 3] reconcileGraphRPC resolved!', Object.keys(result))
+        console.log('[Brain 3] llmVerification =', (result as any).llmVerification)
+        console.log('[Brain 3] warning IDs from Brain2:', result.warnings.map((w: any) => w.id))
+        console.log('[Brain 3] LLM warningIds:', (result as any).llmVerification?.verifiedWarnings?.map((v: any) => v.warningId))
         const current = get()
         const updatedGroups = [...current.ingredientGroups]
         for (const node of result.graph.nodes) {
@@ -562,6 +563,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         })
       })
       .catch((err) => {
+        console.error('[Brain 3] reconcileGraphRPC FAILED:', (err as Error).name, (err as Error).message)
         if ((err as Error).name === 'AbortError') return
         set({ isReconciling: false, reconcileError: (err as Error).message })
       })

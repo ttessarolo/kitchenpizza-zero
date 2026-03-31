@@ -25,10 +25,19 @@ function buildRecipeSummary(
  * Build a concise warnings summary for the LLM.
  */
 function buildWarningsSummary(warnings: ActionableWarning[]): string {
-  return warnings.map((w, i) => {
-    const actions = w.actions?.map((a, j) => `  [${j}] ${a.labelKey}`).join('\n') ?? '  (no actions)'
-    return `${i + 1}. [${w.severity}] ${w.messageKey} (id: ${w.id})\n${actions}`
-  }).join('\n')
+  // Use messageKey as the warningId for the LLM — it's stable across dedup.
+  // Deduplicate by messageKey so the LLM doesn't see the same warning N times.
+  const seen = new Set<string>()
+  return warnings
+    .filter(w => {
+      if (seen.has(w.messageKey)) return false
+      seen.add(w.messageKey)
+      return true
+    })
+    .map((w, i) => {
+      const actions = w.actions?.map((a, j) => `  [${j}] ${a.labelKey}`).join('\n') ?? '  (no actions)'
+      return `${i + 1}. [${w.severity}] warningId: "${w.messageKey}"\n${actions}`
+    }).join('\n')
 }
 
 /**

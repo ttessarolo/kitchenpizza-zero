@@ -5,10 +5,10 @@ import { useT } from '~/hooks/useTranslation'
 interface ActionableWarningBoxProps {
   warnings: DedupedWarning[]
   onApplyAll: () => void
-  llmVerdictMap?: Map<string, { llmVerdict: string; llmReason?: string; suggestedAction?: number }>
+  getLlmVerdict?: (w: { id: string; messageKey: string }) => { llmVerdict: string; llmReason?: string; suggestedAction?: number } | undefined
 }
 
-export function ActionableWarningBox({ warnings, onApplyAll, llmVerdictMap }: ActionableWarningBoxProps) {
+export function ActionableWarningBox({ warnings, onApplyAll, getLlmVerdict }: ActionableWarningBoxProps) {
   const t = useT()
 
   if (warnings.length === 0) return null
@@ -32,7 +32,7 @@ export function ActionableWarningBox({ warnings, onApplyAll, llmVerdictMap }: Ac
 
       <div className="space-y-1.5">
         {warnings.map((w) => (
-          <WarningCard key={w.id} warning={w} count={w.count} llmVerdict={llmVerdictMap?.get(w.id)} />
+          <WarningCard key={w.id} warning={w} count={w.count} llmVerdict={getLlmVerdict?.(w)} />
         ))}
       </div>
     </div>
