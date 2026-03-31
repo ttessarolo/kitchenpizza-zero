@@ -438,5 +438,10 @@
   "style_curved": "Curvo",
   "style_s_curve": "S-Curva",
   "style_none": "Nessuna",
-  "style_arrow": "Freccia"
+  "style_arrow": "Freccia",
+  "warning_ai_confirmed": "AI: confermato",
+  "warning_ai_dismissed": "AI: escluso",
+  "warning_ai_upgraded": "AI: aggravato",
+  "warning_ai_downgraded": "AI: declassato",
+  "warning_ai_auto_resolved": "Auto-risolto"
 }

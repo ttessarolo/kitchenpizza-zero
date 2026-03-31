@@ -12,6 +12,15 @@ import { computePanoramica } from './procedures/panoramica'
 import { getDefaultBakeConfig } from './procedures/bake'
 import { autoCorrect } from './procedures/auto-correct'
 import { explainWarning, nlToConstraints, checkCompat } from './procedures/llm'
+import {
+  getConfig as getAiConfig,
+  testConnection,
+  listPrompts as listAiPrompts,
+  getPromptProcedure as getAiPrompt,
+  updatePromptProcedure as updateAiPrompt,
+  resetPromptProcedure as resetAiPrompt,
+  testPrompt,
+} from './procedures/ai-admin'
 
 export const appRouter = os.router({
   health: healthCheck,
@@ -68,6 +77,15 @@ export const appRouter = os.router({
     explainWarning,
     nlToConstraints,
     checkCompat,
+  }),
+  aiAdmin: os.router({
+    getConfig: getAiConfig,
+    testConnection,
+    listPrompts: listAiPrompts,
+    getPrompt: getAiPrompt,
+    updatePrompt: updateAiPrompt,
+    resetPrompt: resetAiPrompt,
+    testPrompt,
   }),
 })
 

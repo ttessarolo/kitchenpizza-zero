@@ -26,18 +26,34 @@ const SEVERITY_STYLES = {
   },
 }
 
+const VERDICT_STYLES: Record<string, { bg: string; text: string }> = {
+  confirmed: { bg: 'bg-emerald-500/15', text: 'text-emerald-600 dark:text-emerald-400' },
+  dismissed: { bg: 'bg-muted', text: 'text-muted-foreground' },
+  upgraded: { bg: 'bg-destructive/15', text: 'text-destructive' },
+  downgraded: { bg: 'bg-amber-500/15', text: 'text-amber-600 dark:text-amber-400' },
+}
+
+interface LlmVerdict {
+  llmVerdict: string
+  llmReason?: string
+  suggestedAction?: number
+}
+
 interface WarningCardProps {
   warning: ActionableWarning
   count?: number
   appliedAdvisoryIds?: Set<string>
   onDismiss?: () => void
+  llmVerdict?: LlmVerdict
 }
 
-export function WarningCard({ warning, count, appliedAdvisoryIds, onDismiss }: WarningCardProps) {
+export function WarningCard({ warning, count, appliedAdvisoryIds, onDismiss, llmVerdict }: WarningCardProps) {
   const t = useT()
   const applyWarningAction = useRecipeFlowStore((s) => s.applyWarningAction)
   const style = SEVERITY_STYLES[warning.severity]
   const alreadyApplied = appliedAdvisoryIds?.has(warning.id) ?? false
+
+  const verdictStyle = llmVerdict ? VERDICT_STYLES[llmVerdict.llmVerdict] ?? VERDICT_STYLES.confirmed : null
 
   return (
     <div className={`${style.bg} ${style.border} border rounded-xl p-3 ${style.text}`}>
@@ -47,7 +63,21 @@ export function WarningCard({ warning, count, appliedAdvisoryIds, onDismiss }: W
           <span className="text-[10px] font-bold opacity-70 shrink-0 mt-0.5">{t('warning_affected_nodes', { count })}</span>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-xs leading-relaxed">{t(warning.messageKey, warning.messageVars)}</p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-xs leading-relaxed">{t(warning.messageKey, warning.messageVars)}</p>
+
+            {/* LLM verdict badge */}
+            {llmVerdict && verdictStyle && (
+              <span className={`inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${verdictStyle.bg} ${verdictStyle.text}`}>
+                {t(`warning_ai_${llmVerdict.llmVerdict}`)}
+              </span>
+            )}
+          </div>
+
+          {/* LLM reason */}
+          {llmVerdict?.llmReason && (
+            <p className="text-[10px] italic opacity-60 mt-0.5 leading-snug">{llmVerdict.llmReason}</p>
+          )}
 
           {/* Action buttons */}
           {warning.actions && warning.actions.length > 0 && (

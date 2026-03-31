@@ -48,6 +48,13 @@ function AdminLayout() {
           >
             {t('admin_section_science_nav')}
           </Link>
+          <Link
+            to="/admin/ai-brain"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            activeProps={{ className: 'text-sm text-foreground font-medium' }}
+          >
+            {t('admin.ai.title')}
+          </Link>
         </nav>
       </header>
       <Outlet />

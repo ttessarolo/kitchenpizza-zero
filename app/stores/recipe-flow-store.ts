@@ -154,6 +154,8 @@ interface RecipeFlowState {
   updateDep: (nodeId: string, parentId: string, field: 'wait' | 'grams', value: number) => void  // v1 compat: 'wait'→scheduleTimeRatio, 'grams'→scheduleQtyRatio
   warnings: RecipeWarning[]
   autoCorrectReport: AutoCorrectReport | null
+  llmVerification: any
+  autoResolveEnabled: boolean
   selectedEdgeId: string | null
   edgeCalloutPos: { x: number; y: number } | null
   selectEdge: (id: string | null, pos?: { x: number; y: number }) => void
@@ -188,6 +190,7 @@ interface RecipeFlowState {
   removeCrossEdge: (edgeId: string) => void
   setViewMode: (mode: 'layer' | 'panoramica') => void
   setInactiveLayerOpacity: (opacity: number) => void
+  toggleAutoResolve: () => void
   toRecipeV3: () => RecipeV3
 }
 
@@ -526,9 +529,13 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       }
     })
 
-    // Step 2: Reconcile via server (debounced 300ms)
+    // Step 2: Reconcile via server (debounced 300ms, no LLM verify for rapid edits)
     const locale = s.meta.locale || 'it'
-    reconcileGraphRPC(newGraph, newPortioning, newMeta, locale, { debounceMs: 300 })
+    reconcileGraphRPC(newGraph, newPortioning, newMeta, locale, {
+      debounceMs: 300,
+      llmVerify: false,
+      autoResolve: get().autoResolveEnabled,
+    })
       .then((result) => {
         const current = get()
         const updatedGroups = [...current.ingredientGroups]
@@ -541,6 +548,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         set({
           layers: newLayers,
           warnings: result.warnings,
+          llmVerification: result.llmVerification ?? null,
           ingredientGroups: updatedGroups,
           isReconciling: false,
           ...rebuildAllFlowNodes({
@@ -578,6 +586,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     canUndo: false,
     warnings: [],
     autoCorrectReport: null,
+    llmVerification: null as any,
+    autoResolveEnabled: false,
     isReconciling: false,
     reconcileError: null as string | null,
     selectedEdgeId: null,
@@ -722,9 +732,9 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       }
       set({ ...initialState, ...rebuildAllFlowNodes(initialState) })
 
-      // Server reconciliation (no debounce for initial load)
+      // Server reconciliation (no debounce for initial load, LLM verify on, no auto-resolve)
       const locale = v3.meta.locale || 'it'
-      reconcileGraphRPC(graph, portioning, v3.meta, locale, { debounceMs: 0 })
+      reconcileGraphRPC(graph, portioning, v3.meta, locale, { debounceMs: 0, llmVerify: true, autoResolve: false })
         .then((result) => {
           const updatedLayers = get().layers.map((l, i) => {
             if (i !== 0) return l
@@ -738,6 +748,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
             ...get(),
             layers: updatedLayers,
             warnings: result.warnings,
+            llmVerification: result.llmVerification ?? null,
             isReconciling: false,
           }
           set({ ...loadState, ...rebuildAllFlowNodes(loadState) })
@@ -1825,6 +1836,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         return { inactiveLayerOpacity: opacity, ...rebuildAllFlowNodes(newState) }
       })
     },
+
+    toggleAutoResolve: () => set((s) => ({ autoResolveEnabled: !s.autoResolveEnabled })),
 
     toRecipeV3: () => {
       const s = get()

@@ -278,5 +278,20 @@
   "admin.ai.prompt.cross_layer_compat": "Cross-Layer Compatibility",
   "admin.ai.prompt.cross_layer_compat_desc": "Assesses compatibility between recipe layers",
   "admin.ai.prompt.verify_reconciliation": "Verify Reconciliation",
-  "admin.ai.prompt.verify_reconciliation_desc": "Post-reconciliation verification and Auto Pilot decisions"
+  "admin.ai.prompt.verify_reconciliation_desc": "Post-reconciliation verification and Auto Pilot decisions",
+  "admin.ai.nav": "AI Brain",
+  "admin.ai.category.explanation": "Explanation",
+  "admin.ai.category.constraint": "Constraint",
+  "admin.ai.category.compatibility": "Compatibility",
+  "admin.ai.category.verification": "Verification",
+  "admin.ai.variables": "Variables",
+  "admin.ai.select_prompt": "Select a prompt",
+  "admin.ai.no_prompts": "No prompts in this category",
+  "admin.ai.response": "Response",
+  "admin.ai.no_response": "No response — run a test to see output",
+  "admin.ai.testing": "Testing...",
+  "admin.ai.model_config_desc": "LLM provider and connection settings (read-only from environment)",
+  "admin.ai.prompts_desc": "Edit and test prompt templates used by the AI system",
+  "admin.ai.test_console_desc": "Send a prompt to the LLM and inspect the response",
+  "admin.ai.config_readonly_note": "Configuration is read-only (set via environment variables)"
 }

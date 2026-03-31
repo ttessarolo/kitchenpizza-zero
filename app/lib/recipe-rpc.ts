@@ -40,6 +40,7 @@ export interface ReconcileResult {
   graph: RecipeGraph
   portioning: Portioning
   warnings: any[]
+  llmVerification?: any
 }
 
 export async function reconcileGraphRPC(
@@ -47,7 +48,7 @@ export async function reconcileGraphRPC(
   portioning: Portioning,
   meta: RecipeMeta,
   locale: string,
-  opts?: { debounceMs?: number },
+  opts?: { debounceMs?: number; llmVerify?: boolean; autoResolve?: boolean },
 ): Promise<ReconcileResult> {
   reconcileController?.abort()
   if (reconcileTimer) clearTimeout(reconcileTimer)
@@ -57,7 +58,11 @@ export async function reconcileGraphRPC(
       reconcileController = new AbortController()
       try {
         const client = await ensureClient()
-        const result = await client.graph.reconcile({ graph, portioning, meta, locale })
+        const result = await client.graph.reconcile({
+          graph, portioning, meta, locale,
+          llmVerify: opts?.llmVerify ?? true,
+          autoResolve: opts?.autoResolve ?? false,
+        })
         resolve(result as ReconcileResult)
       } catch (e) {
         if ((e as Error).name !== 'AbortError') reject(e)
