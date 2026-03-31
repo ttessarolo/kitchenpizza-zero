@@ -74,8 +74,9 @@ export class OllamaProvider implements LlmProvider {
         return null
       }
 
-      const data = await response.json() as { response?: string }
-      return data.response ?? null
+      const data = await response.json() as { response?: string; thinking?: string }
+      // Qwen3.5 models put content in 'thinking' field, others use 'response'
+      return data.response || data.thinking || null
     } catch (e) {
       console.error('Ollama API error:', (e as Error).message)
       return null
@@ -107,13 +108,15 @@ export class OllamaProvider implements LlmProvider {
 
       if (!response.ok) return null
 
-      const data = await response.json() as { response?: string }
-      if (!data.response) return null
+      const data = await response.json() as { response?: string; thinking?: string }
+      // Qwen3.5 models use 'thinking' field for structured output
+      const text = data.response || data.thinking
+      if (!text) return null
 
-      const parsed = JSON.parse(data.response)
+      const parsed = JSON.parse(text)
       return schema.parse(parsed)
-    } catch {
-      console.error('Failed to parse Ollama JSON output')
+    } catch (e) {
+      console.error('Failed to parse Ollama JSON output:', (e as Error).message)
       return null
     }
   }
