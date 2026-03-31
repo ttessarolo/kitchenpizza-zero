@@ -1,0 +1,741 @@
+{
+  "input": {
+    "graph": {
+      "nodes": [
+        {
+          "subtype": "hand",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "dough",
+          "type": "dough",
+          "data": {
+            "title": "Impasto brioche",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 25,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [
+              {
+                "id": 1,
+                "type": "gt_00_deb",
+                "g": 500,
+                "temp": null
+              }
+            ],
+            "liquids": [
+              {
+                "id": 1,
+                "type": "milk",
+                "g": 150,
+                "temp": null
+              }
+            ],
+            "extras": [
+              {
+                "id": 1,
+                "name": "Uova",
+                "g": 100
+              }
+            ],
+            "yeasts": [
+              {
+                "id": 1,
+                "type": "fresh",
+                "g": 15
+              }
+            ],
+            "salts": [
+              {
+                "id": 1,
+                "type": "sale_fino",
+                "g": 8
+              }
+            ],
+            "sugars": [
+              {
+                "id": 1,
+                "type": "zucchero",
+                "g": 60
+              }
+            ],
+            "fats": [
+              {
+                "id": 1,
+                "type": "burro",
+                "g": 125
+              }
+            ]
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "rise1",
+          "type": "rise",
+          "data": {
+            "title": "Rise room",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 120,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": [],
+            "riseMethod": "room"
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "shape",
+          "type": "shape",
+          "data": {
+            "title": "Forma brioche",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 15,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": [],
+            "shapeCount": 8
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "rise2",
+          "type": "rise",
+          "data": {
+            "title": "Rise room",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 90,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": [],
+            "riseMethod": "room"
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "bake",
+          "type": "bake",
+          "data": {
+            "title": "Cottura",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 25,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": [],
+            "ovenCfg": {
+              "panType": "alu",
+              "ovenType": "electric",
+              "ovenMode": "fan",
+              "temp": 180,
+              "cieloPct": 50,
+              "shelfPosition": 2
+            }
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "done",
+          "type": "done",
+          "data": {
+            "title": "Pronta",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 0,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e_dough__rise1",
+          "source": "dough",
+          "target": "rise1",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        },
+        {
+          "id": "e_rise1__shape",
+          "source": "rise1",
+          "target": "shape",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        },
+        {
+          "id": "e_shape__rise2",
+          "source": "shape",
+          "target": "rise2",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        },
+        {
+          "id": "e_rise2__bake",
+          "source": "rise2",
+          "target": "bake",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        },
+        {
+          "id": "e_bake__done",
+          "source": "bake",
+          "target": "done",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        }
+      ],
+      "lanes": [
+        {
+          "id": "main",
+          "label": "Panificazione",
+          "isMain": true,
+          "origin": {
+            "type": "user"
+          }
+        }
+      ]
+    },
+    "portioning": {
+      "mode": "ball",
+      "tray": {
+        "preset": "t",
+        "l": 40,
+        "w": 30,
+        "h": 2,
+        "material": "alu",
+        "griglia": false,
+        "count": 1
+      },
+      "ball": {
+        "weight": 250,
+        "count": 4
+      },
+      "thickness": 0.5,
+      "targetHyd": 30,
+      "doughHours": 4,
+      "yeastPct": 0.8,
+      "saltPct": 1.6,
+      "fatPct": 25,
+      "preImpasto": null,
+      "preFermento": null,
+      "flourMix": [],
+      "autoCorrect": false,
+      "reasoningLevel": "medium"
+    },
+    "meta": {
+      "name": "Test",
+      "author": "",
+      "type": "pane",
+      "subtype": "brioche",
+      "locale": "it"
+    }
+  },
+  "output": {
+    "graph": {
+      "nodes": [
+        {
+          "subtype": "hand",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "dough",
+          "type": "dough",
+          "data": {
+            "title": "Impasto brioche",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 25,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [
+              {
+                "id": 1,
+                "type": "gt_00_deb",
+                "g": 500,
+                "temp": null
+              }
+            ],
+            "liquids": [
+              {
+                "id": 1,
+                "type": "milk",
+                "g": 150,
+                "temp": null
+              }
+            ],
+            "extras": [
+              {
+                "id": 1,
+                "name": "Uova",
+                "g": 100
+              }
+            ],
+            "yeasts": [
+              {
+                "id": 1,
+                "type": "fresh",
+                "g": 15
+              }
+            ],
+            "salts": [
+              {
+                "id": 1,
+                "type": "sale_fino",
+                "g": 8
+              }
+            ],
+            "sugars": [
+              {
+                "id": 1,
+                "type": "zucchero",
+                "g": 60
+              }
+            ],
+            "fats": [
+              {
+                "id": 1,
+                "type": "burro",
+                "g": 125
+              }
+            ]
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "rise1",
+          "type": "rise",
+          "data": {
+            "title": "Rise room",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 183,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": [],
+            "riseMethod": "room"
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "shape",
+          "type": "shape",
+          "data": {
+            "title": "Forma brioche",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 15,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": [],
+            "shapeCount": 8
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "rise2",
+          "type": "rise",
+          "data": {
+            "title": "Rise room",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 183,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": [],
+            "riseMethod": "room"
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "bake",
+          "type": "bake",
+          "data": {
+            "title": "Cottura",
+            "desc": "",
+            "group": "Cottura Impasto brioche",
+            "baseDur": 37,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": [],
+            "ovenCfg": {
+              "panType": "alu",
+              "ovenType": "electric",
+              "ovenMode": "fan",
+              "temp": 180,
+              "cieloPct": 50,
+              "shelfPosition": 2
+            },
+            "cookingFats": []
+          }
+        },
+        {
+          "subtype": null,
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "lane": "main",
+          "id": "done",
+          "type": "done",
+          "data": {
+            "title": "Pronta",
+            "desc": "",
+            "group": "Impasto",
+            "baseDur": 0,
+            "restDur": 0,
+            "restTemp": null,
+            "flours": [],
+            "liquids": [],
+            "extras": [],
+            "yeasts": [],
+            "salts": [],
+            "sugars": [],
+            "fats": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e_dough__rise1",
+          "source": "dough",
+          "target": "rise1",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        },
+        {
+          "id": "e_rise1__shape",
+          "source": "rise1",
+          "target": "shape",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        },
+        {
+          "id": "e_shape__rise2",
+          "source": "shape",
+          "target": "rise2",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        },
+        {
+          "id": "e_rise2__bake",
+          "source": "rise2",
+          "target": "bake",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        },
+        {
+          "id": "e_bake__done",
+          "source": "bake",
+          "target": "done",
+          "data": {
+            "scheduleTimeRatio": 1,
+            "scheduleQtyRatio": 1
+          }
+        }
+      ],
+      "lanes": [
+        {
+          "id": "main",
+          "label": "Panificazione",
+          "isMain": true,
+          "origin": {
+            "type": "user"
+          }
+        }
+      ]
+    },
+    "portioning": {
+      "mode": "ball",
+      "tray": {
+        "preset": "t",
+        "l": 40,
+        "w": 30,
+        "h": 2,
+        "material": "alu",
+        "griglia": false,
+        "count": 1
+      },
+      "ball": {
+        "weight": 250,
+        "count": 4
+      },
+      "thickness": 0.5,
+      "targetHyd": 30,
+      "doughHours": 4,
+      "yeastPct": 0.8,
+      "saltPct": 1.6,
+      "fatPct": 25,
+      "preImpasto": null,
+      "preFermento": null,
+      "flourMix": [],
+      "autoCorrect": false,
+      "reasoningLevel": "medium"
+    },
+    "warnings": [
+      {
+        "id": "flour_w_dough_rise1",
+        "sourceNodeId": "rise1",
+        "category": "flour",
+        "severity": "warning",
+        "messageKey": "flour_w_max_rise",
+        "messageVars": {
+          "W": 130,
+          "maxH": 1,
+          "riseTitle": "Rise room",
+          "riseHours": 2
+        }
+      },
+      {
+        "id": "flour_w_dough_rise2",
+        "sourceNodeId": "rise2",
+        "category": "flour",
+        "severity": "warning",
+        "messageKey": "flour_w_max_rise",
+        "messageVars": {
+          "W": 130,
+          "maxH": 1,
+          "riseTitle": "Rise room",
+          "riseHours": 1.5
+        }
+      },
+      {
+        "id": "mode_not_recommended",
+        "sourceNodeId": "bake",
+        "category": "baking",
+        "severity": "info",
+        "messageKey": "advisory.mode_not_recommended",
+        "messageVars": {}
+      },
+      {
+        "id": "total_fermentation_mismatch",
+        "sourceNodeId": null,
+        "category": "fermentation",
+        "severity": "warning",
+        "messageKey": "warning.total_fermentation_mismatch",
+        "messageVars": {
+          "equivalentRoomHours": 6.1,
+          "doughHours": 4,
+          "mismatchPct": 52
+        }
+      },
+      {
+        "id": "equivalent_time_exceeds_w_capacity",
+        "sourceNodeId": null,
+        "category": "fermentation",
+        "severity": "warning",
+        "messageKey": "warning.equivalent_time_exceeds_w_capacity",
+        "messageVars": {
+          "equivalentRoomHours": 6.1,
+          "maxHoursForW": 1,
+          "flourW": 130
+        }
+      },
+      {
+        "id": "equivalent_time_exceeds_w_capacity_rise1",
+        "sourceNodeId": "rise1",
+        "category": "fermentation",
+        "severity": "warning",
+        "messageKey": "warning.equivalent_time_exceeds_w_capacity",
+        "messageVars": {
+          "equivalentRoomHours": 6.1,
+          "maxHoursForW": 1,
+          "flourW": 130
+        }
+      },
+      {
+        "id": "equivalent_time_exceeds_w_capacity_rise2",
+        "sourceNodeId": "rise2",
+        "category": "fermentation",
+        "severity": "warning",
+        "messageKey": "warning.equivalent_time_exceeds_w_capacity",
+        "messageVars": {
+          "equivalentRoomHours": 6.1,
+          "maxHoursForW": 1,
+          "flourW": 130
+        }
+      },
+      {
+        "id": "yeast_portioning_mismatch",
+        "sourceNodeId": null,
+        "category": "fermentation",
+        "severity": "warning",
+        "messageKey": "warning.yeast_portioning_mismatch",
+        "messageVars": {
+          "expectedYeastPct": 0.508,
+          "actualYeastPct": 0.8
+        }
+      },
+      {
+        "id": "salt_low",
+        "sourceNodeId": "dough",
+        "category": "salt",
+        "severity": "warning",
+        "messageKey": "warning.salt_low",
+        "messageVars": {
+          "saltPct": 1.6,
+          "recipeType": "pane",
+          "_saltMin": 1.8,
+          "_saltMax": 2.8
+        }
+      },
+      {
+        "id": "fat_high",
+        "sourceNodeId": "dough",
+        "category": "fat",
+        "severity": "warning",
+        "messageKey": "warning.fat_high",
+        "messageVars": {
+          "fatPct": 25,
+          "recipeType": "pane",
+          "_fatMin": 0,
+          "_fatMax": 5
+        }
+      },
+      {
+        "id": "fat_extreme",
+        "sourceNodeId": "dough",
+        "category": "fat",
+        "severity": "warning",
+        "messageKey": "warning.fat_extreme",
+        "messageVars": {
+          "fatPct": 25
+        }
+      },
+      {
+        "id": "hyd_low",
+        "sourceNodeId": "dough",
+        "category": "hydration",
+        "severity": "info",
+        "messageKey": "warning.hyd_low",
+        "messageVars": {
+          "hydration": 30
+        }
+      }
+    ]
+  }
+}

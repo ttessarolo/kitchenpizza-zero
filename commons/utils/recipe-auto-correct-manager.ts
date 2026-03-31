@@ -27,10 +27,8 @@ import type { ScienceProvider } from './science/science-provider'
 import type {
   AutoCorrectConfig,
   AutoCorrectStep,
-  AutoCorrectReport,
   AutoCorrectResult,
 } from '@commons/types/auto-correct'
-import { reconcileGraph } from '../../app/server/services/graph-reconciler.service'
 import { applyWarningActionPure, isLockedMutation } from './graph-mutation-engine'
 import { DEFAULT_LOCKS } from '@commons/types/recipe'
 
@@ -117,6 +115,7 @@ function deepClone<T>(obj: T): T {
  * Iterative constraint solver for recipe graph auto-correction.
  *
  * @param provider - Science provider for rule evaluation
+ * @param reconcileFn - Graph reconciliation function (injected to avoid layering violation)
  * @param graph - Current recipe graph
  * @param portioning - Current portioning settings
  * @param meta - Recipe metadata (type, subtype)
@@ -125,6 +124,7 @@ function deepClone<T>(obj: T): T {
  */
 export function autoCorrectGraph(
   provider: ScienceProvider,
+  reconcileFn: (graph: RecipeGraph, portioning: Portioning, meta: RecipeMeta, provider: ScienceProvider) => any,
   graph: RecipeGraph,
   portioning: Portioning,
   meta: RecipeMeta,
@@ -137,7 +137,7 @@ export function autoCorrectGraph(
   let currentPortioning = deepClone(portioning)
 
   for (let round = 1; round <= maxRounds; round++) {
-    const result = reconcileGraph(currentGraph, currentPortioning, meta, provider)
+    const result = reconcileFn(currentGraph, currentPortioning, meta, provider)
     const locks = currentPortioning.locks ?? DEFAULT_LOCKS
     const actionable = getActionableCanonical(result.warnings, skippedIds)
       .filter((w) => {
@@ -178,7 +178,7 @@ export function autoCorrectGraph(
     )
 
     // Verify improvement
-    const newResult = reconcileGraph(newGraph, newPort, meta, provider)
+    const newResult = reconcileFn(newGraph, newPort, meta, provider)
     const afterCount = countActionable(newResult.warnings)
 
     if (afterCount >= beforeCount) {
@@ -214,7 +214,7 @@ export function autoCorrectGraph(
   }
 
   // Final reconciliation
-  const finalResult = reconcileGraph(currentGraph, currentPortioning, meta, provider)
+  const finalResult = reconcileFn(currentGraph, currentPortioning, meta, provider)
   const remaining = getActionableCanonical(finalResult.warnings, skippedIds)
 
   return {

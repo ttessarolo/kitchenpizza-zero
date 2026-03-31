@@ -1,13 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useT } from '~/hooks/useTranslation'
-import type { RecipeStep, TemperatureUnit, FlourCatalogEntry, CookingConfig, FatIngredient, SteamerConfig, FryConfig, AirFryerConfig, GrillConfig, PanConfig } from '@commons/types/recipe'
-import { getDefaultConfig as getBakeDefaultConfig } from '@commons/utils/bake-manager'
+import type { RecipeStep, TemperatureUnit, FlourCatalogEntry, CookingConfig, FatIngredient, SteamerConfig, FryConfig, AirFryerConfig, GrillConfig, PanConfig, SaltIngredient, SugarIngredient } from '@commons/types/recipe'
+import { getDefaultBakeConfigRPC, blendFlourPropertiesRPC } from '~/lib/recipe-rpc'
 import type { ActionableWarning } from '@commons/types/recipe-graph'
 import { FAT_TYPES } from '@/local_data/fat-catalog'
 import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius } from '@commons/utils/format'
-import { blendFlourProperties, getSaltPct, getSugarPct, getFatPct } from '@commons/utils/dough-manager'
 import { getAncestorIds, getStepTotalWeight } from '@commons/utils/recipe'
+
+// Inline trivial percentage helpers (no science, just division)
+function getSaltPct(salts: SaltIngredient[], totalFlour: number): number {
+  if (totalFlour <= 0) return 0
+  const totalSalt = salts.reduce((a, s) => a + s.g, 0)
+  return Math.round((totalSalt / totalFlour) * 1000) / 10
+}
+function getSugarPct(sugars: SugarIngredient[], totalFlour: number): number {
+  if (totalFlour <= 0) return 0
+  const totalSugar = sugars.reduce((a, s) => a + s.g, 0)
+  return Math.round((totalSugar / totalFlour) * 1000) / 10
+}
+function getFatPct(fats: FatIngredient[], totalFlour: number): number {
+  if (totalFlour <= 0) return 0
+  const totalFat = fats.reduce((a, f) => a + f.g, 0)
+  return Math.round((totalFat / totalFlour) * 1000) / 10
+}
 import {
   STEP_TYPES,
   KNEAD_METHODS,
@@ -24,6 +40,74 @@ import { MiniSelect, LiquidSelector, ExtraSelector, SaltSelector, SugarSelector,
 import { useRecipe } from './RecipeContext'
 import { DepEditor } from './DepEditor'
 import { BakingAdvisory } from './BakingAdvisory'
+
+// ── Async flour-blend suggestion components ──────────────────────
+
+function FlourSuggestions({ flours }: { flours: RecipeStep['flours'] }) {
+  const t = useT()
+  const [tips, setTips] = useState<string[]>([])
+  const flourKey = flours.map((f) => `${f.type}:${f.g}`).join(',')
+  useEffect(() => {
+    if (flours.length === 0) { setTips([]); return }
+    let cancelled = false
+    blendFlourPropertiesRPC(flours)
+      .then((bp) => {
+        if (cancelled) return
+        const newTips: string[] = []
+        if (bp.absorption > 65) newTips.push(t('tip_flour_high_absorption'))
+        if (bp.W > 350) newTips.push(t('tip_flour_strong'))
+        if (bp.W > 0 && bp.W < 150) newTips.push(t('tip_flour_weak'))
+        if (bp.protein > 13.5) newTips.push(t('tip_flour_high_protein'))
+        if (bp.PL > 0.8) newTips.push(t('tip_flour_high_pl'))
+        if (bp.PL > 0 && bp.PL < 0.4) newTips.push(t('tip_flour_low_pl'))
+        if (bp.fallingNumber > 0 && bp.fallingNumber < 250) newTips.push(t('tip_flour_low_falling'))
+        if (bp.fiber > 6) newTips.push(t('tip_flour_high_fiber'))
+        setTips(newTips)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flourKey])
+
+  if (!tips.length) return null
+  return (
+    <div className="mt-1.5 p-2 bg-blue-50 rounded border border-blue-200 text-xs text-blue-800">
+      <div className="font-semibold mb-0.5">{t("tip_header_suggestions")}</div>
+      {tips.map((tip, i) => <div key={i} className="mt-0.5">- {tip}</div>)}
+    </div>
+  )
+}
+
+function RiseFlourSuggestions({ sourcePrep, steps, riseDur }: { sourcePrep: string | null | undefined; steps: RecipeStep[]; riseDur: number }) {
+  const t = useT()
+  const [tips, setTips] = useState<string[]>([])
+  const src = sourcePrep ? steps.find((st) => st.id === sourcePrep) : null
+  const flourKey = src?.flours.map((f) => `${f.type}:${f.g}`).join(',') ?? ''
+
+  useEffect(() => {
+    if (!src || !src.flours.length) { setTips([]); return }
+    let cancelled = false
+    blendFlourPropertiesRPC(src.flours)
+      .then((bp) => {
+        if (cancelled) return
+        const newTips: string[] = []
+        if (bp.W > 0 && bp.W < 180 && riseDur > 180) newTips.push(t('tip_rise_weak_long'))
+        if (bp.fallingNumber > 0 && bp.fallingNumber < 220) newTips.push(t('tip_rise_high_enzyme'))
+        setTips(newTips)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flourKey, riseDur])
+
+  if (!tips.length) return null
+  return (
+    <div className="mt-1.5 p-2 bg-warning/10 rounded border border-warning/30 text-xs text-warning">
+      <div className="font-semibold mb-0.5">{t("tip_header_warning")}</div>
+      {tips.map((tip, i) => <div key={i} className="mt-0.5">- {tip}</div>)}
+    </div>
+  )
+}
 
 interface StepBodyProps {
   step: RecipeStep
@@ -122,24 +206,29 @@ export function StepBody({ step: s }: StepBodyProps) {
                     starterForm: null,
                   }
                 }
-                // Re-create cookingCfg when switching bake subtype
+                // Re-create cookingCfg when switching bake subtype — async via RPC
                 if (st.type === 'bake' && newSubtype) {
-                  try {
-                    const newCfg = getBakeDefaultConfig(newSubtype)
-                    updated.cookingCfg = newCfg
-                    // Keep ovenCfg in sync for legacy compat (forno/pentola)
-                    if (newCfg.method === 'forno' || newCfg.method === 'pentola') {
-                      updated.ovenCfg = newCfg.cfg
-                    } else {
-                      updated.ovenCfg = null
-                    }
-                  } catch {
-                    // Unknown subtype — clear config
-                    updated.cookingCfg = null
-                  }
+                  // Clear config optimistically; async RPC will populate it
+                  updated.cookingCfg = null
                 }
                 return updated
               })
+              // Fetch bake default config asynchronously
+              if (s.type === 'bake' && newSubtype) {
+                getDefaultBakeConfigRPC(newSubtype)
+                  .then((newCfg) => {
+                    uS(s.id, (st) => {
+                      const patched = { ...st, cookingCfg: newCfg }
+                      if (newCfg.method === 'forno' || newCfg.method === 'pentola') {
+                        patched.ovenCfg = newCfg.cfg
+                      } else {
+                        patched.ovenCfg = null
+                      }
+                      return patched
+                    })
+                  })
+                  .catch(() => { /* keep null config */ })
+              }
             }}
             options={subtypes.map((st) => ({ k: st.key, l: t(st.labelKey) }))}
           />
@@ -863,25 +952,7 @@ export function StepBody({ step: s }: StepBodyProps) {
           })()}
 
           {/* Flour-based suggestions */}
-          {(() => {
-            const bp = blendFlourProperties(s.flours, FLOUR_CATALOG as unknown as FlourCatalogEntry[])
-            const tips: string[] = []
-            if (bp.absorption > 65) tips.push(t('tip_flour_high_absorption'))
-            if (bp.W > 350) tips.push(t('tip_flour_strong'))
-            if (bp.W > 0 && bp.W < 150) tips.push(t('tip_flour_weak'))
-            if (bp.protein > 13.5) tips.push(t('tip_flour_high_protein'))
-            if (bp.PL > 0.8) tips.push(t('tip_flour_high_pl'))
-            if (bp.PL > 0 && bp.PL < 0.4) tips.push(t('tip_flour_low_pl'))
-            if (bp.fallingNumber > 0 && bp.fallingNumber < 250) tips.push(t('tip_flour_low_falling'))
-            if (bp.fiber > 6) tips.push(t('tip_flour_high_fiber'))
-            if (!tips.length) return null
-            return (
-              <div className="mt-1.5 p-2 bg-blue-50 rounded border border-blue-200 text-xs text-blue-800">
-                <div className="font-semibold mb-0.5">{t("tip_header_suggestions")}</div>
-                {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
-              </div>
-            )
-          })()}
+          <FlourSuggestions flours={s.flours} />
 
           {/* Salt & sugar suggestions */}
           {(() => {
@@ -964,22 +1035,7 @@ export function StepBody({ step: s }: StepBodyProps) {
             </div>
 
             {/* Rise-step flour suggestions */}
-            {(() => {
-              const src = s.sourcePrep ? recipe.steps.find((st) => st.id === s.sourcePrep) : null
-              if (!src || !src.flours.length) return null
-              const bp = blendFlourProperties(src.flours, FLOUR_CATALOG as unknown as FlourCatalogEntry[])
-              const riseDur = sDur(s)
-              const tips: string[] = []
-              if (bp.W > 0 && bp.W < 180 && riseDur > 180) tips.push(t('tip_rise_weak_long'))
-              if (bp.fallingNumber > 0 && bp.fallingNumber < 220) tips.push(t('tip_rise_high_enzyme'))
-              if (!tips.length) return null
-              return (
-                <div className="mt-1.5 p-2 bg-warning/10 rounded border border-warning/30 text-xs text-warning">
-                  <div className="font-semibold mb-0.5">{t("tip_header_warning")}</div>
-                  {tips.map((t, i) => <div key={i} className="mt-0.5">- {t}</div>)}
-                </div>
-              )
-            })()}
+            <RiseFlourSuggestions sourcePrep={s.sourcePrep} steps={recipe.steps} riseDur={sDur(s)} />
           </div>
         </div>
       )}

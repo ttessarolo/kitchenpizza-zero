@@ -5,6 +5,9 @@
 [build.environment]
   NODE_VERSION = "24"
 
+[functions]
+  included_files = ["science/**", "commons/i18n/**"]
+
 [[headers]]
   for = "/*"
   [headers.values]

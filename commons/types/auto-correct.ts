@@ -2,8 +2,8 @@
  * Types for the RecipeAutoCorrectManager — iterative constraint solver.
  */
 
-import type { RecipeGraph, ActionableWarning, GraphMutation } from './recipe-graph'
-import type { Portioning, RecipeMeta } from './recipe'
+import type { RecipeGraph, ActionableWarning } from './recipe-graph'
+import type { Portioning } from './recipe'
 
 /** Configuration for auto-correction behavior */
 export interface AutoCorrectConfig {

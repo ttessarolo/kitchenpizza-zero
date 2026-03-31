@@ -103,3 +103,28 @@ const warningSchema = z.object({
 export const getWarningsOutputSchema = z.object({
   warnings: z.array(warningSchema),
 })
+
+// ── Duration from yeast (inverse formula) ────────────────────
+export const calcDurationInputSchema = z.object({
+  yeastPct: z.number(),
+  hydration: z.number().min(30).max(130).default(60),
+  tempC: z.number().min(1).max(45).default(24),
+})
+
+export const calcDurationOutputSchema = z.object({
+  hours: z.number(),
+})
+
+// ── Composition percentages ──────────────────────────────────
+export const getCompositionPctsInputSchema = z.object({
+  salts: z.array(z.object({ id: z.number(), type: z.string(), g: z.number() })),
+  sugars: z.array(z.object({ id: z.number(), type: z.string(), g: z.number() })),
+  fats: z.array(z.object({ id: z.number(), type: z.string(), g: z.number() })),
+  totalFlour: z.number(),
+})
+
+export const getCompositionPctsOutputSchema = z.object({
+  saltPct: z.number(),
+  sugarPct: z.number(),
+  fatPct: z.number(),
+})

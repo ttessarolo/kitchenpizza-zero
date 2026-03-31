@@ -24,9 +24,6 @@ import { ensureRecipeV3 } from '@commons/utils/recipe-migration'
 import { autoLayout } from '~/lib/auto-layout'
 import { removeNodeFromGraph, getNodeTotalWeight } from '@commons/utils/graph-utils'
 import { rnd } from '@commons/utils/format'
-import {
-  reconcilePreFerments,
-} from '@commons/utils/pre-ferment-manager'
 import { graphToRecipeV1, stepToNodeData } from '@commons/utils/graph-adapter'
 import { computeGraphTotals, scaleNodeData } from '~/hooks/useGraphCalculator'
 import { generateDoughGraph } from '~/lib/generate-dough'
@@ -34,14 +31,17 @@ import { resolveTemplate } from '@commons/constants/layer-templates'
 import { generateLayerGraph } from '~/lib/generate-layer-graph'
 import { useLocaleStore, getMessages } from '~/hooks/useTranslation'
 import { RECIPE_SUBTYPES } from '@/local_data'
-import { getDoughDefaults, calcYeastPct, estimateBlendW } from '@commons/utils/dough-manager'
-import { reconcileGraph } from '~/server/services/graph-reconciler.service'
-import { staticProvider } from '@commons/utils/science/static-science-provider'
 import type { ActionableWarning as RecipeWarning } from '@commons/types/recipe-graph'
 import type { AutoCorrectReport } from '@commons/types/auto-correct'
 import { applyWarningActionPure } from '@commons/utils/graph-mutation-engine'
-import { autoCorrectGraph } from '@commons/utils/recipe-auto-correct-manager'
-import { computePanoramica } from '@commons/utils/panoramica-manager'
+import {
+  reconcileGraphRPC,
+  autoCorrectRPC,
+  calcYeastPctRPC,
+  getDoughDefaultsRPC,
+  estimateBlendWRPC,
+  computePanoramicaRPC,
+} from '~/lib/recipe-rpc'
 import type { BaseNodeData } from '~/components/recipe-flow/nodes/BaseNode'
 import { getNodeDuration } from '~/hooks/useGraphCalculator'
 
@@ -367,6 +367,22 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
   }
 
   /** Return new layers[] with both graph and portioning updated for active layer */
+  /** Update the active layer with un-reconciled graph (for optimistic updates) */
+  function withGraphAndPortioningUpdate(
+    s: RecipeFlowState,
+    graph: RecipeGraph,
+    portioning: Portioning,
+  ): RecipeLayer[] {
+    return s.layers.map(l => {
+      if (l.id !== s.activeLayerId) return l
+      const updated: RecipeLayer = { ...l, nodes: graph.nodes, edges: graph.edges, lanes: graph.lanes }
+      if (l.masterConfig.type === 'impasto') {
+        updated.masterConfig = { type: 'impasto', config: portioning }
+      }
+      return updated
+    })
+  }
+
   function withReconcileResult(
     s: RecipeFlowState,
     result: { graph: RecipeGraph; portioning: Portioning },
@@ -481,49 +497,62 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
   }
 
   /**
-   * Apply a mutation to the graph, then run the reconciliation engine.
+   * Apply a mutation to the graph, then run reconciliation via oRPC (server-side).
    * This is THE central mutation point — all graph changes should go through here.
    *
-   * Uses staticProvider (browser-compatible, bundled at build-time) for
-   * Science-based warnings and calculations.
+   * Pattern: optimistic local update → async server reconciliation → apply result.
    */
   function applyMutation(fn: (view: { graph: RecipeGraph; portioning: Portioning; meta: RecipeMeta; ingredientGroups: string[] }) => { graph?: RecipeGraph; portioning?: Portioning; meta?: RecipeMeta }) {
     saveSnapshot()
-    set((s) => {
-      const graph = getGraph(s)
-      const portioning = getPortioning(s)
-      const view = { graph, portioning, meta: s.meta, ingredientGroups: s.ingredientGroups }
-      const partial = fn(view)
-      const newGraph = partial.graph ?? graph
-      const newPortioning = partial.portioning ?? portioning
-      const newMeta = partial.meta ?? s.meta
 
-      // Run reconciliation engine WITH Science provider (sync, browser-safe)
-      const result = reconcileGraph(newGraph, newPortioning, newMeta, staticProvider)
+    // Step 1: Apply mutation optimistically (local, immediate)
+    const s = get()
+    const graph = getGraph(s)
+    const portioning = getPortioning(s)
+    const view = { graph, portioning, meta: s.meta, ingredientGroups: s.ingredientGroups }
+    const partial = fn(view)
+    const newGraph = partial.graph ?? graph
+    const newPortioning = partial.portioning ?? portioning
+    const newMeta = partial.meta ?? s.meta
 
-      // Auto-ensure "Cottura *" groups from bake nodes exist in ingredientGroups
-      const updatedGroups = [...s.ingredientGroups]
-      for (const node of result.graph.nodes) {
-        if (node.data.group?.startsWith('Cottura') && !updatedGroups.includes(node.data.group)) {
-          updatedGroups.push(node.data.group)
-        }
-      }
-
-      const newLayers = withReconcileResult(s, result)
-
+    // Optimistic: update layers with un-reconciled graph
+    set((current) => {
+      const optimisticLayers = withGraphAndPortioningUpdate(current, newGraph, newPortioning)
       return {
-        layers: newLayers,
-        warnings: result.warnings,
-        ingredientGroups: updatedGroups,
-        ...rebuildAllFlowNodes({
-          ...s,
-          layers: newLayers,
-          warnings: result.warnings,
-          meta: newMeta,
-          ingredientGroups: updatedGroups,
-        }),
+        layers: optimisticLayers,
+        isReconciling: true,
+        reconcileError: null,
+        ...rebuildAllFlowNodes({ ...current, layers: optimisticLayers, meta: newMeta }),
       }
     })
+
+    // Step 2: Reconcile via server (debounced 300ms)
+    const locale = s.meta.locale || 'it'
+    reconcileGraphRPC(newGraph, newPortioning, newMeta, locale, { debounceMs: 300 })
+      .then((result) => {
+        const current = get()
+        const updatedGroups = [...current.ingredientGroups]
+        for (const node of result.graph.nodes) {
+          if (node.data.group?.startsWith('Cottura') && !updatedGroups.includes(node.data.group)) {
+            updatedGroups.push(node.data.group)
+          }
+        }
+        const newLayers = withReconcileResult(current, result)
+        set({
+          layers: newLayers,
+          warnings: result.warnings,
+          ingredientGroups: updatedGroups,
+          isReconciling: false,
+          ...rebuildAllFlowNodes({
+            ...current, layers: newLayers, warnings: result.warnings,
+            meta: newMeta, ingredientGroups: updatedGroups,
+          }),
+        })
+      })
+      .catch((err) => {
+        if ((err as Error).name === 'AbortError') return
+        set({ isReconciling: false, reconcileError: (err as Error).message })
+      })
   }
 
   const onExpandHandler = (id: string) => {
@@ -549,6 +578,8 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     canUndo: false,
     warnings: [],
     autoCorrectReport: null,
+    isReconciling: false,
+    reconcileError: null as string | null,
     selectedEdgeId: null,
     edgeCalloutPos: null,
     temperatureUnit: 'C' as TemperatureUnit,
@@ -670,48 +701,50 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
         ? activeLayer.masterConfig.config
         : DEFAULT_PORTIONING
 
-      // Init reconcile: convert to v1, reconcile pre-ferments, map back
-      const v1 = graphToRecipeV1(graph, v3.meta, portioning, v3.ingredientGroups)
-      const reconciled = reconcilePreFerments(v1)
-      const reconciledNodes = graph.nodes.map((n) => {
-        const step = reconciled.steps.find((st) => st.id === n.id)
-        if (!step) return n
-        return { ...n, data: { ...n.data, ...stepToNodeData(step) } }
-      })
-      const reconciledGraph: RecipeGraph = { ...graph, nodes: reconciledNodes }
-
-      const result = reconcileGraph(reconciledGraph, portioning, v3.meta, staticProvider)
-
-      // Update first layer with reconciled data
-      const updatedLayers = v3.layers.map((l, i) => {
-        if (i !== 0) return l
-        const updated: RecipeLayer = { ...l, nodes: result.graph.nodes, edges: result.graph.edges, lanes: result.graph.lanes }
-        if (l.masterConfig.type === 'impasto') {
-          updated.masterConfig = { type: 'impasto' as const, config: result.portioning }
-        }
-        return updated
-      })
-
-      const loadState: RecipeFlowState = {
+      // Set initial state with un-reconciled graph, then reconcile via server
+      // (Pre-ferment reconciliation is handled by server-side reconcileGraph Phase 1)
+      const initialState: RecipeFlowState = {
         ...get(),
         meta: v3.meta,
         ingredientGroups: v3.ingredientGroups,
-        layers: updatedLayers,
+        layers: v3.layers,
         activeLayerId: activeLayer.id,
         crossEdges: v3.crossEdges,
         viewMode: 'layer',
         showOnboarding: false,
-        warnings: result.warnings,
+        warnings: [],
+        isReconciling: true,
         selectedNodeId: null,
         expandedNodeId: null,
         peekNodeIds: [],
         flowNodes: [],
         flowEdges: [],
       }
-      set({
-        ...loadState,
-        ...rebuildAllFlowNodes(loadState),
-      })
+      set({ ...initialState, ...rebuildAllFlowNodes(initialState) })
+
+      // Server reconciliation (no debounce for initial load)
+      const locale = v3.meta.locale || 'it'
+      reconcileGraphRPC(graph, portioning, v3.meta, locale, { debounceMs: 0 })
+        .then((result) => {
+          const updatedLayers = get().layers.map((l, i) => {
+            if (i !== 0) return l
+            const updated: RecipeLayer = { ...l, nodes: result.graph.nodes, edges: result.graph.edges, lanes: result.graph.lanes }
+            if (l.masterConfig.type === 'impasto') {
+              updated.masterConfig = { type: 'impasto' as const, config: result.portioning }
+            }
+            return updated
+          })
+          const loadState: RecipeFlowState = {
+            ...get(),
+            layers: updatedLayers,
+            warnings: result.warnings,
+            isReconciling: false,
+          }
+          set({ ...loadState, ...rebuildAllFlowNodes(loadState) })
+        })
+        .catch((err) => {
+          set({ isReconciling: false, reconcileError: (err as Error).message })
+        })
     },
 
     setMeta: (fn) => set((s) => ({ meta: fn(s.meta) })),
@@ -978,15 +1011,22 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       const s = get()
       const graph = getGraph(s)
       const portioning = getPortioning(s)
-      const result = autoCorrectGraph(
-        staticProvider, graph, portioning, s.meta,
-        { autoCorrect: true, reasoningLevel: portioning.reasoningLevel },
-      )
-      applyMutation(() => ({
-        graph: result.graph,
-        portioning: result.portioning,
-      }))
-      set({ autoCorrectReport: result.report })
+      const locale = s.meta.locale || 'it'
+      set({ isReconciling: true })
+      autoCorrectRPC(graph, portioning, s.meta, locale, {
+        autoCorrect: true,
+        reasoningLevel: portioning.reasoningLevel,
+      })
+        .then((result) => {
+          applyMutation(() => ({
+            graph: result.graph as RecipeGraph,
+            portioning: result.portioning as Portioning,
+          }))
+          set({ autoCorrectReport: result.report, isReconciling: false })
+        })
+        .catch((err) => {
+          set({ isReconciling: false, reconcileError: (err as Error).message })
+        })
     },
 
     // ── Toggle field lock (mutual exclusivity for duration <-> yeastPct) ──
@@ -1028,7 +1068,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       }))
     },
 
-    applyTypeDefaults: (typeKey, subtypeKey) => {
+    applyTypeDefaults: async (typeKey, subtypeKey) => {
       saveSnapshot()
       const subs = RECIPE_SUBTYPES[typeKey] || []
       const sub = subs.find((s) => s.key === subtypeKey)
@@ -1040,13 +1080,13 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       if (d.thickness) np.thickness = d.thickness
       if (d.ballG) np.ball = { ...np.ball, weight: d.ballG }
       if (d.hyd) np.targetHyd = d.hyd
-      // Apply dough composition defaults
-      const doughDefs = getDoughDefaults(typeKey, subtypeKey)
+      // Apply dough composition defaults via server
+      const doughDefs = await getDoughDefaultsRPC(typeKey, subtypeKey)
       np.doughHours = doughDefs.defaultDoughHours
       np.saltPct = doughDefs.saltPctDefault
       np.fatPct = doughDefs.fatPctDefault
-      // Calculate yeast from Formula L
-      np.yeastPct = calcYeastPct(staticProvider, doughDefs.defaultDoughHours, np.targetHyd || 60, 24, undefined, estimateBlendW(np.flourMix ?? []))
+      // Calculate yeast from Formula L via server
+      np.yeastPct = await calcYeastPctRPC(doughDefs.defaultDoughHours, np.targetHyd || 60, 24)
       get().handlePortioningChangeWithScale(np)
     },
 
@@ -1675,14 +1715,14 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       }))
     },
 
-    setViewMode: (mode) => {
+    setViewMode: async (mode) => {
       if (mode === 'panoramica') {
         const s = get()
         const mergedNodes: Node<BaseNodeData>[] = []
         const mergedEdges: Edge[] = []
 
         // Compute panoramica for critical path info
-        const panoramica = computePanoramica(staticProvider, s.layers, s.crossEdges)
+        const panoramica = await computePanoramicaRPC(s.layers, s.meta, s.crossEdges)
         const criticalNodeIds = new Set<string>()
         const criticalEdgeIds = new Set<string>()
         const criticalLayer = panoramica.layers.find(l => l.layerId === panoramica.criticalLayerId)

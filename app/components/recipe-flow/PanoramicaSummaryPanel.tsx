@@ -1,10 +1,8 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
-import { computePanoramica } from '@commons/utils/panoramica-manager'
-import { staticProvider } from '@commons/utils/science/static-science-provider'
-import { getFlour } from '@commons/utils/flour-manager'
-import { FLOUR_CATALOG, YEAST_TYPES } from '@/local_data'
+import { computePanoramicaRPC, getFlourRPC } from '~/lib/recipe-rpc'
+import { YEAST_TYPES } from '@/local_data'
 import { FAT_TYPES } from '@/local_data/fat-catalog'
 import { getAllLayerWarnings } from '~/lib/warning-helpers'
 import { deduplicateWarnings } from '@commons/utils/warning-dedup'
@@ -12,7 +10,6 @@ import { WarningCard } from './WarningCard'
 import { ActionableWarningBox } from './ActionableWarningBox'
 import type { RecipeLayer } from '@commons/types/recipe-layers'
 import type { NodeData } from '@commons/types/recipe-graph'
-import type { FlourCatalogEntry } from '@commons/types/recipe'
 import type { FlourIngredient, LiquidIngredient, ExtraIngredient, YeastIngredient, SaltIngredient, SugarIngredient, FatIngredient } from '@commons/types/recipe'
 
 function formatDuration(minutes: number): string {
@@ -108,7 +105,7 @@ interface TimelineEntry {
 
 function buildTimeline(
   layers: RecipeLayer[],
-  panoramica: ReturnType<typeof computePanoramica>,
+  panoramica: NonNullable<Awaited<ReturnType<typeof computePanoramicaRPC>>>,
 ): TimelineEntry[] {
   const entries: TimelineEntry[] = []
 
@@ -369,10 +366,53 @@ function CronoprogrammaSection({ timeline, names, t }: CronoprogrammaSectionProp
 
 // ── Ingredient name resolvers ──────────────────────────────────
 
+// Flour label cache — populated async via RPC, avoids per-render manager imports
+const flourLabelCache = new Map<string, string>()
+
 function useIngredientNames() {
   const t = useT()
+  const [, forceUpdate] = useState(0)
+
+  // Collect all flour types from layers for prefetch
+  const layers = useRecipeFlowStore((s) => s.layers)
+  const flourTypes = useMemo(() => {
+    const types = new Set<string>()
+    for (const layer of layers) {
+      for (const node of layer.nodes) {
+        for (const f of (node.data as NodeData).flours) types.add(f.type)
+      }
+    }
+    return types
+  }, [layers])
+
+  // Prefetch flour labels
+  useEffect(() => {
+    let cancelled = false
+    const missing = [...flourTypes].filter((k) => !flourLabelCache.has(k))
+    if (missing.length === 0) return
+    Promise.all(
+      missing.map((key) =>
+        getFlourRPC(key)
+          .then((f) => { if (!cancelled && f) flourLabelCache.set(key, f.labelKey) })
+          .catch(() => {})
+      ),
+    ).then(() => { if (!cancelled) forceUpdate((n) => n + 1) })
+    return () => { cancelled = true }
+  }, [flourTypes])
+
   return {
-    flour: (type: string) => t(getFlour(type, FLOUR_CATALOG as unknown as FlourCatalogEntry[]).labelKey),
+    flour: (type: string) => {
+      const labelKey = flourLabelCache.get(type)
+      if (labelKey) return t(labelKey)
+      // Fire-and-forget fetch for uncached keys
+      if (!flourLabelCache.has(type)) {
+        getFlourRPC(type)
+          .then((f) => { if (f) { flourLabelCache.set(type, f.labelKey); forceUpdate((n) => n + 1) } })
+          .catch(() => {})
+        flourLabelCache.set(type, `flour_${type}`) // temporary fallback
+      }
+      return t(`flour_${type}`)
+    },
     liquid: (type: string) => t(`liquid_${type.toLowerCase()}`),
     salt: (type: string) => t(`salt_${type.toLowerCase()}`),
     sugar: (type: string) => t(`sugar_${type.toLowerCase()}`),
@@ -396,11 +436,16 @@ export function PanoramicaSummaryPanel() {
     [warnings, layers],
   )
 
-  const result = useMemo(() => {
-    if (layers.length === 0) return null
-    try { return computePanoramica(staticProvider, layers, crossEdges) }
-    catch { return null }
-  }, [layers, crossEdges])
+  const meta = useRecipeFlowStore((s) => s.meta)
+  const [result, setResult] = useState<Awaited<ReturnType<typeof computePanoramicaRPC>> | null>(null)
+  useEffect(() => {
+    if (layers.length === 0) { setResult(null); return }
+    let cancelled = false
+    computePanoramicaRPC(layers, meta, crossEdges)
+      .then((r) => { if (!cancelled) setResult(r) })
+      .catch(() => { if (!cancelled) setResult(null) })
+    return () => { cancelled = true }
+  }, [layers, meta, crossEdges])
 
   const ingredientsByLayer = useMemo(() => {
     const map = new Map<string, AggregatedIngredients>()

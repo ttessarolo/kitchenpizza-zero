@@ -1,14 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
-import { calcYeastPct, calcDurationFromYeast } from '@commons/utils/dough-manager'
-import { staticProvider } from '@commons/utils/science/static-science-provider'
+import { calcYeastPctRPC, calcDurationFromYeastRPC, estimateBlendWRPC, blendFlourPropertiesRPC } from '~/lib/recipe-rpc'
 import { rnd } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
 import { YEAST_TYPES } from '@/local_data'
 import { WarningCard } from './WarningCard'
 import { ActionableWarningBox } from './ActionableWarningBox'
 import { FlourMixSelector } from './FlourMixSelector'
-import { estimateBlendW, blendFlourProperties } from '@commons/utils/flour-manager'
 import { deduplicateWarnings } from '@commons/utils/warning-dedup'
 import { DEFAULT_LOCKS } from '@commons/types/recipe'
 import { LockButton } from './LockButton'
@@ -107,17 +105,16 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
   const fatPct = totalFlour > 0 ? Math.round(fatG / totalFlour * 1000) / 10 : 0
   const hyd = totalFlour > 0 ? Math.round(totalLiquid / totalFlour * 100) : 0
 
-  // Flour mix W for yeast correction
-  const flourMix = useRecipeFlowStore((s) => selectPortioning(s).flourMix ?? [])
-  const allChainFlours = chainNodes.flatMap((n) => n.data.flours)
-  const flourW = allChainFlours.length > 0 && allChainFlours.some((f) => f.g > 0)
-    ? blendFlourProperties(allChainFlours).W
-    : estimateBlendW(flourMix)
-
   // Hours: use local state for smooth slider, fallback to inverse Formula L
-  const estFromYeast = yeastPct > 0
-    ? calcDurationFromYeast(staticProvider, yeastPct, hyd || 60, 24)
-    : 18
+  const [estFromYeast, setEstFromYeast] = useState(18)
+  useEffect(() => {
+    if (yeastPct <= 0) { setEstFromYeast(18); return }
+    let cancelled = false
+    calcDurationFromYeastRPC(yeastPct, hyd || 60, 24)
+      .then((h) => { if (!cancelled) setEstFromYeast(h) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [yeastPct, hyd])
   const doughHours = Math.round(doughHoursLocal ?? estFromYeast)
   // pct is ALWAYS fresh-equivalent. Convert to the node's actual yeast type.
   function setYeastPct(pct: number) {
@@ -130,9 +127,12 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
     updateNodeData(nodeId, { yeasts: [{ id: 0, type: yeastType, g: actualG }] })
     // Inverse Formula L: recalculate duration (only if duration is NOT locked)
     if (!locks.duration) {
-      const newHours = calcDurationFromYeast(staticProvider, pct, hyd || 60, 24)
-      setDoughHoursLocal(newHours)
-      updateDoughHours(newHours)
+      calcDurationFromYeastRPC(pct, hyd || 60, 24)
+        .then((newHours) => {
+          setDoughHoursLocal(newHours)
+          updateDoughHours(newHours)
+        })
+        .catch(() => {})
     }
   }
 
@@ -199,24 +199,22 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
       }
     }
 
-    // Recalculate yeast from Formula L (hydration changed → yeast amount changes)
-    const newYeastPct = calcYeastPct(staticProvider, doughHours, newHyd, 24, undefined, flourW) // fresh-equivalent %
-    if (newYeastPct > 0 && totalFlour > 0) {
-      const freshG = rnd(totalFlour * newYeastPct / 100)
-      const yeastType = (d.yeasts ?? [])[0]?.type || 'fresh'
-      const yt = YEAST_TYPES.find((t) => t.key === yeastType)
-      const toFresh = yt?.toFresh ?? 1
-      const actualG = rnd(freshG / toFresh)
-      // Merge yeast into existing patch for the same node, or add new entry
-      const existing = updates.find((u) => u.id === nodeId)
-      if (existing) {
-        existing.patch.yeasts = [{ id: 0, type: yeastType, g: actualG }]
-      } else {
-        updates.push({ id: nodeId, patch: { yeasts: [{ id: 0, type: yeastType, g: actualG }] } })
-      }
-    }
-
+    // Apply liquid updates immediately (optimistic)
     batchUpdateNodes(updates)
+
+    // Recalculate yeast from Formula L (hydration changed → yeast amount changes)
+    calcYeastPctRPC(doughHours, newHyd, 24)
+      .then((newYeastPct) => {
+        if (newYeastPct > 0 && totalFlour > 0) {
+          const freshG = rnd(totalFlour * newYeastPct / 100)
+          const yeastType = (d.yeasts ?? [])[0]?.type || 'fresh'
+          const yt = YEAST_TYPES.find((t) => t.key === yeastType)
+          const toFresh = yt?.toFresh ?? 1
+          const actualG = rnd(freshG / toFresh)
+          batchUpdateNodes([{ id: nodeId, patch: { yeasts: [{ id: 0, type: yeastType, g: actualG }] } }])
+        }
+      })
+      .catch(() => {})
   }
 
   return (
@@ -265,14 +263,12 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
         onChange={(v) => {
           const hours = Math.round(v)
           setDoughHoursLocal(hours)
-          if (locks.yeastPct) {
-            // Yeast locked: update doughHours + reconcile (Phase 3c scales rise nodes)
-            updateDoughHours(hours)
-          } else {
-            // Normal: update doughHours + recalculate yeast (triggers reconcile)
-            updateDoughHours(hours)
-            const newYeastPct = calcYeastPct(staticProvider, hours, hyd || 60, 24, undefined, flourW)
-            setYeastPct(Math.round(newYeastPct * 100) / 100)
+          updateDoughHours(hours)
+          if (!locks.yeastPct) {
+            // Normal: recalculate yeast (triggers reconcile)
+            calcYeastPctRPC(hours, hyd || 60, 24)
+              .then((newYeastPct) => setYeastPct(Math.round(newYeastPct * 100) / 100))
+              .catch(() => {})
           }
         }} />
 
@@ -302,8 +298,14 @@ function GlobalCompositionSettings() {
   const toggleLock = useRecipeFlowStore((s) => s.toggleLock)
 
   const { doughHours, yeastPct, saltPct, fatPct, targetHyd, preImpasto, preFermento, flourMix } = portioning
-  const globalFlourW = estimateBlendW(flourMix ?? [])
-  const suggestedYeast = calcYeastPct(staticProvider, doughHours, targetHyd || 60, 24, undefined, globalFlourW)
+  const [suggestedYeast, setSuggestedYeast] = useState(yeastPct)
+  useEffect(() => {
+    let cancelled = false
+    calcYeastPctRPC(doughHours, targetHyd || 60, 24)
+      .then((pct) => { if (!cancelled) setSuggestedYeast(pct) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [doughHours, targetHyd])
 
   function update(patch: Partial<typeof portioning>) {
     setPortioning((p) => ({ ...p, ...patch }))
@@ -363,8 +365,10 @@ function GlobalCompositionSettings() {
           if (locks.yeastPct) {
             update({ doughHours: v })
           } else {
-            const newYeast = calcYeastPct(staticProvider, v, targetHyd || 60, 24, undefined, globalFlourW)
-            update({ doughHours: v, yeastPct: Math.round(newYeast * 1000) / 1000 })
+            update({ doughHours: v })
+            calcYeastPctRPC(v, targetHyd || 60, 24)
+              .then((newYeast) => update({ yeastPct: Math.round(newYeast * 1000) / 1000 }))
+              .catch(() => {})
           }
         }} />
       <SliderRow icon="🍞" label={t('label_yeast')} value={Math.round(yeastPct * 100) / 100} min={0} max={3.5} step={0.01} unit="%"
@@ -374,8 +378,10 @@ function GlobalCompositionSettings() {
           if (locks.duration) {
             update({ yeastPct: v })
           } else {
-            const newHours = calcDurationFromYeast(staticProvider, v, targetHyd || 60, 24)
-            update({ yeastPct: v, doughHours: newHours })
+            update({ yeastPct: v })
+            calcDurationFromYeastRPC(v, targetHyd || 60, 24)
+              .then((newHours) => update({ doughHours: newHours }))
+              .catch(() => {})
           }
         }} />
       <SliderRow icon="🧂" label={t('label_salt')} value={Math.round(saltPct * 10) / 10} min={0} max={4} step={0.1} unit="%"

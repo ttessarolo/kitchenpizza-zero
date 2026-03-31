@@ -1,18 +1,59 @@
+import { useState, useEffect } from 'react'
 import { Card } from '~/components/ui/card'
 import { SectionHeader } from './shared/SectionHeader'
 import { IngredientRow } from './shared/IngredientRow'
 import { rnd } from '@commons/utils/format'
-import { getFlour } from '@commons/utils/flour-manager'
+import { getFlourRPC } from '~/lib/recipe-rpc'
 import { FLOUR_CATALOG, YEAST_TYPES } from '@/local_data'
 import { FAT_TYPES } from '@/local_data/fat-catalog'
 import { useT } from '~/hooks/useTranslation'
 import type { GroupedIngredients } from '~/hooks/useRecipeCalculator'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
 
+// Module-level flour label cache shared with PanoramicaSummaryPanel
+const flourLabelCache = new Map<string, string>()
+
+function useFlourLabel(type: string): string {
+  const t = useT()
+  // Try local catalog first (sync)
+  const catalogEntry = (FLOUR_CATALOG as unknown as FlourCatalogEntry[]).find((f) => f.key === type)
+  const [labelKey, setLabelKey] = useState<string>(
+    catalogEntry?.labelKey ?? flourLabelCache.get(type) ?? `flour_${type}`,
+  )
+
+  useEffect(() => {
+    if (catalogEntry) {
+      flourLabelCache.set(type, catalogEntry.labelKey)
+      return
+    }
+    if (flourLabelCache.has(type)) {
+      setLabelKey(flourLabelCache.get(type)!)
+      return
+    }
+    let cancelled = false
+    getFlourRPC(type)
+      .then((f) => {
+        if (!cancelled && f) {
+          flourLabelCache.set(type, f.labelKey)
+          setLabelKey(f.labelKey)
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [type, catalogEntry])
+
+  return t(labelKey)
+}
+
 interface IngredientsOverviewProps {
   ingredientGroups: string[]
   groupedIngredients: Record<string, GroupedIngredients>
   hideHeader?: boolean
+}
+
+function FlourIngredientRow({ type, g }: { type: string; g: number }) {
+  const name = useFlourLabel(type)
+  return <IngredientRow name={name} amount={rnd(g)} unit="g" />
 }
 
 export function IngredientsOverview({
@@ -37,12 +78,7 @@ export function IngredientsOverview({
               {g}
             </h3>
             {grp.flours.map((f) => (
-              <IngredientRow
-                key={'f' + f.type}
-                name={t(getFlour(f.type, FLOUR_CATALOG as unknown as FlourCatalogEntry[]).labelKey)}
-                amount={rnd(f.g)}
-                unit="g"
-              />
+              <FlourIngredientRow key={'f' + f.type} type={f.type} g={f.g} />
             ))}
             {grp.liquids.map((l) => (
               <IngredientRow key={'l' + l.type} name={l.type} amount={rnd(l.g)} unit="g" />

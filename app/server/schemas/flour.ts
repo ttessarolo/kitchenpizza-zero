@@ -51,3 +51,36 @@ export const estimateWInputSchema = z.object({
 export const estimateWOutputSchema = z.object({
   W: z.number(),
 })
+
+// ── Blend properties ─────────────────────────────────────────
+const flourIngredientSchema = z.object({
+  id: z.number(),
+  type: z.string(),
+  g: z.number(),
+  temp: z.number().nullable(),
+})
+
+export const blendPropertiesInputSchema = z.object({
+  flours: z.array(flourIngredientSchema),
+})
+
+export const blendPropertiesOutputSchema = z.object({
+  protein: z.number(),
+  W: z.number(),
+  PL: z.number(),
+  absorption: z.number(),
+  ash: z.number(),
+  fiber: z.number(),
+  starchDamage: z.number(),
+  fermentSpeed: z.number(),
+  fallingNumber: z.number(),
+})
+
+// ── Estimate blend W from flour keys ─────────────────────────
+export const estimateBlendWInputSchema = z.object({
+  flourKeys: z.array(z.string()),
+})
+
+export const estimateBlendWOutputSchema = z.object({
+  W: z.number(),
+})

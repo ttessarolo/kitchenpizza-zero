@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useT } from '~/hooks/useTranslation'
 import { stepColor } from '~/lib/theme-colors'
 import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
@@ -19,7 +19,7 @@ import {
 import { fmtDuration } from '@commons/utils/format'
 import { LAYER_TYPE_META } from '@commons/constants/layer-defaults'
 import { getSubtypeLabelKey } from '@commons/constants/layer-subtypes'
-import { calcFinalDoughTemp } from '@commons/utils/dough-manager'
+import { calcFinalDoughTempRPC } from '~/lib/recipe-rpc'
 import { WarningCard } from './WarningCard'
 import { ActionableWarningBox } from './ActionableWarningBox'
 import { deduplicateWarnings } from '@commons/utils/warning-dedup'
@@ -91,11 +91,18 @@ function SinglePanel({
       return getNodeDuration(n, meta.type, meta.subtype, portioning.thickness)
     }
 
-    const getFDT = (s: RecipeStep | null) => {
-      if (!s || !s.flours.length) return ambientTemp
-      const km = KNEAD_METHODS.find((m) => m.key === s.kneadMethod) || KNEAD_METHODS[0]
-      return calcFinalDoughTemp(s.flours, s.liquids, ambientTemp, km.ff)
-    }
+    const [fdt, setFdt] = useState(ambientTemp)
+    const getFDT = () => fdt
+    useEffect(() => {
+      const step = selectedNodeId ? nodeIdToStep(selectedNodeId) : null
+      if (!step || !step.flours.length) { setFdt(ambientTemp); return }
+      const km = KNEAD_METHODS.find((m) => m.key === step.kneadMethod) || KNEAD_METHODS[0]
+      let cancelled = false
+      calcFinalDoughTempRPC(step.flours as any, step.liquids as any, ambientTemp, km.ff)
+        .then((temp) => { if (!cancelled) setFdt(temp) })
+        .catch(() => {})
+      return () => { cancelled = true }
+    }, [selectedNodeId, ambientTemp])
 
     // Uses reconciling update — triggers pre-ferment reconcile + scale propagation
     const updateStep = (id: string, fn: (s: RecipeStep) => RecipeStep) => {

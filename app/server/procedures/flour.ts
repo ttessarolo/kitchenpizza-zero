@@ -5,10 +5,13 @@ import {
   searchInputSchema, searchOutputSchema,
   suggestForWInputSchema, suggestForWOutputSchema,
   estimateWInputSchema, estimateWOutputSchema,
+  blendPropertiesInputSchema, blendPropertiesOutputSchema,
+  estimateBlendWInputSchema, estimateBlendWOutputSchema,
 } from '../schemas/flour'
 import {
   FLOUR_CATALOG, FLOUR_GROUPS,
   getFlour, searchFlours, suggestForW, estimateW,
+  blendFlourProperties, estimateBlendW,
 } from '@commons/utils/flour-manager'
 
 export const getCatalog = baseProcedure
@@ -42,4 +45,18 @@ export const estimateWFromProtein = baseProcedure
   .output(estimateWOutputSchema)
   .handler(async ({ input }) => ({
     W: estimateW(input.protein),
+  }))
+
+export const blendProperties = baseProcedure
+  .input(blendPropertiesInputSchema)
+  .output(blendPropertiesOutputSchema)
+  .handler(async ({ input }) => {
+    return blendFlourProperties(input.flours as any, FLOUR_CATALOG as any)
+  })
+
+export const estimateBlendWProcedure = baseProcedure
+  .input(estimateBlendWInputSchema)
+  .output(estimateBlendWOutputSchema)
+  .handler(async ({ input }) => ({
+    W: estimateBlendW(input.flourKeys),
   }))

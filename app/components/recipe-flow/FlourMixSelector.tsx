@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
 import { FLOUR_CATALOG, FLOUR_GROUPS } from '@/local_data/flour-catalog'
-import { estimateBlendW, blendFlourProperties } from '@commons/utils/flour-manager'
+import { estimateBlendWRPC, blendFlourPropertiesRPC } from '~/lib/recipe-rpc'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { Command, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from '~/components/ui/command'
@@ -21,10 +21,29 @@ export function FlourMixSelector() {
   const doughNode = graph.nodes.find((n) => n.type === 'dough')
   const realFlours = doughNode?.data.flours ?? []
   const hasRealFlours = realFlours.length > 0 && realFlours.some((f) => f.g > 0)
-  const blendW = hasRealFlours
-    ? blendFlourProperties(realFlours).W
-    : estimateBlendW(flourMix)
+  const [blendW, setBlendW] = useState(0)
   const wLabel = hasRealFlours ? t('label_blended_w') : t('label_estimated_w')
+  const blendKey = hasRealFlours
+    ? realFlours.map((f) => `${f.type}:${f.g}`).join(',')
+    : flourMix.join(',')
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        if (hasRealFlours) {
+          const bp = await blendFlourPropertiesRPC(realFlours)
+          if (!cancelled) setBlendW(bp.W)
+        } else if (flourMix.length > 0) {
+          const w = await estimateBlendWRPC(flourMix)
+          if (!cancelled) setBlendW(w)
+        } else {
+          if (!cancelled) setBlendW(0)
+        }
+      } catch { /* keep previous */ }
+    })()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blendKey])
 
   function toggle(key: string) {
     setPortioning((p) => ({

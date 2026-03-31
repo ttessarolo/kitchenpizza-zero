@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { FLOUR_CATALOG, FLOUR_GROUPS } from '@/local_data'
-import { getFlour, estimateW } from '@commons/utils/flour-manager'
+import { getFlourRPC, estimateWFromProteinRPC } from '~/lib/recipe-rpc'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
 import { useT } from '~/hooks/useTranslation'
 import {
@@ -31,7 +31,18 @@ export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlo
     ? (FLOUR_CATALOG as unknown as FlourCatalogEntry[]).filter((f) => allowedKeys.includes(f.key))
     : (FLOUR_CATALOG as unknown as FlourCatalogEntry[])
   const allFlours = [...baseCatalog, ...customFlours]
-  const cur = customFlours.find((f) => f.key === value) || getFlour(value, FLOUR_CATALOG as unknown as FlourCatalogEntry[])
+  // Sync lookup from local catalog first; async RPC as fallback
+  const catalogEntry = (FLOUR_CATALOG as unknown as FlourCatalogEntry[]).find((f) => f.key === value)
+  const [rpcFlour, setRpcFlour] = useState<FlourCatalogEntry | null>(null)
+  useEffect(() => {
+    if (catalogEntry || customFlours.find((f) => f.key === value)) return
+    let cancelled = false
+    getFlourRPC(value)
+      .then((f) => { if (!cancelled && f) setRpcFlour(f as unknown as FlourCatalogEntry) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [value, catalogEntry, customFlours])
+  const cur = customFlours.find((f) => f.key === value) || catalogEntry || rpcFlour || (FLOUR_CATALOG as unknown as FlourCatalogEntry[])[0]
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -181,7 +192,16 @@ function CreateFlourDialog({
   const [fermentSpeed, setFermentSpeed] = useState(1)
   const [fallingNumber, setFallingNumber] = useState(300)
 
-  const computedW = W ?? estimateW(protein)
+  const [estimatedW, setEstimatedW] = useState(280)
+  useEffect(() => {
+    if (W !== null) return // user set explicit W
+    let cancelled = false
+    estimateWFromProteinRPC(protein)
+      .then((w) => { if (!cancelled) setEstimatedW(w) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [protein, W])
+  const computedW = W ?? estimatedW
   const canSave = label.trim().length > 0
 
   function handleSave() {

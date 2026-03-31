@@ -54,7 +54,7 @@ describe('cascade resolution', () => {
     expect(beforeActionable.length).toBeGreaterThan(0)
 
     // Auto-correct
-    const result = autoCorrectGraph(provider, graph, portioning, makeDefaultMeta(), defaultConfig)
+    const result = autoCorrectGraph(provider, reconcileGraph, graph, portioning, makeDefaultMeta(), defaultConfig)
 
     expect(result.report.status).toBe('ok')
     expect(result.report.steps.length).toBeGreaterThan(0)
@@ -83,7 +83,7 @@ describe('independent composition warnings', () => {
     const graph = makeGraph([dough], [])
     const portioning = makeDefaultPortioning({ yeastPct: 0.001, saltPct: 0.2 })
 
-    const result = autoCorrectGraph(provider, graph, portioning, makeDefaultMeta(), defaultConfig)
+    const result = autoCorrectGraph(provider, reconcileGraph, graph, portioning, makeDefaultMeta(), defaultConfig)
 
     // Should resolve composition warnings
     expect(result.report.steps.filter((s) => s.outcome === 'applied').length).toBeGreaterThanOrEqual(1)
@@ -98,7 +98,7 @@ describe('clean graph', () => {
   it('returns ok with 0 steps for graph with no warnings', () => {
     const graph = makeGraph([], [])
     const portioning = makeDefaultPortioning()
-    const result = autoCorrectGraph(provider, graph, portioning, makeDefaultMeta(), defaultConfig)
+    const result = autoCorrectGraph(provider, reconcileGraph, graph, portioning, makeDefaultMeta(), defaultConfig)
 
     expect(result.report.status).toBe('ok')
     expect(result.report.steps).toHaveLength(0)
@@ -121,7 +121,7 @@ describe('max rounds', () => {
     const portioning = makeDefaultPortioning({ doughHours: 48, yeastPct: 0.01 })
 
     const result = autoCorrectGraph(
-      provider, graph, portioning, makeDefaultMeta(),
+      provider, reconcileGraph, graph, portioning, makeDefaultMeta(),
       { autoCorrect: true, reasoningLevel: 'low' }, // only 3 rounds
     )
 
@@ -145,7 +145,7 @@ describe('analysis mode', () => {
     const portioning = makeDefaultPortioning({ doughHours: 24 })
 
     const result = autoCorrectGraph(
-      provider, graph, portioning, makeDefaultMeta(),
+      provider, reconcileGraph, graph, portioning, makeDefaultMeta(),
       { autoCorrect: false, reasoningLevel: 'medium' },
     )
 
@@ -184,7 +184,7 @@ describe('addNodeAfter mutation', () => {
     const acclWarning = before.warnings.find((w) => w.messageKey === 'warning.acclimatization_missing')
 
     if (acclWarning) {
-      const result = autoCorrectGraph(provider, graph, portioning, makeDefaultMeta(), defaultConfig)
+      const result = autoCorrectGraph(provider, reconcileGraph, graph, portioning, makeDefaultMeta(), defaultConfig)
       // If acclimatization was an issue, auto-correct should have added a node
       const nodesAdded = result.graph.nodes.length - graph.nodes.length
       expect(nodesAdded).toBeGreaterThanOrEqual(0) // may or may not add based on priority
@@ -205,7 +205,7 @@ describe('priority ordering', () => {
     const graph = makeGraph([dough, r1], [makeEdge('d1', 'r1')])
     const portioning = makeDefaultPortioning({ doughHours: 48, yeastPct: 0.22 })
 
-    const result = autoCorrectGraph(provider, graph, portioning, makeDefaultMeta(), defaultConfig)
+    const result = autoCorrectGraph(provider, reconcileGraph, graph, portioning, makeDefaultMeta(), defaultConfig)
 
     // First step should be Tier 1 (flour_w_max_rise or equivalent_time_exceeds)
     if (result.report.steps.length > 0) {
@@ -236,13 +236,13 @@ describe('reasoningLevel', () => {
     const graph = makeGraph([], [])
     const port = makeDefaultPortioning()
 
-    const low = autoCorrectGraph(provider, graph, port, makeDefaultMeta(), { autoCorrect: true, reasoningLevel: 'low' })
+    const low = autoCorrectGraph(provider, reconcileGraph, graph, port, makeDefaultMeta(), { autoCorrect: true, reasoningLevel: 'low' })
     expect(low.report.maxRounds).toBe(3)
 
-    const med = autoCorrectGraph(provider, graph, port, makeDefaultMeta(), { autoCorrect: true, reasoningLevel: 'medium' })
+    const med = autoCorrectGraph(provider, reconcileGraph, graph, port, makeDefaultMeta(), { autoCorrect: true, reasoningLevel: 'medium' })
     expect(med.report.maxRounds).toBe(5)
 
-    const high = autoCorrectGraph(provider, graph, port, makeDefaultMeta(), { autoCorrect: true, reasoningLevel: 'high' })
+    const high = autoCorrectGraph(provider, reconcileGraph, graph, port, makeDefaultMeta(), { autoCorrect: true, reasoningLevel: 'high' })
     expect(high.report.maxRounds).toBe(8)
   })
 })
