@@ -1,0 +1,20 @@
+{
+  "type": "defaults",
+  "id": "prep_subtype_defaults",
+  "_meta": {
+    "section": "prep",
+    "displayName": "meta.defaults.prep_types.name",
+    "description": "meta.defaults.prep_types.desc",
+    "tags": ["prep", "defaults", "subtype"],
+    "lastModified": "2026-03-31",
+    "author": "system"
+  },
+  "entries": [
+    { "type": "topping", "subtype": null, "servings": 4, "yield": 300 },
+    { "type": "filling", "subtype": null, "servings": 4, "yield": 500 },
+    { "type": "garnish", "subtype": null, "servings": 4, "yield": 100 },
+    { "type": "base", "subtype": null, "servings": 4, "yield": 600 },
+    { "type": "marinade", "subtype": null, "servings": 4, "yield": 400 },
+    { "type": "generic", "subtype": null, "servings": 4, "yield": 500 }
+  ]
+}

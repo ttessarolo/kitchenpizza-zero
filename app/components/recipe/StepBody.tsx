@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useT } from '~/hooks/useTranslation'
-import type { RecipeStep, TemperatureUnit, FlourCatalogEntry, CookingConfig, FatIngredient, SteamerConfig, FryConfig, AirFryerConfig, GrillConfig, PanConfig, SaltIngredient, SugarIngredient } from '@commons/types/recipe'
+import type { RecipeStep, TemperatureUnit, CookingConfig, FatIngredient, SteamerConfig, FryConfig, AirFryerConfig, GrillConfig, PanConfig, SaltIngredient, SugarIngredient } from '@commons/types/recipe'
 import { getDefaultBakeConfigRPC, blendFlourPropertiesRPC } from '~/lib/recipe-rpc'
 import type { ActionableWarning } from '@commons/types/recipe-graph'
 import { FAT_TYPES } from '@/local_data/fat-catalog'
@@ -32,7 +32,6 @@ import {
   OVEN_TYPES,
   OVEN_MODES,
   MODE_MAP,
-  FLOUR_CATALOG,
 } from '@/local_data'
 import { FlourPicker } from './FlourPicker'
 import { IngredientBox } from './IngredientBox'

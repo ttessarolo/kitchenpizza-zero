@@ -114,7 +114,10 @@ export function calcFinalDoughTemp(
   liquids: LiquidIngredient[],
   ambientTemp: number,
   frictionFactor: number,
+  provider?: ScienceProvider,
 ): number {
+  const airPct = provider?.getFormula('final_dough_temp')?.constants?.airIncorporationPct ?? 0.15
+
   let t = 0
   let s = 0
 
@@ -127,8 +130,8 @@ export function calcFinalDoughTemp(
     s += l.g * (l.temp ?? ambientTemp)
   }
 
-  // 15% air incorporation at ambient temperature
-  const aw = t * 0.15
+  // Air incorporation at ambient temperature
+  const aw = t * airPct
   t += aw
   s += aw * ambientTemp
 
@@ -142,10 +145,21 @@ export function calcFinalDoughTemp(
  * Base 2.5% with minor adjustment for high hydration, clamped to 2.0–3.0%.
  * [C] Cap. 53 — Salt in pizza doughs: 2.3-2.8% typical.
  */
-export function computeSuggestedSalt(totalFlour: number, hydration: number): number {
-  const basePct = 2.5
-  const adjustment = Math.max(0, (hydration - 60) * 0.01)
-  const pct = Math.min(3.0, Math.max(2.0, basePct + adjustment))
+export function computeSuggestedSalt(totalFlour: number, hydration: number, provider?: ScienceProvider): number {
+  let basePct = 2.5, adjFactor = 0.01, minPct = 2.0, maxPct = 3.0
+  if (provider) {
+    try {
+      const formula = provider.getFormula('suggested_salt')
+      if (formula?.constants) {
+        basePct = formula.constants.basePct ?? basePct
+        adjFactor = formula.constants.adjustFactor ?? adjFactor
+        minPct = formula.constants.minPct ?? minPct
+        maxPct = formula.constants.maxPct ?? maxPct
+      }
+    } catch { /* fallback to hardcoded */ }
+  }
+  const adjustment = Math.max(0, (hydration - 60) * adjFactor)
+  const pct = Math.min(maxPct, Math.max(minPct, basePct + adjustment))
   return rnd(totalFlour * pct / 100)
 }
 

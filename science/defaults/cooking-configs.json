@@ -1,0 +1,99 @@
+{
+  "type": "defaults",
+  "id": "cooking_config_defaults",
+  "_meta": {
+    "section": "bake",
+    "displayName": "meta.defaults.cooking_configs.name",
+    "description": "meta.defaults.cooking_configs.desc",
+    "tags": ["bake", "cooking", "defaults", "config"],
+    "lastModified": "2026-03-31",
+    "author": "system"
+  },
+  "entries": [
+    {
+      "type": "forno", "subtype": null,
+      "method": "forno",
+      "cfg": {
+        "panType": "stone",
+        "ovenType": "electric",
+        "ovenMode": "static",
+        "temp": 250,
+        "cieloPct": 50,
+        "shelfPosition": 2
+      }
+    },
+    {
+      "type": "pentola", "subtype": null,
+      "method": "pentola",
+      "cfg": {
+        "panType": "ci_lid",
+        "ovenType": "electric",
+        "ovenMode": "steam",
+        "temp": 240,
+        "cieloPct": 50,
+        "shelfPosition": 2,
+        "lidOn": true
+      }
+    },
+    {
+      "type": "vapore", "subtype": null,
+      "method": "vapore",
+      "cfg": {
+        "steamerType": "bamboo",
+        "temp": 100,
+        "lidLift": false,
+        "waterLevel": "full",
+        "paperLiner": true
+      }
+    },
+    {
+      "type": "frittura", "subtype": null,
+      "method": "frittura",
+      "cfg": {
+        "fryMethod": "deep",
+        "oilTemp": 180,
+        "flipHalf": true,
+        "maxDoughWeight": 175
+      }
+    },
+    {
+      "type": "aria", "subtype": null,
+      "method": "aria",
+      "cfg": {
+        "temp": 180,
+        "preheat": true,
+        "preheatDur": 3,
+        "oilSpray": true,
+        "flipHalf": true,
+        "basketType": "drawer",
+        "capacity": "standard"
+      }
+    },
+    {
+      "type": "griglia", "subtype": null,
+      "method": "griglia",
+      "cfg": {
+        "grillType": "gas",
+        "directTemp": 400,
+        "indirectTemp": 200,
+        "twoZone": true,
+        "lidClosed": true,
+        "oilSpray": true,
+        "flipOnce": true,
+        "dockDough": false
+      }
+    },
+    {
+      "type": "padella", "subtype": null,
+      "method": "padella",
+      "cfg": {
+        "panMaterial": "cast_iron",
+        "panSize": 30,
+        "temp": 220,
+        "oilSpray": true,
+        "flipOnce": true,
+        "lidUsed": false
+      }
+    }
+  ]
+}

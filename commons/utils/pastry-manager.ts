@@ -11,9 +11,9 @@ import { evaluateRules } from './science/rule-engine'
 import type { RuleResult } from './science/rule-engine'
 import { evaluateClassification } from './science/formula-engine'
 
-// ── Constants ────────────────────────────────────────────────
+// ── Constants (hardcoded fallbacks, prefer ScienceProvider) ──
 
-// ── Per-subtype defaults (from science/catalogs/pastry-types.json) ──
+// ── Per-subtype defaults ──
 
 const PASTRY_SUBTYPE_DEFAULTS: Record<string, Partial<PastryMasterConfig>> = {
   cioccolato: { targetWeight: 300, servings: 6, temperatureNotes: '' },
@@ -24,12 +24,18 @@ const PASTRY_SUBTYPE_DEFAULTS: Record<string, Partial<PastryMasterConfig>> = {
   generic: { targetWeight: 500, servings: 6, temperatureNotes: '' },
 }
 
-/** Returns sensible defaults for a pastry subtype. */
-export function getDefaults(subtype: string): Partial<PastryMasterConfig> {
+/** Returns sensible defaults for a pastry subtype. Reads from ScienceProvider when available. */
+export function getDefaults(subtype: string, provider?: ScienceProvider): Partial<PastryMasterConfig> {
+  if (provider) {
+    const d = provider.getDefaults('pastry_subtype_defaults', subtype, null) as Record<string, unknown>
+    if (d && Object.keys(d).length > 0 && d.targetWeight != null) {
+      return d as unknown as Partial<PastryMasterConfig>
+    }
+  }
   return PASTRY_SUBTYPE_DEFAULTS[subtype] ?? {}
 }
 
-/** Tempering ranges per chocolate type: [melt, coolMin, coolMax, workMin, workMax] */
+/** Tempering ranges per chocolate type (fallback) */
 const TEMPER_RANGES: Record<string, { workMin: number; workMax: number }> = {
   dark: { workMin: 31, workMax: 32 },
   milk: { workMin: 29, workMax: 30 },
@@ -64,7 +70,15 @@ export function validateTemperingCurve(
   workTemp: number,
 ): { valid: boolean; warnings: string[] } {
   const warnings: string[] = []
-  const range = TEMPER_RANGES[chocolateType]
+
+  // Try to read temper ranges from provider defaults block
+  let range = TEMPER_RANGES[chocolateType]
+  try {
+    const block = provider.getBlock('pastry_subtype_defaults') as any
+    if (block?.temperRanges?.[chocolateType]) {
+      range = block.temperRanges[chocolateType]
+    }
+  } catch { /* fallback to hardcoded */ }
 
   if (!range) {
     return { valid: false, warnings: ['unknown_chocolate_type'] }
@@ -111,13 +125,22 @@ export function validateTemperingCurve(
  * @returns { safe } — true if pasteurized or no eggs present
  */
 export function checkCustardPasteurization(
-  _provider: ScienceProvider,
+  provider: ScienceProvider,
   temp: number,
   duration: number,
   hasEggs: boolean,
 ): { safe: boolean } {
   if (!hasEggs) return { safe: true }
-  return { safe: temp >= CUSTARD_SAFE_TEMP && duration >= CUSTARD_MIN_DURATION_S }
+
+  let safeTemp = CUSTARD_SAFE_TEMP
+  let minDur = CUSTARD_MIN_DURATION_S
+  try {
+    const block = provider.getBlock('pastry_subtype_defaults') as any
+    if (block?.custard?.safeTemp != null) safeTemp = block.custard.safeTemp
+    if (block?.custard?.minDurationS != null) minDur = block.custard.minDurationS
+  } catch { /* fallback to hardcoded */ }
+
+  return { safe: temp >= safeTemp && duration >= minDur }
 }
 
 // ── 3. calcMeringueRatio ─────────────────────────────────────
@@ -133,14 +156,20 @@ export function checkCustardPasteurization(
  * @returns { ratio, stable }
  */
 export function calcMeringueRatio(
-  _provider: ScienceProvider,
+  provider: ScienceProvider,
   eggWhiteG: number,
   sugarG: number,
 ): { ratio: number; stable: boolean } {
   if (eggWhiteG <= 0) return { ratio: 0, stable: false }
 
+  let stableRatio = MERINGUE_STABLE_RATIO
+  try {
+    const block = provider.getBlock('pastry_subtype_defaults') as any
+    if (block?.meringue?.stableRatio != null) stableRatio = block.meringue.stableRatio
+  } catch { /* fallback to hardcoded */ }
+
   const ratio = Math.round((sugarG / eggWhiteG) * 100) / 100
-  return { ratio, stable: ratio >= MERINGUE_STABLE_RATIO }
+  return { ratio, stable: ratio >= stableRatio }
 }
 
 // ── 4. getPastryWarnings ─────────────────────────────────────

@@ -1,0 +1,31 @@
+{
+  "type": "catalog",
+  "id": "cooking_factors",
+  "_meta": {
+    "section": "bake",
+    "displayName": "meta.catalog.cooking_factors.name",
+    "description": "meta.catalog.cooking_factors.desc",
+    "tags": ["bake", "cooking", "factors", "duration"],
+    "lastModified": "2026-03-31",
+    "author": "system"
+  },
+  "modeFactor": {
+    "static": 1.0,
+    "fan": 0.85,
+    "steam": 1.0
+  },
+  "steamerFactor": {
+    "bamboo": 1.0,
+    "electric": 0.9
+  },
+  "fryMethodFactor": {
+    "deep": 1.0,
+    "shallow": 1.2
+  },
+  "fuelFactor": {
+    "gas": 1.0,
+    "charcoal": 1.1,
+    "electric": 1.0
+  },
+  "entries": []
+}

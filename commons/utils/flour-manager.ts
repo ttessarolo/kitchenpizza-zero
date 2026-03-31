@@ -27,7 +27,7 @@ import { rnd } from './format'
 // ── Science imports ────────────────────────────────────────────
 
 import type { ScienceProvider } from './science/science-provider'
-import { evaluateClassification } from './science/formula-engine'
+import { evaluateClassification, evaluateFormula } from './science/formula-engine'
 
 // ── Catalog lookup ─────────────────────────────────────────────
 
@@ -128,7 +128,15 @@ export function estimateBlendW(
  *
  * [C] Cap. 20 — Relationship between protein content and alveographic W.
  */
-export function estimateW(protein: number): number {
+export function estimateW(protein: number, provider?: ScienceProvider): number {
+  if (provider) {
+    try {
+      const formula = provider.getFormula('estimate_W_from_protein')
+      if (formula?.expression) {
+        return evaluateFormula(formula, { protein })
+      }
+    } catch { /* fallback to hardcoded */ }
+  }
   return Math.round(Math.max(60, Math.min(420, 22 * protein - 70)))
 }
 

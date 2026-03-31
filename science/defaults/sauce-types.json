@@ -1,0 +1,20 @@
+{
+  "type": "defaults",
+  "id": "sauce_subtype_defaults",
+  "_meta": {
+    "section": "sauce",
+    "displayName": "meta.defaults.sauce_types.name",
+    "description": "meta.defaults.sauce_types.desc",
+    "tags": ["sauce", "defaults", "subtype"],
+    "lastModified": "2026-03-31",
+    "author": "system"
+  },
+  "entries": [
+    { "type": "sugo", "subtype": null, "targetVolume": 500, "targetConsistency": "medium", "shelfLife": 3 },
+    { "type": "emulsione", "subtype": null, "targetVolume": 300, "targetConsistency": "thin", "shelfLife": 2 },
+    { "type": "pesto", "subtype": null, "targetVolume": 250, "targetConsistency": "thick", "shelfLife": 5 },
+    { "type": "crema", "subtype": null, "targetVolume": 400, "targetConsistency": "medium", "shelfLife": 2 },
+    { "type": "ragu", "subtype": null, "targetVolume": 600, "targetConsistency": "thick", "shelfLife": 4 },
+    { "type": "besciamella", "subtype": null, "targetVolume": 500, "targetConsistency": "medium", "shelfLife": 2 }
+  ]
+}

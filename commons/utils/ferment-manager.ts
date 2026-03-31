@@ -7,8 +7,9 @@
 
 import type { FermentMasterConfig } from '@commons/types/recipe-layers'
 import type { ActionableWarning } from '@commons/types/recipe-graph'
+import type { ScienceProvider } from './science/science-provider'
 
-// ── Per-subtype defaults (from science/catalogs/ferment-types.json) ──
+// ── Per-subtype defaults (hardcoded fallback, prefer ScienceProvider) ──
 
 const FERMENT_SUBTYPE_DEFAULTS: Record<string, Partial<FermentMasterConfig>> = {
   lattofermentazione: { saltPercentage: 2.5, targetPH: 4.0, temperature: 20, duration: 72, vessel: 'jar' },
@@ -19,8 +20,14 @@ const FERMENT_SUBTYPE_DEFAULTS: Record<string, Partial<FermentMasterConfig>> = {
   kimchi: { saltPercentage: 3, targetPH: 3.5, temperature: 18, duration: 120, vessel: 'jar' },
 }
 
-/** Returns sensible defaults for a ferment subtype. */
-export function getDefaults(subtype: string): Partial<FermentMasterConfig> {
+/** Returns sensible defaults for a ferment subtype. Reads from ScienceProvider when available. */
+export function getDefaults(subtype: string, provider?: ScienceProvider): Partial<FermentMasterConfig> {
+  if (provider) {
+    const d = provider.getDefaults('ferment_subtype_defaults', subtype, null) as Record<string, unknown>
+    if (d && Object.keys(d).length > 0 && d.saltPercentage != null) {
+      return d as unknown as Partial<FermentMasterConfig>
+    }
+  }
   return FERMENT_SUBTYPE_DEFAULTS[subtype] ?? {}
 }
 

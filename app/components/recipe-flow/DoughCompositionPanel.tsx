@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
-import { calcYeastPctRPC, calcDurationFromYeastRPC, estimateBlendWRPC, blendFlourPropertiesRPC } from '~/lib/recipe-rpc'
+import { calcYeastPctRPC, calcDurationFromYeastRPC } from '~/lib/recipe-rpc'
 import { rnd } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
 import { YEAST_TYPES } from '@/local_data'
@@ -297,7 +297,7 @@ function GlobalCompositionSettings() {
   const locks = useRecipeFlowStore((s) => selectPortioning(s).locks ?? DEFAULT_LOCKS)
   const toggleLock = useRecipeFlowStore((s) => s.toggleLock)
 
-  const { doughHours, yeastPct, saltPct, fatPct, targetHyd, preImpasto, preFermento, flourMix } = portioning
+  const { doughHours, yeastPct, saltPct, fatPct, targetHyd, preImpasto, preFermento } = portioning
   const [suggestedYeast, setSuggestedYeast] = useState(yeastPct)
   useEffect(() => {
     let cancelled = false

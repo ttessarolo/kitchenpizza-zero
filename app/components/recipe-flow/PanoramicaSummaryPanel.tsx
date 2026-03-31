@@ -521,7 +521,7 @@ export function PanoramicaSummaryPanel() {
         <div className="px-3 pb-3">
           <div className="text-xl font-bold text-foreground">{formatDuration(result.totalDuration)}</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">
-            {result.layers.length} {t('layers')} &middot; {result.layers.reduce((a, l) => a + l.nodeCount, 0)} {t('nodes')}
+            {result.layers.length} {t('layers')} &middot; {result.layers.reduce((a: number, l: any) => a + l.nodeCount, 0)} {t('nodes')}
           </div>
         </div>
       </details>
@@ -701,7 +701,7 @@ export function PanoramicaSummaryPanel() {
           </summary>
           <div className="px-3 pb-3">
           <div className="space-y-0.5">
-            {result.crossDependencies.map((dep) => {
+            {result.crossDependencies.map((dep: any) => {
               const srcLayer = layers.find((l) => l.id === dep.sourceLayerId)
               const tgtLayer = layers.find((l) => l.id === dep.targetLayerId)
               return (

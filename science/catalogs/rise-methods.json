@@ -10,29 +10,34 @@
       "methods",
       "yeast"
     ],
-    "lastModified": "2026-03-27",
+    "lastModified": "2026-03-31",
     "author": "system"
   },
+  "baselineTemp": 24,
   "entries": [
     {
       "key": "room",
       "label": "Ambiente (~22°C)",
-      "tf": 1
+      "tf": 1,
+      "q10Coeff": 1.0
     },
     {
       "key": "fridge",
       "label": "Frigo (~4°C)",
-      "tf": 3.6
+      "tf": 3.6,
+      "q10Coeff": 0.05
     },
     {
       "key": "ctrl18",
       "label": "Controllata 18°C",
-      "tf": 1.4
+      "tf": 1.4,
+      "q10Coeff": 0.2
     },
     {
       "key": "ctrl12",
       "label": "Controllata 12°C",
-      "tf": 2.2
+      "tf": 2.2,
+      "q10Coeff": 0.1
     }
   ],
   "yeastTypes": [

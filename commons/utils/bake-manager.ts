@@ -64,9 +64,17 @@ export function getBakingProfile(
 
 /**
  * Return the default CookingConfig for a given bake sub-type.
+ * Reads from ScienceProvider when available, falls back to hardcoded switch.
  * Throws if the subtype is not recognized.
  */
-export function getDefaultConfig(subtype: string): CookingConfig {
+export function getDefaultConfig(subtype: string, provider?: ScienceProvider): CookingConfig {
+  if (provider) {
+    const d = provider.getDefaults('cooking_config_defaults', subtype, null) as Record<string, unknown>
+    if (d && d.method != null && d.cfg != null) {
+      return { method: d.method as string, cfg: d.cfg } as CookingConfig
+    }
+  }
+
   switch (subtype as CookingSubtype) {
     case 'forno':
       return {
@@ -179,6 +187,7 @@ export function calcDuration(
   recipeType: string,
   recipeSubtype: string | null,
   thickness: number,
+  provider?: ScienceProvider,
 ): number {
   // Look up profile — try the cooking method type first, then fall back to recipe type
   const profile =
@@ -193,6 +202,21 @@ export function calcDuration(
   const [tMin, tMax] = profile.timeRange
   const baseTime = (tMin + tMax) / 2
 
+  // Load cooking factors from provider if available
+  let modeFactors: Record<string, number> = { static: 1.0, fan: 0.85, steam: 1.0 }
+  let steamerFactors: Record<string, number> = { bamboo: 1.0, electric: 0.9 }
+  let fryMethodFactors: Record<string, number> = { deep: 1.0, shallow: 1.2 }
+  let fuelFactors: Record<string, number> = { gas: 1.0, charcoal: 1.1, electric: 1.0 }
+  if (provider) {
+    try {
+      const block = provider.getBlock('cooking_factors') as any
+      if (block?.modeFactor) modeFactors = block.modeFactor
+      if (block?.steamerFactor) steamerFactors = block.steamerFactor
+      if (block?.fryMethodFactor) fryMethodFactors = block.fryMethodFactor
+      if (block?.fuelFactor) fuelFactors = block.fuelFactor
+    } catch { /* fallback to hardcoded */ }
+  }
+
   switch (subtype as CookingSubtype) {
     // ── Oven-based methods (forno, pentola) ──
     case 'forno':
@@ -200,7 +224,7 @@ export function calcDuration(
       const ovenCfg = cookingCfg.cfg as OvenConfig
       const tempRatio = profile.refTemp / Math.max(ovenCfg.temp, 100)
       const matFactor = profile.materialFactors[ovenCfg.panType] ?? 1.0
-      const modeFactor = ovenCfg.ovenMode === 'fan' ? 0.85 : 1.0
+      const modeFactor = modeFactors[ovenCfg.ovenMode] ?? 1.0
 
       let thickFactor = 1.0
       if (profile.baseThickness > 0 && thickness > 0) {
@@ -214,18 +238,15 @@ export function calcDuration(
     // ── Steam ──
     case 'vapore': {
       const steamCfg = cookingCfg.cfg as SteamerConfig
-      // Electric steamers are slightly faster (~10%)
-      const steamerFactor = steamCfg.steamerType === 'electric' ? 0.9 : 1.0
+      const steamerFactor = steamerFactors[steamCfg.steamerType] ?? 1.0
       return Math.max(1, Math.round(baseTime * steamerFactor))
     }
 
     // ── Frying ──
     case 'frittura': {
       const fryCfg = cookingCfg.cfg as FryConfig
-      // Adjust by oil temp ratio (higher temp = less time)
       const tempRatio = profile.refTemp / Math.max(fryCfg.oilTemp, 100)
-      // Shallow frying takes ~20% longer
-      const methodFactor = fryCfg.fryMethod === 'shallow' ? 1.2 : 1.0
+      const methodFactor = fryMethodFactors[fryCfg.fryMethod] ?? 1.0
       return Math.max(1, Math.round(baseTime * tempRatio * methodFactor))
     }
 
@@ -233,7 +254,6 @@ export function calcDuration(
     case 'aria': {
       const airCfg = cookingCfg.cfg as AirFryerConfig
       const tempRatio = profile.refTemp / Math.max(airCfg.temp, 100)
-      // Preheat adds its own duration
       const preheatAdd = airCfg.preheat ? airCfg.preheatDur : 0
       return Math.max(1, Math.round(baseTime * tempRatio) + preheatAdd)
     }
@@ -242,8 +262,7 @@ export function calcDuration(
     case 'griglia': {
       const grillCfg = cookingCfg.cfg as GrillConfig
       const tempRatio = profile.refTemp / Math.max(grillCfg.directTemp, 100)
-      // Charcoal is less consistent, takes ~10% more
-      const fuelFactor = grillCfg.grillType === 'charcoal' ? 1.1 : 1.0
+      const fuelFactor = fuelFactors[grillCfg.grillType] ?? 1.0
       return Math.max(1, Math.round(baseTime * tempRatio * fuelFactor))
     }
 
@@ -347,12 +366,24 @@ export function validateConfig(subtype: string, config: CookingConfig): string[]
 export function syncCookingFats(
   cookingFats: FatIngredient[],
   fryConfig: FryConfig,
+  provider?: ScienceProvider,
 ): FatIngredient[] {
   // If user already has cooking fats configured, don't override
   if (cookingFats.length > 0) return cookingFats
 
+  // Read frying amounts from provider if available
+  let deepAmount = 500
+  let shallowAmount = 150
+  if (provider) {
+    try {
+      const block = provider.getBlock('frying_amounts') as any
+      if (block?.defaults?.deep != null) deepAmount = block.defaults.deep
+      if (block?.defaults?.shallow != null) shallowAmount = block.defaults.shallow
+    } catch { /* fallback to hardcoded */ }
+  }
+
   // Auto-add a default frying fat
-  const estimatedG = fryConfig.fryMethod === 'deep' ? 500 : 150
+  const estimatedG = fryConfig.fryMethod === 'deep' ? deepAmount : shallowAmount
   const defaultOil = FRYABLE_FAT_KEYS[0] ?? 'olio_arachidi'
 
   return [{

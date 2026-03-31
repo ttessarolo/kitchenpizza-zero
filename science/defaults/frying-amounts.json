@@ -1,0 +1,20 @@
+{
+  "type": "defaults",
+  "id": "frying_amounts",
+  "_meta": {
+    "section": "bake",
+    "displayName": "meta.defaults.frying_amounts.name",
+    "description": "meta.defaults.frying_amounts.desc",
+    "tags": ["bake", "frying", "defaults", "fat"],
+    "lastModified": "2026-03-31",
+    "author": "system"
+  },
+  "defaults": {
+    "deep": 500,
+    "shallow": 150
+  },
+  "entries": [
+    { "type": "deep", "subtype": null, "amount": 500 },
+    { "type": "shallow", "subtype": null, "amount": 150 }
+  ]
+}

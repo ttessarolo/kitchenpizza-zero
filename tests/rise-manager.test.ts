@@ -142,20 +142,20 @@ describe('RiseManager — calcRiseDuration', () => {
 
 describe('RiseManager — riseTemperatureFactor', () => {
   it('returns 1.0 at 24°C for room method', () => {
-    expect(riseTemperatureFactor(24, 'room')).toBeCloseTo(1.0, 3)
+    expect(riseTemperatureFactor(null, 24, 'room')).toBeCloseTo(1.0, 3)
   })
 
   it('warmer FDT → factor < 1 (faster rise)', () => {
-    expect(riseTemperatureFactor(30, 'room')).toBeLessThan(1)
+    expect(riseTemperatureFactor(null, 30, 'room')).toBeLessThan(1)
   })
 
   it('cooler FDT → factor > 1 (slower rise)', () => {
-    expect(riseTemperatureFactor(18, 'room')).toBeGreaterThan(1)
+    expect(riseTemperatureFactor(null, 18, 'room')).toBeGreaterThan(1)
   })
 
   it('fridge method dampens FDT effect', () => {
-    const roomEffect = Math.abs(riseTemperatureFactor(30, 'room') - 1)
-    const fridgeEffect = Math.abs(riseTemperatureFactor(30, 'fridge') - 1)
+    const roomEffect = Math.abs(riseTemperatureFactor(null, 30, 'room') - 1)
+    const fridgeEffect = Math.abs(riseTemperatureFactor(null, 30, 'fridge') - 1)
     expect(fridgeEffect).toBeLessThan(roomEffect)
   })
 })

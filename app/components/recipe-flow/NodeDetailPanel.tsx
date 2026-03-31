@@ -79,6 +79,22 @@ function SinglePanel({
 
   const totals = useMemo(() => computeGraphTotals(graph), [graph])
 
+  // FDT: compute asynchronously via RPC, outside useMemo
+  const [fdt, setFdt] = useState(ambientTemp)
+  const nodeFlourKey = node ? node.data.flours.map((f: any) => `${f.type}:${f.g}`).join(',') : ''
+  const nodeLiquidKey = node ? node.data.liquids.map((l: any) => `${l.type}:${l.g}`).join(',') : ''
+  useEffect(() => {
+    if (!node || !node.data.flours.length) { setFdt(ambientTemp); return }
+    const step = nodeToStep(node, graph.edges)
+    const km = KNEAD_METHODS.find((m) => m.key === step.kneadMethod) || KNEAD_METHODS[0]
+    let cancelled = false
+    calcFinalDoughTempRPC(step.flours as any, step.liquids as any, ambientTemp, km.ff)
+      .then((temp) => { if (!cancelled) setFdt(temp) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeFlourKey, nodeLiquidKey, ambientTemp])
+
   const bridge: RecipeCalculator = useMemo(() => {
     const displayTemp = (c: number) => {
       if (temperatureUnit === 'F') return `${Math.round(celsiusToFahrenheit(c))} °F`
@@ -91,18 +107,7 @@ function SinglePanel({
       return getNodeDuration(n, meta.type, meta.subtype, portioning.thickness)
     }
 
-    const [fdt, setFdt] = useState(ambientTemp)
     const getFDT = () => fdt
-    useEffect(() => {
-      const step = selectedNodeId ? nodeIdToStep(selectedNodeId) : null
-      if (!step || !step.flours.length) { setFdt(ambientTemp); return }
-      const km = KNEAD_METHODS.find((m) => m.key === step.kneadMethod) || KNEAD_METHODS[0]
-      let cancelled = false
-      calcFinalDoughTempRPC(step.flours as any, step.liquids as any, ambientTemp, km.ff)
-        .then((temp) => { if (!cancelled) setFdt(temp) })
-        .catch(() => {})
-      return () => { cancelled = true }
-    }, [selectedNodeId, ambientTemp])
 
     // Uses reconciling update — triggers pre-ferment reconcile + scale propagation
     const updateStep = (id: string, fn: (s: RecipeStep) => RecipeStep) => {
@@ -177,7 +182,7 @@ function SinglePanel({
       removeDep: storeRemoveDep,
       updateDep: storeUpdateDep,
     } as RecipeCalculator
-  }, [recipe, graph, meta, portioning, temperatureUnit, ambientTemp, totals, updateNodeData, setTemperatureUnit, storeAddDep, storeRemoveDep, storeUpdateDep])
+  }, [recipe, graph, meta, portioning, temperatureUnit, ambientTemp, totals, fdt, updateNodeData, setTemperatureUnit, storeAddDep, storeRemoveDep, storeUpdateDep])
 
   if (!node) return null
 

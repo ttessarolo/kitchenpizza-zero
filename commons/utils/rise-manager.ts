@@ -67,9 +67,20 @@ export function calcRiseDuration(
  *
  * [C] Cap. 39 — Temperature and fermentation kinetics.
  */
-export function riseTemperatureFactor(fdt: number, riseMethod: string): number {
-  const coeff: Record<string, number> = { room: 1, ctrl18: 0.2, ctrl12: 0.1, fridge: 0.05 }
-  return Math.pow(2, (-(fdt - 24) * (coeff[riseMethod] ?? 1)) / 10)
+export function riseTemperatureFactor(provider: ScienceProvider | null, fdt: number, riseMethod: string): number {
+  let coeff = 1
+  let baseline = 24
+  if (provider) {
+    const catalog = provider.getCatalog('rise_methods')
+    const entry = (catalog as any[]).find((e: any) => e.key === riseMethod)
+    if (entry?.q10Coeff != null) coeff = entry.q10Coeff
+    // baseline from top-level catalog block
+    if ((catalog as any).baselineTemp != null) baseline = (catalog as any).baselineTemp
+  } else {
+    const fallback: Record<string, number> = { room: 1, ctrl18: 0.2, ctrl12: 0.1, fridge: 0.05 }
+    coeff = fallback[riseMethod] ?? 1
+  }
+  return Math.pow(2, (-(fdt - baseline) * coeff) / 10)
 }
 
 // ── Method lookup ──────────────────────────────────────────────

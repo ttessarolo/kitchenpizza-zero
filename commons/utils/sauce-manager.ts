@@ -19,7 +19,7 @@ const DEFAULT_EVAP_RATE = 0.15
 /** Lid reduces evaporation by ~60%. */
 const LID_FACTOR = 0.4
 
-// ── Per-subtype defaults (from science/catalogs/sauce-types.json) ──
+// ── Per-subtype defaults (hardcoded fallback, prefer ScienceProvider) ──
 
 const SAUCE_SUBTYPE_DEFAULTS: Record<string, Partial<SauceMasterConfig>> = {
   sugo: { targetVolume: 500, targetConsistency: 'medium', shelfLife: 3 },
@@ -30,8 +30,14 @@ const SAUCE_SUBTYPE_DEFAULTS: Record<string, Partial<SauceMasterConfig>> = {
   besciamella: { targetVolume: 500, targetConsistency: 'medium', shelfLife: 2 },
 }
 
-/** Returns sensible defaults for a sauce subtype. */
-export function getDefaults(subtype: string): Partial<SauceMasterConfig> {
+/** Returns sensible defaults for a sauce subtype. Reads from ScienceProvider when available. */
+export function getDefaults(subtype: string, provider?: ScienceProvider): Partial<SauceMasterConfig> {
+  if (provider) {
+    const d = provider.getDefaults('sauce_subtype_defaults', subtype, null) as Record<string, unknown>
+    if (d && Object.keys(d).length > 0 && d.targetVolume != null) {
+      return d as unknown as Partial<SauceMasterConfig>
+    }
+  }
   return SAUCE_SUBTYPE_DEFAULTS[subtype] ?? {}
 }
 

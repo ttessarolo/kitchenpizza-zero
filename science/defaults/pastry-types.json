@@ -1,0 +1,32 @@
+{
+  "type": "defaults",
+  "id": "pastry_subtype_defaults",
+  "_meta": {
+    "section": "pastry",
+    "displayName": "meta.defaults.pastry_types.name",
+    "description": "meta.defaults.pastry_types.desc",
+    "tags": ["pastry", "defaults", "subtype"],
+    "lastModified": "2026-03-31",
+    "author": "system"
+  },
+  "entries": [
+    { "type": "cioccolato", "subtype": null, "targetWeight": 300, "servings": 6, "temperatureNotes": "" },
+    { "type": "crema", "subtype": null, "targetWeight": 500, "servings": 6, "temperatureNotes": "" },
+    { "type": "meringa", "subtype": null, "targetWeight": 200, "servings": 8, "temperatureNotes": "" },
+    { "type": "mousse", "subtype": null, "targetWeight": 400, "servings": 6, "temperatureNotes": "" },
+    { "type": "glassa", "subtype": null, "targetWeight": 250, "servings": 8, "temperatureNotes": "" },
+    { "type": "generic", "subtype": null, "targetWeight": 500, "servings": 6, "temperatureNotes": "" }
+  ],
+  "temperRanges": {
+    "dark": { "workMin": 31, "workMax": 32 },
+    "milk": { "workMin": 29, "workMax": 30 },
+    "white": { "workMin": 27, "workMax": 28 }
+  },
+  "custard": {
+    "safeTemp": 82,
+    "minDurationS": 10
+  },
+  "meringue": {
+    "stableRatio": 1.5
+  }
+}
