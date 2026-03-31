@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
+import { createServerFn } from '@tanstack/react-start'
+import { useState, useMemo, useCallback } from 'react'
 import { Sparkles } from 'lucide-react'
 import { useT } from '~/hooks/useTranslation'
-import { orpc } from '~/lib/orpc'
 import {
   Card,
   CardContent,
@@ -23,7 +23,67 @@ import {
   SelectItem,
 } from '~/components/ui/select'
 
+// ── Server functions ────────────────────────────────────────
+import { getFlags } from '~/server/lib/feature-flags'
+import { getCurrentProvider, resetLlmProvider } from '~/server/services/llm/llm-service'
+import { OllamaProvider } from '~/server/services/llm/ollama-provider'
+import { getAllPrompts, getPromptTemplate, updatePrompt as updatePromptStore, resetPrompt as resetPromptStore, fillTemplate } from '~/server/services/llm/prompt-store'
+import { llmService } from '~/server/services/llm/llm-service'
+
+const loadAiBrainData = createServerFn().handler(async () => {
+  const flags = getFlags()
+  const config = {
+    enabled: flags.LLM_ENABLED,
+    provider: flags.LLM_PROVIDER,
+    baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+    model: process.env.OLLAMA_MODEL || 'qwen3.5:0.8b',
+    maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '512', 10),
+    timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS || '10000', 10),
+  }
+  const prompts = getAllPrompts()
+  return { config, prompts }
+})
+
+const serverTestConnection = createServerFn().handler(async () => {
+  const start = Date.now()
+  const provider = getCurrentProvider()
+  const available = await provider.isAvailable()
+  const latencyMs = Date.now() - start
+  let models: Array<{ name: string; size: number; modified_at: string }> = []
+  let currentModel = process.env.OLLAMA_MODEL || 'qwen3.5:0.8b'
+  if (provider instanceof OllamaProvider) {
+    models = await provider.listModels()
+    currentModel = provider.getModel()
+  }
+  return { available, models, currentModel, latencyMs }
+})
+
+const serverUpdatePrompt = (createServerFn() as any)
+  .validator((d: { key: string; template: string }) => d)
+  .handler(async ({ data }: { data: { key: string; template: string } }) => {
+    return updatePromptStore(data.key, data.template)
+  })
+
+const serverResetPrompt = (createServerFn() as any)
+  .validator((d: { key: string }) => d)
+  .handler(async ({ data }: { data: { key: string } }) => {
+    return resetPromptStore(data.key)
+  })
+
+const serverTestPrompt = (createServerFn() as any)
+  .validator((d: { key: string; variables: Record<string, string> }) => d)
+  .handler(async ({ data }: { data: { key: string; variables: Record<string, string> } }) => {
+    const template = getPromptTemplate(data.key)
+    if (!template) return { output: null, latencyMs: 0, source: 'fallback' as const }
+    const prompt = fillTemplate(template, data.variables)
+    const start = Date.now()
+    const output = await llmService.generate(prompt)
+    const latencyMs = Date.now() - start
+    return { output, latencyMs, source: output ? 'llm' as const : 'fallback' as const }
+  })
+
 export const Route = createFileRoute('/admin/ai-brain')({
+  loader: () => loadAiBrainData(),
   component: AiBrainPage,
 })
 
@@ -41,18 +101,43 @@ const CATEGORIES = ['explanation', 'constraint', 'compatibility', 'verification'
 
 function AiBrainPage() {
   const t = useT()
+  const { config, prompts: initialPrompts } = Route.useLoaderData()
+  const [prompts, setPrompts] = useState(initialPrompts)
+  const [connResult, setConnResult] = useState<{ available: boolean; models: any[]; currentModel: string; latencyMs: number } | null>(null)
+  const [isTesting, setIsTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ output: string | null; latencyMs: number; source: string } | null>(null)
+  const [isTestingPrompt, setIsTestingPrompt] = useState(false)
 
-  const { data: config } = orpc.aiAdmin.getConfig.useQuery()
-  const { data: prompts } = orpc.aiAdmin.listPrompts.useQuery()
+  const handleTestConnection = useCallback(async () => {
+    setIsTesting(true)
+    try {
+      const result = await serverTestConnection()
+      setConnResult(result)
+    } catch { /* ignore */ }
+    setIsTesting(false)
+  }, [])
 
-  const testConnectionMutation = orpc.aiAdmin.testConnection.useMutation()
-  const updatePromptMutation = orpc.aiAdmin.updatePrompt.useMutation()
-  const resetPromptMutation = orpc.aiAdmin.resetPrompt.useMutation()
-  const testPromptMutation = orpc.aiAdmin.testPrompt.useMutation()
+  const handleUpdatePrompt = useCallback(async (key: string, template: string) => {
+    const updated = await serverUpdatePrompt({ data: { key, template } })
+    if (updated) setPrompts(prev => prev.map(p => p.key === key ? { ...p, ...updated } : p))
+  }, [])
+
+  const handleResetPrompt = useCallback(async (key: string) => {
+    const updated = await serverResetPrompt({ data: { key } })
+    if (updated) setPrompts(prev => prev.map(p => p.key === key ? { ...p, ...updated } : p))
+  }, [])
+
+  const handleTestPrompt = useCallback(async (key: string, variables: Record<string, string>) => {
+    setIsTestingPrompt(true)
+    try {
+      const result = await serverTestPrompt({ data: { key, variables } })
+      setTestResult(result)
+    } catch { /* ignore */ }
+    setIsTestingPrompt(false)
+  }, [])
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
-      {/* Page header */}
       <div>
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-purple-500" />
@@ -60,26 +145,28 @@ function AiBrainPage() {
         </h2>
       </div>
 
-      {/* Section 1: Model Configuration */}
       <ModelConfigSection
         config={config}
-        testConnectionMutation={testConnectionMutation}
+        connResult={connResult}
+        isTesting={isTesting}
+        onTestConnection={handleTestConnection}
         t={t}
       />
 
-      {/* Section 2: Prompt Templates */}
       <PromptTemplatesSection
-        prompts={prompts ?? []}
-        updatePromptMutation={updatePromptMutation}
-        resetPromptMutation={resetPromptMutation}
-        testPromptMutation={testPromptMutation}
+        prompts={prompts}
+        onUpdatePrompt={handleUpdatePrompt}
+        onResetPrompt={handleResetPrompt}
+        onTestPrompt={handleTestPrompt}
+        isTestingPrompt={isTestingPrompt}
         t={t}
       />
 
-      {/* Section 3: Test Console */}
       <TestConsoleSection
-        prompts={prompts ?? []}
-        testPromptMutation={testPromptMutation}
+        prompts={prompts}
+        onTestPrompt={handleTestPrompt}
+        testResult={testResult}
+        isTestingPrompt={isTestingPrompt}
         t={t}
       />
     </div>
@@ -90,103 +177,81 @@ function AiBrainPage() {
 
 function ModelConfigSection({
   config,
-  testConnectionMutation,
+  connResult,
+  isTesting,
+  onTestConnection,
   t,
 }: {
-  config: { enabled: boolean; provider: string; baseUrl: string; model: string; maxTokens: number; timeoutMs: number } | undefined
-  testConnectionMutation: ReturnType<typeof orpc.aiAdmin.testConnection.useMutation>
+  config: { enabled: boolean; provider: string; baseUrl: string; model: string; maxTokens: number; timeoutMs: number }
+  connResult: { available: boolean; models: any[]; currentModel: string; latencyMs: number } | null
+  isTesting: boolean
+  onTestConnection: () => void
   t: ReturnType<typeof useT>
 }) {
-  const connResult = testConnectionMutation.data
-
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>{t('admin.ai.model_config')}</CardTitle>
-            <CardDescription>{t('admin.ai.model_config_desc')}</CardDescription>
           </div>
-          {config && (
-            <Badge variant={config.enabled ? 'default' : 'secondary'}>
-              {config.enabled ? t('admin.ai.connected') : t('admin.ai.disconnected')}
-            </Badge>
-          )}
+          <Badge variant={config.enabled ? 'default' : 'secondary'}>
+            {config.enabled ? t('admin.ai.connected') : t('admin.ai.disconnected')}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {config ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('admin.ai.provider')}</Label>
-                <Input value={config.provider} readOnly className="bg-muted" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('admin.ai.base_url')}</Label>
-                <Input value={config.baseUrl} readOnly className="bg-muted" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('admin.ai.model')}</Label>
-                <Input value={config.model} readOnly className="bg-muted" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('admin.ai.max_tokens')}</Label>
-                <Input value={config.maxTokens} readOnly className="bg-muted" type="number" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('admin.ai.timeout')}</Label>
-                <Input value={config.timeoutMs} readOnly className="bg-muted" type="number" />
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>{t('admin.ai.provider')}</Label>
+            <Input value={config.provider} readOnly className="bg-muted" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('admin.ai.base_url')}</Label>
+            <Input value={config.baseUrl} readOnly className="bg-muted" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('admin.ai.model')}</Label>
+            <Input value={config.model} readOnly className="bg-muted" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('admin.ai.max_tokens')}</Label>
+            <Input value={config.maxTokens} readOnly className="bg-muted" type="number" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('admin.ai.timeout')}</Label>
+            <Input value={config.timeoutMs} readOnly className="bg-muted" type="number" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button onClick={onTestConnection} disabled={isTesting} variant="outline">
+            {isTesting ? '...' : t('admin.ai.test_connection')}
+          </Button>
+
+          {connResult && (
+            <div className="flex items-center gap-2">
+              <Badge variant={connResult.available ? 'default' : 'destructive'}>
+                {connResult.available ? t('admin.ai.connected') : t('admin.ai.disconnected')}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {t('admin.ai.latency')}: {connResult.latencyMs}ms
+              </span>
             </div>
+          )}
+        </div>
 
-            <p className="text-xs text-muted-foreground">{t('admin.ai.config_readonly_note')}</p>
-
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={() => testConnectionMutation.mutate({})}
-                disabled={testConnectionMutation.isPending}
-                variant="outline"
-              >
-                {testConnectionMutation.isPending ? t('admin.ai.testing') : t('admin.ai.test_connection')}
-              </Button>
-
-              {connResult && (
-                <div className="flex items-center gap-2">
-                  <Badge variant={connResult.available ? 'default' : 'destructive'}>
-                    {connResult.available ? t('admin.ai.connected') : t('admin.ai.disconnected')}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {t('admin.ai.latency')}: {connResult.latencyMs}ms
-                  </span>
-                  {connResult.models.length > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      ({connResult.models.length} models)
-                    </span>
-                  )}
-                </div>
-              )}
+        {connResult?.models && connResult.models.length > 0 && (
+          <div className="space-y-2">
+            <Label>{t('admin.ai.model')}</Label>
+            <div className="flex flex-wrap gap-2">
+              {connResult.models.map((m: any) => (
+                <Badge key={m.name} variant={m.name === connResult.currentModel ? 'default' : 'outline'}>
+                  {m.name} ({formatBytes(m.size)})
+                </Badge>
+              ))}
             </div>
-
-            {/* Show available models from connection test */}
-            {connResult?.models && connResult.models.length > 0 && (
-              <div className="space-y-2">
-                <Label>{t('admin.ai.model')}</Label>
-                <div className="flex flex-wrap gap-2">
-                  {connResult.models.map((m) => (
-                    <Badge
-                      key={m.name}
-                      variant={m.name === connResult.currentModel ? 'default' : 'outline'}
-                    >
-                      {m.name} ({formatBytes(m.size)})
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">{t('label_loading')}</p>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -197,9 +262,10 @@ function ModelConfigSection({
 
 function PromptTemplatesSection({
   prompts,
-  updatePromptMutation,
-  resetPromptMutation,
-  testPromptMutation,
+  onUpdatePrompt,
+  onResetPrompt,
+  onTestPrompt,
+  isTestingPrompt,
   t,
 }: {
   prompts: Array<{
@@ -212,12 +278,14 @@ function PromptTemplatesSection({
     defaultModel?: string
     lastModified: string
   }>
-  updatePromptMutation: ReturnType<typeof orpc.aiAdmin.updatePrompt.useMutation>
-  resetPromptMutation: ReturnType<typeof orpc.aiAdmin.resetPrompt.useMutation>
-  testPromptMutation: ReturnType<typeof orpc.aiAdmin.testPrompt.useMutation>
+  onUpdatePrompt: (key: string, template: string) => Promise<void>
+  onResetPrompt: (key: string) => Promise<void>
+  onTestPrompt: (key: string, variables: Record<string, string>) => Promise<void>
+  isTestingPrompt: boolean
   t: ReturnType<typeof useT>
 }) {
   const [editedTemplates, setEditedTemplates] = useState<Record<string, string>>({})
+  const [isSaving, setIsSaving] = useState(false)
 
   const promptsByCategory = useMemo(() => {
     const grouped: Record<string, typeof prompts> = {}
@@ -227,33 +295,27 @@ function PromptTemplatesSection({
     return grouped
   }, [prompts])
 
-  const handleSave = (key: string) => {
+  const handleSave = async (key: string) => {
     const template = editedTemplates[key]
     if (template !== undefined) {
-      updatePromptMutation.mutate({ key, template })
-      setEditedTemplates((prev) => {
-        const next = { ...prev }
-        delete next[key]
-        return next
-      })
+      setIsSaving(true)
+      await onUpdatePrompt(key, template)
+      setEditedTemplates((prev) => { const next = { ...prev }; delete next[key]; return next })
+      setIsSaving(false)
     }
   }
 
-  const handleReset = (key: string) => {
-    resetPromptMutation.mutate({ key })
-    setEditedTemplates((prev) => {
-      const next = { ...prev }
-      delete next[key]
-      return next
-    })
+  const handleReset = async (key: string) => {
+    setIsSaving(true)
+    await onResetPrompt(key)
+    setEditedTemplates((prev) => { const next = { ...prev }; delete next[key]; return next })
+    setIsSaving(false)
   }
 
   const handleTestFromPrompts = (key: string, variables: string[]) => {
     const vars: Record<string, string> = {}
-    for (const v of variables) {
-      vars[v] = `[test_${v}]`
-    }
-    testPromptMutation.mutate({ key, variables: vars })
+    for (const v of variables) vars[v] = `[test_${v}]`
+    onTestPrompt(key, vars)
   }
 
   return (
@@ -330,7 +392,7 @@ function PromptTemplatesSection({
                         <Button
                           size="sm"
                           onClick={() => handleSave(prompt.key)}
-                          disabled={!isDirty || updatePromptMutation.isPending}
+                          disabled={!isDirty || isSaving}
                         >
                           {t('admin.ai.save_prompt')}
                         </Button>
@@ -338,7 +400,7 @@ function PromptTemplatesSection({
                           size="sm"
                           variant="outline"
                           onClick={() => handleReset(prompt.key)}
-                          disabled={resetPromptMutation.isPending}
+                          disabled={isSaving}
                         >
                           {t('admin.ai.reset_default')}
                         </Button>
@@ -346,7 +408,7 @@ function PromptTemplatesSection({
                           size="sm"
                           variant="ghost"
                           onClick={() => handleTestFromPrompts(prompt.key, prompt.variables)}
-                          disabled={testPromptMutation.isPending}
+                          disabled={isTestingPrompt}
                         >
                           {t('admin.ai.test_prompt')}
                         </Button>
@@ -367,7 +429,9 @@ function PromptTemplatesSection({
 
 function TestConsoleSection({
   prompts,
-  testPromptMutation,
+  onTestPrompt,
+  testResult,
+  isTestingPrompt,
   t,
 }: {
   prompts: Array<{
@@ -380,7 +444,9 @@ function TestConsoleSection({
     defaultModel?: string
     lastModified: string
   }>
-  testPromptMutation: ReturnType<typeof orpc.aiAdmin.testPrompt.useMutation>
+  onTestPrompt: (key: string, variables: Record<string, string>) => Promise<void>
+  testResult: { output: string | null; latencyMs: number; source: string } | null
+  isTestingPrompt: boolean
   t: ReturnType<typeof useT>
 }) {
   const [selectedKey, setSelectedKey] = useState<string>('')
@@ -393,19 +459,17 @@ function TestConsoleSection({
     const prompt = prompts.find((p) => p.key === key)
     if (prompt) {
       const vars: Record<string, string> = {}
-      for (const v of prompt.variables) {
-        vars[v] = ''
-      }
+      for (const v of prompt.variables) vars[v] = ''
       setVariables(vars)
     }
   }
 
   const handleRun = () => {
     if (!selectedKey) return
-    testPromptMutation.mutate({ key: selectedKey, variables })
+    onTestPrompt(selectedKey, variables)
   }
 
-  const result = testPromptMutation.data
+  const result = testResult
 
   return (
     <Card>
@@ -452,9 +516,9 @@ function TestConsoleSection({
         {/* Run button */}
         <Button
           onClick={handleRun}
-          disabled={!selectedKey || testPromptMutation.isPending}
+          disabled={!selectedKey || isTestingPrompt}
         >
-          {testPromptMutation.isPending ? t('admin.ai.testing') : t('admin.ai.run_test')}
+          {isTestingPrompt ? '...' : t('admin.ai.run_test')}
         </Button>
 
         {/* Response area */}
@@ -474,7 +538,7 @@ function TestConsoleSection({
           </div>
         )}
 
-        {!result && !testPromptMutation.isPending && (
+        {!result && !isTestingPrompt && (
           <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground min-h-[100px] flex items-center justify-center">
             {t('admin.ai.no_response')}
           </div>
