@@ -168,6 +168,7 @@
   "label_open_toolbar": "Apri toolbar",
   "label_split_default": "Divisione",
   "warning_already_added": "Già aggiunto",
+  "warning_thinking": "Analisi ricetta in corso...",
   "warning_affected_nodes": "×{{count}} nodi",
   "warning_actionable_title": "Azioni necessarie",
   "btn_apply_all": "Applica tutto",

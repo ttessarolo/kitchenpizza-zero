@@ -168,6 +168,7 @@
   "label_open_toolbar": "Open toolbar",
   "label_split_default": "Split",
   "warning_already_added": "Already added",
+  "warning_thinking": "Analyzing recipe...",
   "warning_affected_nodes": "×{{count}} nodes",
   "warning_actionable_title": "Actions needed",
   "btn_apply_all": "Apply all",

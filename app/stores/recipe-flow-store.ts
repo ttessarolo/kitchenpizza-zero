@@ -537,6 +537,10 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
       autoResolve: get().autoResolveEnabled,
     })
       .then((result) => {
+        // Debug: show Brain 3 status in browser console
+        if ((result as any)._llmDebug) {
+          console.log('[Brain 3]', (result as any)._llmDebug)
+        }
         const current = get()
         const updatedGroups = [...current.ingredientGroups]
         for (const node of result.graph.nodes) {

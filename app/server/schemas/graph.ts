@@ -121,4 +121,13 @@ export const reconcileOutputSchema = z.object({
   portioning: portioningSchema,
   warnings: z.array(warningSchema),
   llmVerification: llmVerificationResultSchema.nullable().optional(),
+  _llmDebug: z.object({
+    enabled: z.boolean(),
+    provider: z.string(),
+    llmVerifyRequested: z.boolean(),
+    warningsCount: z.number(),
+    verificationAttempted: z.boolean(),
+    verificationResult: z.string(),
+    error: z.string().nullable(),
+  }).optional(),
 })

@@ -35,7 +35,9 @@ export const reconcile = baseProcedure
 
     // Step 2: Brain 3 LLM verification (optional)
     let llmVerification = null
-    if (flags.LLM_ENABLED && llmVerify && result.warnings.length > 0) {
+    let llmError: string | null = null
+    const shouldVerify = flags.LLM_ENABLED && llmVerify && result.warnings.length > 0
+    if (shouldVerify) {
       try {
         llmVerification = await verifyReconciliation(
           result.graph,
@@ -45,8 +47,7 @@ export const reconcile = baseProcedure
           locale,
         )
       } catch (e) {
-        // LLM failure is non-blocking — log and continue
-        console.warn('[Brain 3] LLM verification failed:', (e as Error).message)
+        llmError = (e as Error).message
       }
     }
 
@@ -89,5 +90,14 @@ export const reconcile = baseProcedure
     return {
       ...result,
       ...(llmVerification ? { llmVerification } : {}),
+      _llmDebug: {
+        enabled: flags.LLM_ENABLED,
+        provider: flags.LLM_PROVIDER,
+        llmVerifyRequested: llmVerify,
+        warningsCount: result.warnings.length,
+        verificationAttempted: shouldVerify,
+        verificationResult: llmVerification ? 'success' : 'null',
+        error: llmError,
+      },
     }
   })

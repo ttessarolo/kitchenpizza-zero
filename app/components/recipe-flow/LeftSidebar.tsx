@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { Sparkles } from 'lucide-react'
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { ModeToggle } from './ModeToggle'
@@ -62,6 +63,7 @@ export function LeftSidebar() {
   const meta = useRecipeFlowStore((s) => s.meta)
   const setMeta = useRecipeFlowStore((s) => s.setMeta)
   const warnings = useRecipeFlowStore((s) => s.warnings)
+  const isReconciling = useRecipeFlowStore((s) => s.isReconciling)
   const applyAllWarningActions = useRecipeFlowStore((s) => s.applyAllWarningActions)
 
   // Warnings for the active layer (includes canonical warnings)
@@ -254,17 +256,23 @@ export function LeftSidebar() {
       )}
 
       {/* Active layer warnings — reveal "Criticità" */}
-      {viewMode !== 'panoramica' && (activeActionable.length > 0 || activeInformational.length > 0) && (
+      {viewMode !== 'panoramica' && (isReconciling || activeActionable.length > 0 || activeInformational.length > 0) && (
         <details open className="border-t border-border">
           <summary className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:bg-muted/30 list-none flex items-center justify-between [&::-webkit-details-marker]:hidden">
             {t('section_warnings')}
             <span className="text-[8px]">▾</span>
           </summary>
           <div className="px-2 pb-2 space-y-1.5 overflow-y-auto">
-            {activeActionable.length > 0 && (
+            {isReconciling && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground p-3 animate-pulse">
+                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                <span>{t('warning_thinking')}</span>
+              </div>
+            )}
+            {!isReconciling && activeActionable.length > 0 && (
               <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} />
             )}
-            {activeInformational.map((w) => (
+            {!isReconciling && activeInformational.map((w) => (
               <WarningCard key={w.id} warning={w} count={w.count} />
             ))}
           </div>
