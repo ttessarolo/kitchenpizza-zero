@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { getScienceProvider } from '~/server/middleware/science'
+import { FormulaDisplay, FormulaCard } from '~/components/science/FormulaDisplay'
+import type { MathJSON } from '@commons/utils/science/types'
 
 const loadBlock = (createServerFn() as any)
   .handler(async ({ data: id }: { data: string }) => {
@@ -72,12 +74,14 @@ function RuleDetail() {
           )}
         </div>
 
-        {/* Formula expression */}
-        {b.expression != null && (
-          <div className="mb-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Expression</h3>
-            <pre className="bg-muted p-3 rounded-lg text-sm font-mono overflow-x-auto">{String(b.expression)}</pre>
-          </div>
+        {/* Formula expression (MathJSON + KaTeX rendering) */}
+        {b.expr != null && (
+          <FormulaCard
+            label="Expression"
+            expr={b.expr as MathJSON}
+            latex={b.latex as string | null}
+            className="mb-4"
+          />
         )}
 
         {/* Variants */}
@@ -91,7 +95,9 @@ function RuleDetail() {
                     <span className="text-sm font-medium">{t(String(v.nameKey))}</span>
                     {v.default != null && <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded">default</span>}
                   </div>
-                  <pre className="bg-muted p-2 rounded text-xs font-mono">{String(v.expression)}</pre>
+                  <div className="bg-muted p-2 rounded">
+                    <FormulaDisplay expr={v.expr as MathJSON} latex={v.latex as string | null} />
+                  </div>
                   {v.constants != null && (
                     <div className="mt-1 text-xs text-muted-foreground">
                       Constants: {Object.entries(v.constants as Record<string, number>).map(([k, val]) => `${k}=${val}`).join(', ')}
@@ -130,7 +136,7 @@ function RuleDetail() {
               {(b.factors as Array<Record<string, unknown>>).map((f) => (
                 <div key={String(f.id)} className="bg-muted rounded p-2 text-xs">
                   <span className="font-mono font-semibold">{String(f.id)}</span>
-                  {f.expression != null && <span className="ml-2 text-muted-foreground">{String(f.expression)}</span>}
+                  {f.expr != null && <span className="ml-2"><FormulaDisplay expr={f.expr as MathJSON} latex={f.latex as string | null} className="text-sm" /></span>}
                   {f.source === 'lookup' && <span className="ml-2 text-muted-foreground">lookup: {String(f.table)}.{String(f.field)}</span>}
                   {f.ref != null && <span className="ml-2 italic text-muted-foreground">— {String(f.ref)}</span>}
                 </div>

@@ -172,6 +172,8 @@
   "warning_affected_nodes": "×{{count}} nodes",
   "warning_actionable_title": "Actions needed",
   "btn_apply_all": "Apply all",
+  "btn_applying": "Applying...",
+  "applying_fixes": "Applying fixes, please wait...",
   "auto_correct_ok": "{{count}} issues resolved in {{rounds}} rounds",
   "auto_correct_ko": "{{resolved}} resolved, {{remaining}} could not be auto-fixed",
   "auto_correct_step_applied": "Fixed: {{action}}",

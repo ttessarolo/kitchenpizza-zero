@@ -55,7 +55,7 @@ const DEFAULT_PORTIONING: Portioning = {
   thickness: 0.5,
   targetHyd: 65, doughHours: 18, yeastPct: 0.22, saltPct: 2.3, fatPct: 3,
   preImpasto: null, preFermento: null, flourMix: [],
-  autoCorrect: false, reasoningLevel: 'medium',
+  autoCorrect: true, reasoningLevel: 'high',
 }
 
 // ── Convert RecipeNode to React Flow Node ───────────────────────
@@ -1019,22 +1019,55 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
     },
 
     // ── Apply all warnings via iterative auto-correct solver ──────
+    // Flow: auto-correct (N deterministic rounds) → apply result → LLM verify (1 call)
+    // Spinner stays on for the entire duration.
     applyAllWarningActions: () => {
       const s = get()
       const graph = getGraph(s)
       const portioning = getPortioning(s)
       const locale = s.meta.locale || 'it'
-      set({ isReconciling: true })
-      autoCorrectRPC(graph, portioning, s.meta, locale, {
+      const meta = s.meta
+
+      set({ isReconciling: true, reconcileError: null })
+
+      autoCorrectRPC(graph, portioning, meta, locale, {
         autoCorrect: true,
         reasoningLevel: portioning.reasoningLevel,
       })
-        .then((result) => {
-          applyMutation(() => ({
-            graph: result.graph as RecipeGraph,
-            portioning: result.portioning as Portioning,
-          }))
-          set({ autoCorrectReport: result.report, isReconciling: false })
+        .then((acResult) => {
+          // Apply auto-correct result directly (NO applyMutation — avoids redundant reconciliation)
+          const current = get()
+          const acGraph = acResult.graph as RecipeGraph
+          const acPortioning = acResult.portioning as Portioning
+          const acLayers = withGraphAndPortioningUpdate(current, acGraph, acPortioning)
+          set({
+            layers: acLayers,
+            warnings: acResult.warnings,
+            autoCorrectReport: acResult.report,
+            ...rebuildAllFlowNodes({ ...current, layers: acLayers, warnings: acResult.warnings }),
+          })
+
+          // Now run ONE reconciliation with LLM verification on the corrected graph
+          reconcileGraphRPC(acGraph, acPortioning, meta, locale, {
+            debounceMs: 0,
+            llmVerify: true,
+            autoResolve: current.autoResolveEnabled,
+          })
+            .then((reconResult) => {
+              const curr = get()
+              const finalLayers = withReconcileResult(curr, reconResult)
+              set({
+                layers: finalLayers,
+                warnings: reconResult.warnings,
+                llmInsights: (reconResult as any).llmInsights ?? [],
+                isReconciling: false,
+                ...rebuildAllFlowNodes({ ...curr, layers: finalLayers, warnings: reconResult.warnings }),
+              })
+            })
+            .catch(() => {
+              // LLM verification failed — keep auto-correct result, just turn off spinner
+              set({ isReconciling: false })
+            })
         })
         .catch((err) => {
           set({ isReconciling: false, reconcileError: (err as Error).message })

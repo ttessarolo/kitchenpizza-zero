@@ -1,8 +1,7 @@
 import { getFlags } from '../../lib/feature-flags'
 import type { LlmProvider } from './noop-provider'
 import { NoopProvider } from './noop-provider'
-import { HfApiProvider } from './hf-api-provider'
-import { OllamaProvider } from './ollama-provider'
+import { OpenAiProvider } from './openai-provider'
 
 let cachedProvider: LlmProvider | null = null
 
@@ -16,11 +15,8 @@ function getProvider(): LlmProvider {
   }
 
   switch (flags.LLM_PROVIDER) {
-    case 'ollama':
-      cachedProvider = new OllamaProvider()
-      break
-    case 'hf_api':
-      cachedProvider = new HfApiProvider()
+    case 'openai':
+      cachedProvider = new OpenAiProvider()
       break
     default:
       cachedProvider = new NoopProvider()

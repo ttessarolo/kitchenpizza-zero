@@ -12,6 +12,7 @@ const loadBlocks = createServerFn().handler(async () => {
     id: b.id,
     type: b.type,
     section: b._meta?.section ?? 'other',
+    title: (b as any).title ?? null,
     displayName: i18nIt[b._meta?.displayName ?? ''] ?? i18nEn[b._meta?.displayName ?? ''] ?? b.id,
     description: i18nIt[b._meta?.description ?? ''] ?? i18nEn[b._meta?.description ?? ''] ?? '',
     tags: b._meta?.tags ?? [],
@@ -83,8 +84,8 @@ function ScienceDashboard() {
                     {badge.label}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{item.displayName}</div>
-                    {item.description && (
+                    <div className="text-sm font-medium truncate">{item.title ?? item.displayName}</div>
+                    {!item.title && item.description && (
                       <div className="text-xs text-muted-foreground truncate">{item.description}</div>
                     )}
                   </div>

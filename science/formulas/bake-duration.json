@@ -16,7 +16,8 @@
       {
         "id": "temp_ratio",
         "ref": "Temperature ratio: reference temp / actual temp",
-        "expression": "refTemp / max(ovenTemp, 100)"
+        "expr": ["Divide", "refTemp", ["Max", "ovenTemp", 100]],
+        "latex": "\\frac{refTemp}{\\max(ovenTemp, 100)}"
       },
       {
         "id": "material_factor",
@@ -27,12 +28,14 @@
       {
         "id": "mode_factor",
         "ref": "Fan mode is 15% faster than static",
-        "expression": "ovenMode == 1 ? 0.85 : 1.0"
+        "expr": ["If", ["Equal", "ovenMode", 1], 0.85, 1.0],
+        "latex": "ovenMode = 1 \\rightarrow 0.85 : 1.0"
       },
       {
         "id": "thickness_factor",
         "ref": "Thickness adjustment: thicker dough = longer bake",
-        "expression": "1 + ((thickness - baseThickness) / 0.1) * thicknessFactor"
+        "expr": ["Add", 1, ["Multiply", ["Divide", ["Subtract", "thickness", "baseThickness"], 0.1], "thicknessFactor"]],
+        "latex": "1 + \\frac{thickness - baseThickness}{0.1} \\cdot thicknessFactor"
       }
     ],
     "output": { "name": "durationMin", "unit": "min", "round": 0, "min": 5 }
@@ -49,7 +52,8 @@
       "lastModified": "2026-03-27",
       "author": "system"
     },
-    "expression": "2 ^ (-(fdt - 24) * coeff / 10)",
+    "expr": ["Power", 2, ["Negate", ["Divide", ["Multiply", ["Subtract", "fdt", 24], "coeff"], 10]]],
+    "latex": "2^{-\\frac{(fdt - 24) \\cdot coeff}{10}}",
     "constants": {
       "refTemp": 24,
       "divFactor": 10

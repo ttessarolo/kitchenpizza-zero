@@ -2,7 +2,7 @@
 
 ### Philosophy
 
-**Zero hardcoded science in code.** All baking knowledge — formulas, thresholds, factor chains, classification rules, advisory conditions, catalog data — lives in declarative JSON files under `/science/`. The TypeScript Managers are pure execution engines: they receive logic from a `ScienceProvider`, evaluate it via `expr-eval`, and return results. This separation enables:
+**Zero hardcoded science in code.** All baking knowledge — formulas, thresholds, factor chains, classification rules, advisory conditions, catalog data — lives in declarative JSON (local) or Neon PostgreSQL (production). The TypeScript Managers are pure execution engines: they receive logic from a `ScienceProvider`, evaluate MathJSON expressions via `@cortex-js/compute-engine`, and return results. This separation enables:
 
 - **Non-developers can edit baking science** (via admin panel or JSON files) without touching code
 - **Multiple formula variants** coexist (e.g., Casucci Formula L vs Q10 model for yeast) — the user or system chooses
@@ -19,7 +19,7 @@
 ScienceProvider ──────────────► Manager.function(provider, ...)
      │                               │
      ▼                               ▼
-FormulaEngine (expr-eval)       RuleEngine (conditions)
+FormulaEngine (MathJSON/CE)     RuleEngine (conditions)
      │                               │
      ▼                               ▼
 { result: 0.172 }               { messageKey, messageVars, actions }
@@ -52,7 +52,7 @@ All scientific formulas, rules, thresholds, and catalogs are stored as JSON in `
 
 | Type | Purpose | Example |
 |------|---------|---------|
-| `formula` | Math expression (expr-eval) | `K / (REF_HYD * tempC^2 * hours)` |
+| `formula` | MathJSON expression | `["Divide", "K", ["Multiply", "REF_HYD", ...]]` |
 | `factor_chain` | Multiplicative: base × f1 × f2 × ... | Rise duration (11 factors) |
 | `piecewise` | Step function | W > 380 → 20h |
 | `classification` | Categorization | W → weak/medium/strong |

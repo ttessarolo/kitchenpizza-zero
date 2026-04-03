@@ -10,7 +10,8 @@
     "lastModified": "2026-03-29",
     "author": "system"
   },
-  "expression": "startVolume * (1 - clamp(cookDuration * evapRate * lidFactor / 100, 0, 0.8))",
+  "expr": ["Multiply", "startVolume", ["Subtract", 1, ["Clamp", ["Divide", ["Multiply", "cookDuration", ["Multiply", "evapRate", "lidFactor"]], 100], 0, 0.8]]],
+  "latex": "startVolume \\cdot (1 - \\text{clamp}(\\frac{cookDuration \\cdot evapRate \\cdot lidFactor}{100}, 0, 0.8))",
   "constants": {
     "evapRate": 0.15,
     "lidFactor": 1.0

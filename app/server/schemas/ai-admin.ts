@@ -2,25 +2,18 @@ import { z } from 'zod'
 
 export const llmConfigSchema = z.object({
   enabled: z.boolean(),
-  provider: z.enum(['ollama', 'hf_api', 'noop']),
-  baseUrl: z.string(),
+  provider: z.enum(['openai', 'noop']),
   model: z.string(),
+  apiKeySet: z.boolean(),
   maxTokens: z.number(),
   timeoutMs: z.number(),
 })
 
 export type LlmConfig = z.infer<typeof llmConfigSchema>
 
-export const ollamaModelSchema = z.object({
-  name: z.string(),
-  size: z.number(),
-  modified_at: z.string(),
-})
-
 export const testConnectionOutputSchema = z.object({
   available: z.boolean(),
-  models: z.array(ollamaModelSchema),
-  currentModel: z.string(),
+  model: z.string(),
   latencyMs: z.number(),
 })
 

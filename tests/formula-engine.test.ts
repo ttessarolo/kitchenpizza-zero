@@ -30,14 +30,15 @@ const i18nDir = resolve(process.cwd(), 'commons/i18n')
 const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 // ═══════════════════════════════════════════════════════════════
-// Formula evaluation
+// Formula evaluation (MathJSON expressions)
 // ═══════════════════════════════════════════════════════════════
 
 describe('FormulaEngine — evaluateFormula', () => {
   const yeastFormula: FormulaBlock = {
     type: 'formula',
     id: 'yeast_pct',
-    expression: 'K / (REF_HYD * tempC^2 * hours)',
+    // MathJSON: K / (REF_HYD * tempC^2 * hours)
+    expr: ['Divide', 'K', ['Multiply', ['Multiply', 'REF_HYD', ['Power', 'tempC', 2]], 'hours']],
     constants: { K: 100000, REF_HYD: 56 },
     inputs: ['hours', 'tempC'],
     output: { name: 'yeastPct', unit: '%', round: 3 },
@@ -86,7 +87,8 @@ describe('FormulaEngine — evaluateFormula with variants', () => {
         key: 'formula_l',
         nameKey: 'variant.yeast.formula_l',
         descriptionKey: 'variant.yeast.formula_l.desc',
-        expression: 'K / (REF_HYD * tempC^2 * hours)',
+        // MathJSON: K / (REF_HYD * tempC^2 * hours)
+        expr: ['Divide', 'K', ['Multiply', ['Multiply', 'REF_HYD', ['Power', 'tempC', 2]], 'hours']],
         constants: { K: 100000, REF_HYD: 56 },
         default: true,
       },
@@ -94,7 +96,8 @@ describe('FormulaEngine — evaluateFormula with variants', () => {
         key: 'q10_model',
         nameKey: 'variant.yeast.q10',
         descriptionKey: 'variant.yeast.q10.desc',
-        expression: 'baseYeast * (Q10 ^ ((Tref - tempC) / 10)) / hours',
+        // MathJSON: baseYeast * (Q10 ^ ((Tref - tempC) / 10)) / hours
+        expr: ['Divide', ['Multiply', 'baseYeast', ['Power', 'Q10', ['Divide', ['Subtract', 'Tref', 'tempC'], 10]]], 'hours'],
         constants: { baseYeast: 1.5, Q10: 2, Tref: 24 },
       },
     ],
@@ -120,7 +123,7 @@ describe('FormulaEngine — evaluateFormula with variants', () => {
 })
 
 // ═══════════════════════════════════════════════════════════════
-// Factor chain evaluation
+// Factor chain evaluation (MathJSON expressions)
 // ═══════════════════════════════════════════════════════════════
 
 describe('FormulaEngine — evaluateFactorChain', () => {
@@ -129,8 +132,8 @@ describe('FormulaEngine — evaluateFactorChain', () => {
     id: 'test_chain',
     base: { value: 60, unit: 'min' },
     factors: [
-      { id: 'double', expression: '2' },
-      { id: 'half_yeast', expression: '2 / max(yeastPct, 0.5)' },
+      { id: 'double', expr: 2 },
+      { id: 'half_yeast', expr: ['Divide', 2, ['Max', 'yeastPct', 0.5]] },
     ],
     output: { name: 'result', round: 0 },
   }
@@ -177,7 +180,7 @@ describe('FormulaEngine — evaluateFactorChain', () => {
       type: 'factor_chain',
       id: 'test',
       base: { value: 10 },
-      factors: [{ id: 'tiny', expression: '0.001' }],
+      factors: [{ id: 'tiny', expr: 0.001 }],
       output: { name: 'result', round: 0, min: 15 },
     }
     expect(evaluateFactorChain(chain, {})).toBe(15)

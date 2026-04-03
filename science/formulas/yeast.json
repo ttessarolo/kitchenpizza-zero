@@ -15,7 +15,8 @@
       "key": "formula_l",
       "nameKey": "variant.yeast.formula_l",
       "descriptionKey": "variant.yeast.formula_l.desc",
-      "expression": "K / (hydration * tempC^2 * hours)",
+      "expr": ["Divide", "K", ["Multiply", "hydration", ["Multiply", ["Power", "tempC", 2], "hours"]]],
+      "latex": "\\frac{K}{hydration \\cdot T_{C}^{2} \\cdot hours}",
       "constants": { "K": 100000 },
       "applicability": { "minHours": 1, "maxHours": 48, "minTemp": 18, "maxTemp": 30 },
       "default": true
@@ -24,7 +25,8 @@
       "key": "q10_model",
       "nameKey": "variant.yeast.q10",
       "descriptionKey": "variant.yeast.q10.desc",
-      "expression": "baseYeast * (Q10 ^ ((Tref - tempC) / 10)) / hours",
+      "expr": ["Divide", ["Multiply", "baseYeast", ["Power", "Q10", ["Divide", ["Subtract", "Tref", "tempC"], 10]]], "hours"],
+      "latex": "\\frac{baseYeast \\cdot Q10^{\\frac{T_{ref} - T_{C}}{10}}}{hours}",
       "constants": { "baseYeast": 1.5, "Q10": 2, "Tref": 24 },
       "applicability": { "minHours": 24, "maxHours": 98, "minTemp": 2, "maxTemp": 45 }
     }

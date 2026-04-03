@@ -44,7 +44,7 @@ The solver applies fixes in scientifically-grounded priority order:
 ```typescript
 interface AutoCorrectConfig {
   autoCorrect: boolean                    // true = apply; false = analyze only
-  reasoningLevel: 'low' | 'medium' | 'high'  // max rounds: 3 / 5 / 8
+  reasoningLevel: 'low' | 'medium' | 'high'  // max rounds: 3 / 6 / 10
 }
 ```
 

@@ -10,7 +10,8 @@
     "lastModified": "2026-03-27",
     "author": "system"
   },
-  "expression": "weightedAvg + frictionFactor",
+  "expr": ["Add", "weightedAvg", "frictionFactor"],
+  "latex": "weightedAvg + frictionFactor",
   "constants": {
     "airIncorporationPct": 0.15
   },

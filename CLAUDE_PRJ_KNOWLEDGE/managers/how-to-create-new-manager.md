@@ -83,7 +83,7 @@ export function get{Domain}Warnings(
 
 Create JSON files in `/science/` following `cookingsciencebrain.schema.json`:
 
-- **Formulas**: `/science/formulas/{domain}-*.json` — mathematical expressions (expr-eval)
+- **Formulas**: `/science/formulas/{domain}-*.json` — mathematical expressions (MathJSON format)
 - **Rules**: `/science/rules/{domain}-warnings.json` — advisory/warning conditions
 - **Catalogs**: `/science/catalogs/{domain}-types.json` — data tables
 - **Classifications**: `/science/classifications/{domain}-*.json` — categorization

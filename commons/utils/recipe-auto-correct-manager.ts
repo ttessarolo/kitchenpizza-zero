@@ -58,7 +58,7 @@ function getWarningTier(warningId: string): number {
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-const MAX_ROUNDS: Record<string, number> = { low: 3, medium: 5, high: 8 }
+const MAX_ROUNDS: Record<string, number> = { low: 3, medium: 6, high: 10 }
 
 /**
  * Count actionable warnings (all IDs, not just unique messageKeys).

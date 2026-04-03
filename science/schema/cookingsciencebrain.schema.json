@@ -54,18 +54,28 @@
       "required": ["name"]
     },
 
+    "mathjson": {
+      "description": "MathJSON expression (CortexJS standard): a number, a string (variable), or an array [operator, ...operands]",
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string" },
+        { "type": "array", "items": {}, "minItems": 1 }
+      ]
+    },
+
     "variant": {
       "type": "object",
       "properties": {
         "key": { "type": "string" },
         "nameKey": { "type": "string" },
         "descriptionKey": { "type": "string" },
-        "expression": { "type": "string" },
+        "expr": { "$ref": "#/$defs/mathjson" },
+        "latex": { "type": "string" },
         "constants": { "type": "object", "additionalProperties": { "type": "number" } },
         "applicability": { "type": "object" },
         "default": { "type": "boolean" }
       },
-      "required": ["key", "nameKey", "expression"]
+      "required": ["key", "nameKey", "expr"]
     },
 
     "formula": {
@@ -75,7 +85,8 @@
         "id": { "type": "string" },
         "ref": { "type": "string" },
         "_meta": { "$ref": "#/$defs/meta" },
-        "expression": { "type": "string" },
+        "expr": { "$ref": "#/$defs/mathjson" },
+        "latex": { "type": "string" },
         "constants": { "type": "object", "additionalProperties": { "type": "number" } },
         "variants": { "type": "array", "items": { "$ref": "#/$defs/variant" } },
         "inputs": { "type": "array", "items": { "type": "string" } },
@@ -90,7 +101,8 @@
       "properties": {
         "id": { "type": "string" },
         "ref": { "type": "string" },
-        "expression": { "type": "string" },
+        "expr": { "$ref": "#/$defs/mathjson" },
+        "latex": { "type": "string" },
         "source": { "enum": ["lookup", "input"] },
         "table": { "type": "string" },
         "key": { "type": "string" },

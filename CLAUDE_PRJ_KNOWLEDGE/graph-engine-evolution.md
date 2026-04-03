@@ -1,7 +1,7 @@
 # Graph Engine Evolution — Implementation Plan
 
 > **Branch:** `feat/multi-brain-engine`
-> **Objective:** Migrate from client-side graph computation to a server-side multi-brain architecture with Graphology graph engine, domain-specific query DSL, and Transformers.js v4 tiny LLM.
+> **Objective:** Migrate from client-side graph computation to a server-side multi-brain architecture with Graphology graph engine, domain-specific query DSL, and OpenAI gpt-5.4-mini LLM.
 > **Deploy target:** Netlify (Node.js 24)
 
 ---
@@ -23,9 +23,9 @@ CLIENT (thin)                         SERVER (Node.js / Netlify Functions)
 │ (render only)   │ ←── oRPC ───→   │                                          │
 │                 │                  │ ┌──────────┐ ┌────────┐ ┌────────────┐  │
 │ User mutations  │                  │ │BRAIN 1   │ │BRAIN 2 │ │BRAIN 3     │  │
-│ → oRPC call     │                  │ │Graphology│ │Science │ │Tiny LLM    │  │
-│                 │                  │ │+ DSL     │ │Determ. │ │Transformers│  │
-│ Receives:       │                  │ │          │ │        │ │.js v4      │  │
+│ → oRPC call     │                  │ │Graphology│ │Science │ │OpenAI      │  │
+│                 │                  │ │+ DSL     │ │Determ. │ │gpt-5.4-mini│  │
+│ Receives:       │                  │ │          │ │        │ │Cloud API   │  │
 │ - updated graph │                  │ │Structure │ │Formulas│ │            │  │
 │ - warnings      │                  │ │Traversal │ │Rules   │ │NL→Constr.  │  │
 │ - schedule      │                  │ │Pattern   │ │Chains  │ │Explain     │  │
@@ -48,7 +48,7 @@ git checkout -b feat/multi-brain-engine
 ### 0.2 Install new dependencies
 ```bash
 pnpm add graphology graphology-traversal graphology-shortest-path graphology-components graphology-operators graphology-utils
-pnpm add @huggingface/transformers
+pnpm add openai
 ```
 
 ### 0.3 Verify Netlify compatibility
@@ -287,95 +287,47 @@ The store should implement optimistic UI updates:
 
 ---
 
-## Phase 3: Tiny LLM Integration (Brain 3)
+## Phase 3: OpenAI LLM Integration (Brain 3)
 
 ### Goal
-Integrate a local Qwen3-0.6B (or 1.7B) model via Transformers.js v4 on the server for: NL→constraints translation, warning explanations, cross-layer compatibility assessment, and DSL query generation.
+Integrate OpenAI gpt-5.4-mini via cloud API for: NL→constraints translation, warning explanations, cross-layer compatibility assessment, and DSL query generation.
 
-### 3.1 Model selection
+### 3.1 Model
 
-**Primary:** `onnx-community/Qwen3-0.6B-ONNX` (q4f16 quantization, ~400MB)
-**Fallback if capable enough for structured output:** promote to Qwen3-1.7B after testing
+**Model:** OpenAI `gpt-5.4-mini` via official `openai` npm SDK.
+Excellent structured JSON output (native `response_format: json_object`), multilingual (Italian nativo), deep domain knowledge for culinary science reasoning.
 
-**Why Qwen3:** best-in-class structured JSON output for its size, excellent multilingual (Italian), same family as embedding model in CSB.
+### 3.2 LLM Service (IMPLEMENTED)
 
-### 3.2 LLM Service
+**Architecture:**
+- `app/server/services/llm/openai-provider.ts` — OpenAI SDK wrapper implementing `LlmProvider` interface
+- `app/server/services/llm/llm-service.ts` — Provider switching (openai | noop)
+- `app/server/services/llm/noop-provider.ts` — Graceful degradation fallback
+- `local_data/llm-prompts.ts` — 4 prompt templates (explain_warning, nl_to_constraints, cross_layer_compat, verify_reconciliation)
+- `local_data/llm-perimeter.ts` — Safety bounds for LLM verdicts (preset: `openai_mini`)
 
-**New file:** `app/server/services/llm-service.ts`
+### 3.3 Graceful degradation
 
-```typescript
-import { pipeline, TextGenerationPipeline } from '@huggingface/transformers'
+Brain 3 is OPTIONAL. If the API is unavailable or returns invalid output:
+- All LLM procedures return `null` → client uses existing behavior
+- Feature flag `LLM_ENABLED=false` disables entirely
+- `NoopProvider` ensures zero errors when disabled
 
-class LLMService {
-  private generator: TextGenerationPipeline | null = null
-  private loading: Promise<void> | null = null
+### 3.4 Deployment
 
-  // Lazy initialization — model loads on first call
-  async ensureReady(): Promise<void>
+API calls to OpenAI — no model loading, no cold start concerns. Typical latency 1-3s.
+Env vars: `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-5.4-mini`, `LLM_MAX_TOKENS=4096`, `LLM_TIMEOUT_MS=30000`.
 
-  // Core generation with structured output
-  async generate(prompt: string, schema?: JsonSchema): Promise<string>
-
-  // Domain-specific methods
-  async naturalLanguageToConstraints(userInput: string, recipeContext: RecipeSummary): Promise<AdaptationConstraints>
-  async explainWarning(warning: ActionableWarning, recipeContext: RecipeSummary, locale: string): Promise<string>
-  async assessCrossLayerCompatibility(layer1: LayerSummary, layer2: LayerSummary): Promise<CompatibilityAssessment>
-  async generateGraphQuery(naturalLanguage: string): Promise<GraphQuery>
-}
-
-export const llmService = new LLMService()
-```
-
-### 3.3 Prompt templates
-
-**New directory:** `app/server/prompts/`
-
-Store prompt templates as `.md` files (same pattern as CSB):
-
-| File | Purpose |
-|------|---------|
-| `nl-to-constraints.md` | System prompt for NL→structured constraint extraction |
-| `explain-warning.md` | System prompt for warning explanation generation |
-| `cross-layer-compat.md` | System prompt for cross-layer compatibility assessment |
-| `generate-query.md` | System prompt for DSL query generation from NL |
-
-### 3.4 Graceful degradation
-
-Brain 3 is OPTIONAL. If the model fails to load, is too slow, or returns invalid output:
-- `explain.warning` returns `null` → client shows the raw i18n message (existing behavior)
-- `explain.adapt` returns an error → client shows "adaptation not available" message
-- `graph.mixLayers` works without LLM — uses deterministic compatibility rules only
-
-### 3.5 Netlify deployment strategy
-
-**Option A: Netlify Function with lazy model loading**
-- Model downloaded from HuggingFace on first invocation
-- Cached in `/tmp` (Netlify Function ephemeral storage)
-- Cold start: ~15-30s (model download + initialization)
-- Warm invocations: ~200ms-2s per generation
-- **Risk:** Function timeout (default 10s, max 26s on Pro plan)
-
-**Option B: Netlify Background Function**
-- No timeout limit
-- Long-running LLM calls handled asynchronously
-- Client polls for completion or uses server-sent events
-
-**Option C: Separate persistent Node.js process (future)**
-- If Netlify limits prove blocking, deploy LLM service separately
-- KitchenPizza server calls LLM service via HTTP
-
-**Recommendation:** Start with Option A. The LLM is used for non-blocking enrichments (explanations, coaching) — if cold start is slow, the UX gracefully degrades. For the `explain.adapt` flow (which IS user-blocking), use Option B or queue-based approach.
-
-### 3.6 Files to create
+### 3.5 Files
 
 | Action | File | Description |
 |--------|------|-------------|
-| CREATE | `app/server/services/llm-service.ts` | Transformers.js LLM wrapper |
-| CREATE | `app/server/prompts/nl-to-constraints.md` | Prompt template |
-| CREATE | `app/server/prompts/explain-warning.md` | Prompt template |
-| CREATE | `app/server/prompts/cross-layer-compat.md` | Prompt template |
-| CREATE | `app/server/prompts/generate-query.md` | Prompt template |
-| MODIFY | `app/server/procedures/explain.ts` | Wire LLM service |
+| EXISTS | `app/server/services/llm/openai-provider.ts` | OpenAI SDK wrapper |
+| EXISTS | `app/server/services/llm/llm-service.ts` | Provider switching |
+| EXISTS | `app/server/services/llm/verify-reconciliation.ts` | LLM verification flow |
+| EXISTS | `app/server/services/llm/apply-perimeter.ts` | Safety perimeter enforcement |
+| EXISTS | `local_data/llm-prompts.ts` | Prompt templates |
+| EXISTS | `local_data/llm-perimeter.ts` | Perimeter presets |
 
 ---
 
@@ -514,10 +466,10 @@ For each fixture:
 
 | Test | What it verifies |
 |------|-----------------|
-| Model loads successfully | Transformers.js initializes without errors |
-| Structured output valid | `naturalLanguageToConstraints()` returns valid JSON matching schema |
+| OpenAI provider available | `isAvailable()` returns true with valid API key |
+| Structured output valid | `generateJSON()` returns valid JSON matching Zod schema |
 | Graceful degradation | Timeout/error → returns null, no crash |
-| Italian language | Model responds correctly to Italian input |
+| Italian language | Model responds correctly to Italian locale prompts |
 | Explanation quality | Manual review of 10 warning explanations (spot check, not automated) |
 
 ### 5.5 E2E Tests
@@ -539,12 +491,13 @@ For each fixture:
 Add to `.env` and Netlify dashboard:
 
 ```env
-# Brain 3 - Tiny LLM
-TRANSFORMERS_MODEL=onnx-community/Qwen3-0.6B-ONNX
-TRANSFORMERS_QUANTIZATION=q4f16
-LLM_ENABLED=true                    # Feature flag to disable LLM entirely
-LLM_MAX_TOKENS=512
-LLM_TIMEOUT_MS=10000
+# Brain 3 - OpenAI LLM
+LLM_ENABLED=true
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-proj-...
+OPENAI_MODEL=gpt-5.4-mini
+LLM_MAX_TOKENS=4096
+LLM_TIMEOUT_MS=30000
 ```
 
 ### 6.2 Netlify configuration

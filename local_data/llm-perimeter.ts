@@ -11,25 +11,14 @@ export interface LlmPerimeter {
 }
 
 export const PERIMETER_PRESETS: Record<string, LlmPerimeter> = {
-  tiny_no_finetune: {
-    canDowngrade: true,
-    maxDowngradeSteps: 1,
-    canUpgrade: false,
-    maxUpgradeSteps: 0,
-    canDismiss: false,
-    dismissMaxSeverity: 'info',
-    autoActionMinConfidence: 0.85,
-    canGenerateInsights: true,
-    logScienceConflicts: true,
-  },
-  tiny_finetuned: {
+  openai_mini: {
     canDowngrade: true,
     maxDowngradeSteps: 2,
     canUpgrade: true,
     maxUpgradeSteps: 1,
     canDismiss: true,
     dismissMaxSeverity: 'warning',
-    autoActionMinConfidence: 0.7,
+    autoActionMinConfidence: 0.65,
     canGenerateInsights: true,
     logScienceConflicts: true,
   },
@@ -47,8 +36,8 @@ export const PERIMETER_PRESETS: Record<string, LlmPerimeter> = {
 }
 
 // Active perimeter — mutable, changed via admin UI
-let activePresetKey = 'tiny_no_finetune'
-let activePerimeter: LlmPerimeter = { ...PERIMETER_PRESETS.tiny_no_finetune }
+let activePresetKey = 'openai_mini'
+let activePerimeter: LlmPerimeter = { ...PERIMETER_PRESETS.openai_mini }
 
 export function getActivePerimeter(): LlmPerimeter {
   return activePerimeter

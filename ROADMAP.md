@@ -52,9 +52,9 @@ Il sistema ha tre classi di utenti:
 
 ---
 
-### Brain 3 — Tiny LLM Locale (Transformers.js v4)
+### Brain 3 — OpenAI gpt-5.4-mini (Cloud API)
 
-**Cosa è:** un modello language model piccolo (0.6-1.7B parametri) che gira direttamente sul server Node.js via Transformers.js v4. Zero costi API. Il modello è un "bridge intelligente" tra l'utente e il sistema deterministico.
+**Cosa è:** il modello LLM cloud (OpenAI gpt-5.4-mini) che funge da "bridge intelligente" tra l'utente e il sistema deterministico. Usa l'SDK ufficiale OpenAI con supporto nativo per structured JSON output.
 
 **Ruoli:**
 1. **NL → Constraints:** l'utente dice "ho farina Manitoba, forno elettrico 250°C, pronto domani alle 19" → il modello genera un JSON strutturato di vincoli che il sistema deterministico applica
@@ -63,13 +63,13 @@ Il sistema ha tre classi di utenti:
 4. **Generazione query DSL:** traduce richieste naturali in query sul grafo ("trova tutte le lievitazioni in frigo senza acclimatazione")
 5. **Coaching:** guida l'utente nella composizione/correzione della ricetta
 
-**Scelta modello base (senza fine-tuning):** Qwen3-0.6B-Instruct (ONNX, quantizzazione q4f16). Sweet spot tra capacità e dimensione. Migliore della famiglia per structured JSON output e multilingua (italiano eccellente). Stessa famiglia del modello di embedding usato nel CSB.
+**Modello:** OpenAI gpt-5.4-mini via API cloud. Eccellente per structured JSON output, multilingua (italiano nativo), ragionamento scientifico. Perimetro operativo molto più ampio rispetto ai modelli tiny precedenti (Qwen 0.8B).
 
 **Principio fondamentale:** il LLM è un oracolo fallibile. NON è mai l'unica fonte di verità. Ogni output che diventa una mutazione del grafo passa attraverso la validazione deterministica di Brain 2. Se il LLM suggerisce un'idratazione assurda, il rule engine la blocca.
 
-**Deployment:** su Netlify Functions con lazy model loading. Cold start ~15-30s (download modello da HuggingFace), warm ~200ms-2s. Feature flag `LLM_ENABLED` per disabilitare completamente. Graceful degradation: se il LLM non è disponibile, il sistema funziona normalmente senza spiegazioni e senza adattamento NL.
+**Deployment:** chiamate API dirette, nessun model loading locale. Latenza tipica 1-3s. Feature flag `LLM_ENABLED` per disabilitare completamente. Graceful degradation: se il LLM non è disponibile, il sistema funziona normalmente senza spiegazioni e senza adattamento NL.
 
-**Evoluzione futura:** fine-tuning con GRPO su dataset generato dal Cooking Science Brain. Il fine-tuning trasformerà un modello generico in un micro-esperto di scienza culinaria, con 6-21x di miglioramento su structured output (basato su ricerca pubblicata).
+**Evoluzione futura:** con la potenza di gpt-5.4-mini, diventa praticabile la generazione diretta di query Cypher per il grafo, coaching avanzato context-aware, e analisi cross-ricetta.
 
 ---
 

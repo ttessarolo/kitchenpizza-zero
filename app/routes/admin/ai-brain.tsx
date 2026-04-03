@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { useState, useMemo, useCallback } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, CheckCircle2, XCircle } from 'lucide-react'
 import { useT } from '~/hooks/useTranslation'
 import {
   Card,
@@ -25,8 +25,8 @@ import {
 
 // ── Server functions ────────────────────────────────────────
 import { getFlags } from '~/server/lib/feature-flags'
-import { resetLlmProvider } from '~/server/services/llm/llm-service'
-import { OllamaProvider } from '~/server/services/llm/ollama-provider'
+import { getCurrentProvider } from '~/server/services/llm/llm-service'
+import { OpenAiProvider } from '~/server/services/llm/openai-provider'
 import { getAllPrompts, getPromptTemplate, updatePrompt as updatePromptStore, resetPrompt as resetPromptStore, fillTemplate } from '~/server/services/llm/prompt-store'
 import { llmService } from '~/server/services/llm/llm-service'
 
@@ -35,25 +35,27 @@ const loadAiBrainData = createServerFn().handler(async () => {
   const config = {
     enabled: flags.LLM_ENABLED,
     provider: flags.LLM_PROVIDER,
-    baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'qwen3.5:0.8b',
-    maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '512', 10),
-    timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS || '10000', 10),
+    model: process.env.OPENAI_MODEL || 'gpt-5.4-mini',
+    apiKeySet: !!process.env.OPENAI_API_KEY,
+    maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '4096', 10),
+    timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS || '30000', 10),
   }
   const prompts = getAllPrompts()
   return { config, prompts }
 })
 
 const serverTestConnection = createServerFn().handler(async () => {
-  // Always test Ollama directly, regardless of LLM_ENABLED flag.
-  // The admin panel needs to show connection status even when LLM is disabled.
-  const testProvider = new OllamaProvider()
+  const provider = getCurrentProvider()
   const start = Date.now()
-  const available = await testProvider.isAvailable()
+  const available = await provider.isAvailable()
   const latencyMs = Date.now() - start
-  const models = await testProvider.listModels()
-  const currentModel = testProvider.getModel()
-  return { available, models, currentModel, latencyMs }
+
+  let model = process.env.OPENAI_MODEL || 'gpt-5.4-mini'
+  if (provider instanceof OpenAiProvider) {
+    model = provider.getModel()
+  }
+
+  return { available, model, latencyMs }
 })
 
 const serverUpdatePrompt = (createServerFn() as any)
@@ -82,14 +84,6 @@ export const Route = createFileRoute('/admin/ai-brain')({
   component: AiBrainPage,
 })
 
-// ── Helpers ────────────────────────────────────────────────────
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
-
 const CATEGORIES = ['explanation', 'constraint', 'compatibility', 'verification'] as const
 
 // ── Page ───────────────────────────────────────────────────────
@@ -98,7 +92,7 @@ function AiBrainPage() {
   const t = useT()
   const { config, prompts: initialPrompts } = Route.useLoaderData()
   const [prompts, setPrompts] = useState(initialPrompts)
-  const [connResult, setConnResult] = useState<{ available: boolean; models: any[]; currentModel: string; latencyMs: number } | null>(null)
+  const [connResult, setConnResult] = useState<{ available: boolean; model: string; latencyMs: number } | null>(null)
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ output: string | null; latencyMs: number; source: string } | null>(null)
   const [isTestingPrompt, setIsTestingPrompt] = useState(false)
@@ -177,8 +171,8 @@ function ModelConfigSection({
   onTestConnection,
   t,
 }: {
-  config: { enabled: boolean; provider: string; baseUrl: string; model: string; maxTokens: number; timeoutMs: number }
-  connResult: { available: boolean; models: any[]; currentModel: string; latencyMs: number } | null
+  config: { enabled: boolean; provider: string; model: string; apiKeySet: boolean; maxTokens: number; timeoutMs: number }
+  connResult: { available: boolean; model: string; latencyMs: number } | null
   isTesting: boolean
   onTestConnection: () => void
   t: ReturnType<typeof useT>
@@ -202,12 +196,24 @@ function ModelConfigSection({
             <Input value={config.provider} readOnly className="bg-muted" />
           </div>
           <div className="space-y-1.5">
-            <Label>{t('admin.ai.base_url')}</Label>
-            <Input value={config.baseUrl} readOnly className="bg-muted" />
-          </div>
-          <div className="space-y-1.5">
             <Label>{t('admin.ai.model')}</Label>
             <Input value={config.model} readOnly className="bg-muted" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('admin.ai.api_key_status')}</Label>
+            <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-muted text-sm">
+              {config.apiKeySet ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span>{t('admin.ai.api_key_configured')}</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 text-red-500" />
+                  <span>{t('admin.ai.api_key_missing')}</span>
+                </>
+              )}
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>{t('admin.ai.max_tokens')}</Label>
@@ -235,19 +241,6 @@ function ModelConfigSection({
             </div>
           )}
         </div>
-
-        {connResult?.models && connResult.models.length > 0 && (
-          <div className="space-y-2">
-            <Label>{t('admin.ai.model')}</Label>
-            <div className="flex flex-wrap gap-2">
-              {connResult.models.map((m: any) => (
-                <Badge key={m.name} variant={m.name === connResult.currentModel ? 'default' : 'outline'}>
-                  {m.name} ({formatBytes(m.size)})
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   )

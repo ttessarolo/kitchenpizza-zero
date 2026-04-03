@@ -9,8 +9,8 @@ import {
   testPromptOutputSchema,
 } from '../schemas/ai-admin'
 import { getFlags } from '../lib/feature-flags'
-import { llmService, getCurrentProvider, resetLlmProvider } from '../services/llm/llm-service'
-import { OllamaProvider } from '../services/llm/ollama-provider'
+import { llmService, getCurrentProvider } from '../services/llm/llm-service'
+import { OpenAiProvider } from '../services/llm/openai-provider'
 import {
   getAllPrompts,
   getPrompt,
@@ -27,10 +27,10 @@ export const getConfig = baseProcedure
     return {
       enabled: flags.LLM_ENABLED,
       provider: flags.LLM_PROVIDER,
-      baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-      model: process.env.OLLAMA_MODEL || 'qwen3.5:0.8b',
-      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '512', 10),
-      timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS || '10000', 10),
+      model: process.env.OPENAI_MODEL || 'gpt-5.4-mini',
+      apiKeySet: !!process.env.OPENAI_API_KEY,
+      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '4096', 10),
+      timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS || '30000', 10),
     }
   })
 
@@ -42,15 +42,12 @@ export const testConnection = baseProcedure
     const available = await provider.isAvailable()
     const latencyMs = Date.now() - start
 
-    let models: Array<{ name: string; size: number; modified_at: string }> = []
-    let currentModel = process.env.OLLAMA_MODEL || 'qwen3.5:0.8b'
-
-    if (provider instanceof OllamaProvider) {
-      models = await provider.listModels()
-      currentModel = provider.getModel()
+    let model = process.env.OPENAI_MODEL || 'gpt-5.4-mini'
+    if (provider instanceof OpenAiProvider) {
+      model = provider.getModel()
     }
 
-    return { available, models, currentModel, latencyMs }
+    return { available, model, latencyMs }
   })
 
 export const listPrompts = baseProcedure

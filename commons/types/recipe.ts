@@ -185,7 +185,7 @@ export interface Portioning {
   flourMix: string[]          // [] = all flours allowed (no filter)
   // Auto-correct settings
   autoCorrect: boolean                              // enable iterative constraint solver
-  reasoningLevel: 'low' | 'medium' | 'high'        // max solver iterations: 3 / 5 / 8
+  reasoningLevel: 'low' | 'medium' | 'high'        // max solver iterations: 3 / 6 / 10
   // Field locks — locked fields are not modified by reconciliation or auto-correct
   locks?: PortioningLocks
   // Captured when totalDough lock is activated — the actual graph total at lock time.

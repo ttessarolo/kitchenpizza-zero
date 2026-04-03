@@ -272,7 +272,7 @@ export function LeftSidebar() {
               </div>
             )}
             {!isReconciling && activeActionable.length > 0 && (
-              <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} />
+              <ActionableWarningBox warnings={activeActionable} onApplyAll={applyAllWarningActions} isApplying={isReconciling} />
             )}
             {!isReconciling && activeInformational.map((w) => (
               <WarningCard key={w.id} warning={w} count={w.count} />

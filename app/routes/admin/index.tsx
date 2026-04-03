@@ -13,21 +13,20 @@ import {
 } from 'lucide-react'
 import { useT } from '~/hooks/useTranslation'
 import { getFlags } from '~/server/lib/feature-flags'
-import { OllamaProvider } from '~/server/services/llm/ollama-provider'
+import { getCurrentProvider } from '~/server/services/llm/llm-service'
 
 const loadAdminStats = createServerFn().handler(async () => {
   const provider = await getScienceProvider()
   const blocks = provider.listAll()
   const rules = blocks.filter((b) => b.type === 'rule')
 
-  // Check LLM/Ollama status
+  // Check LLM status
   const flags = getFlags()
-  let ollamaStatus: 'ok' | 'error' = 'error'
-  let ollamaModel = process.env.OLLAMA_MODEL || 'qwen3.5:0.8b'
+  let llmStatus: 'ok' | 'error' = 'error'
+  const llmModel = process.env.OPENAI_MODEL || 'gpt-5.4-mini'
   try {
-    const ollamaProvider = new OllamaProvider()
-    ollamaStatus = (await ollamaProvider.isAvailable()) ? 'ok' : 'error'
-    ollamaModel = ollamaProvider.getModel()
+    const llmProvider = getCurrentProvider()
+    llmStatus = (await llmProvider.isAvailable()) ? 'ok' : 'error'
   } catch { /* ignore */ }
 
   return {
@@ -35,8 +34,8 @@ const loadAdminStats = createServerFn().handler(async () => {
     scienceRules: rules.length,
     llmEnabled: flags.LLM_ENABLED,
     llmProvider: flags.LLM_PROVIDER,
-    ollamaStatus,
-    ollamaModel,
+    llmStatus,
+    llmModel,
   }
 })
 
@@ -192,7 +191,7 @@ function AdminDashboard() {
           </div>
           <div className="text-xs text-muted-foreground mt-1">
             {stats.llmEnabled
-              ? `Provider: ${stats.llmProvider} · Model: ${stats.ollamaModel} · Ollama: ${stats.ollamaStatus === 'ok' ? 'Connected' : 'Disconnected'}`
+              ? `Provider: ${stats.llmProvider} · Model: ${stats.llmModel} · Status: ${stats.llmStatus === 'ok' ? 'Connected' : 'Disconnected'}`
               : 'LLM_ENABLED=false — Brain 3 disabled. Set LLM_ENABLED=true in .env to activate.'
             }
           </div>
@@ -209,8 +208,8 @@ function AdminDashboard() {
           <StatusRow label="i18n (IT/EN)" status="ok" />
           <StatusRow label="Auth (Clerk)" status="ok" />
           <StatusRow label="Database (Neon)" status="ok" />
-          <StatusRow label={`Ollama (${stats.ollamaModel})`} status={stats.ollamaStatus} />
-          <StatusRow label="AI Brain (LLM)" status={stats.llmEnabled ? (stats.ollamaStatus === 'ok' ? 'ok' : 'warning') : 'warning'} />
+          <StatusRow label={`OpenAI (${stats.llmModel})`} status={stats.llmStatus} />
+          <StatusRow label="AI Brain (LLM)" status={stats.llmEnabled ? (stats.llmStatus === 'ok' ? 'ok' : 'warning') : 'warning'} />
         </div>
       </div>
     </div>

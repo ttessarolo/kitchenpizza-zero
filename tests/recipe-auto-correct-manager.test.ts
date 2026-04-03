@@ -232,7 +232,7 @@ describe('priority ordering', () => {
 // ═══════════════════════════════════════════════════════════════════
 
 describe('reasoningLevel', () => {
-  it('low=3, medium=5, high=8 max rounds', () => {
+  it('low=3, medium=6, high=10 max rounds', () => {
     const graph = makeGraph([], [])
     const port = makeDefaultPortioning()
 
@@ -240,9 +240,9 @@ describe('reasoningLevel', () => {
     expect(low.report.maxRounds).toBe(3)
 
     const med = autoCorrectGraph(provider, reconcileGraph, graph, port, makeDefaultMeta(), { autoCorrect: true, reasoningLevel: 'medium' })
-    expect(med.report.maxRounds).toBe(5)
+    expect(med.report.maxRounds).toBe(6)
 
     const high = autoCorrectGraph(provider, reconcileGraph, graph, port, makeDefaultMeta(), { autoCorrect: true, reasoningLevel: 'high' })
-    expect(high.report.maxRounds).toBe(8)
+    expect(high.report.maxRounds).toBe(10)
   })
 })
