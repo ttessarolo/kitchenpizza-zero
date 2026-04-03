@@ -10,6 +10,12 @@ import { getDefaults as getFermentDefaults } from '@commons/utils/ferment-manage
 import { getDefaults as getPastryDefaults } from '@commons/utils/pastry-manager'
 import { makeLayer, makeRecipeV3 } from './synthetic_data/helpers'
 import type { RecipeV3 } from '@commons/types/recipe-layers'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { resolve } from 'path'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 // ── Registry integrity ──────────────────────────────────────────
 
@@ -182,7 +188,7 @@ describe('ensureLayerSubtypes', () => {
 describe('Dummy managers getDefaults', () => {
   it('sauce: returns defaults for each subtype', () => {
     for (const entry of LAYER_SUBTYPES.sauce) {
-      const defaults = getSauceDefaults(entry.key)
+      const defaults = getSauceDefaults(entry.key, provider)
       expect(defaults).toBeDefined()
       expect(typeof defaults.targetVolume).toBe('number')
     }
@@ -190,7 +196,7 @@ describe('Dummy managers getDefaults', () => {
 
   it('prep: returns defaults for each subtype', () => {
     for (const entry of LAYER_SUBTYPES.prep) {
-      const defaults = getPrepDefaults(entry.key)
+      const defaults = getPrepDefaults(entry.key, provider)
       expect(defaults).toBeDefined()
       expect(typeof defaults.servings).toBe('number')
     }
@@ -198,7 +204,7 @@ describe('Dummy managers getDefaults', () => {
 
   it('ferment: returns defaults for each subtype', () => {
     for (const entry of LAYER_SUBTYPES.ferment) {
-      const defaults = getFermentDefaults(entry.key)
+      const defaults = getFermentDefaults(entry.key, provider)
       expect(defaults).toBeDefined()
       expect(typeof defaults.temperature).toBe('number')
     }
@@ -206,7 +212,7 @@ describe('Dummy managers getDefaults', () => {
 
   it('pastry: returns defaults for each subtype', () => {
     for (const entry of LAYER_SUBTYPES.pastry) {
-      const defaults = getPastryDefaults(entry.key)
+      const defaults = getPastryDefaults(entry.key, provider)
       expect(defaults).toBeDefined()
       expect(typeof defaults.targetWeight).toBe('number')
     }

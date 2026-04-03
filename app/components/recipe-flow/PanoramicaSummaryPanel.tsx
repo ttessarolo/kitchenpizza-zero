@@ -2,8 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
 import { computePanoramicaRPC, getFlourRPC } from '~/lib/recipe-rpc'
-import { YEAST_TYPES } from '@/local_data'
-import { FAT_TYPES } from '@/local_data/fat-catalog'
+import { useYeastTypes, useFatTypes } from '~/hooks/useScienceCatalogs'
 import { getAllLayerWarnings } from '~/lib/warning-helpers'
 import { deduplicateWarnings } from '@commons/utils/warning-dedup'
 import { WarningCard } from './WarningCard'
@@ -370,6 +369,8 @@ function CronoprogrammaSection({ timeline, names, t }: CronoprogrammaSectionProp
 const flourLabelCache = new Map<string, string>()
 
 function useIngredientNames() {
+  const YEAST_TYPES = useYeastTypes()
+  const FAT_TYPES = useFatTypes()
   const t = useT()
   const [, forceUpdate] = useState(0)
 

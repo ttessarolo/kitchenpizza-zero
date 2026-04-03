@@ -5,6 +5,7 @@
 
 import type { RecipeGraph, RecipeNode, RecipeEdge } from '@commons/types/recipe-graph'
 import type { Portioning, RecipeMeta } from '@commons/types/recipe'
+import type { ScienceProvider } from '@commons/utils/science/science-provider'
 import { STEP_TYPES } from '@/local_data'
 import { rnd } from '@commons/utils/format'
 import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
@@ -15,6 +16,7 @@ interface GenerateOptions {
   portioning: Portioning
   totalDough: number
   t: (key: string, vars?: Record<string, unknown>) => string
+  provider: ScienceProvider
 }
 
 let idCounter = 0
@@ -24,7 +26,7 @@ function uid(prefix: string) {
 
 export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
   idCounter = 0
-  const { meta, portioning, totalDough, t } = opts
+  const { meta, portioning, totalDough, t, provider } = opts
   const { targetHyd, yeastPct, saltPct, fatPct, preImpasto, preFermento, doughHours } = portioning
 
   // Calculate ingredient amounts from composition
@@ -268,7 +270,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
 
   // ── Cottura (from BakingProfile) ──
   const bakeId = uid('bake')
-  const bakeProfile = getBakingProfile(meta.type, meta.subtype)
+  const bakeProfile = getBakingProfile(provider, meta.type, meta.subtype)
   const bakeMaterial = portioning.tray.material || 'alu'
   const bakeTemp = bakeProfile?.refTemp ?? 220
   const bakeCieloMin = bakeProfile?.cieloPctRange?.[0] ?? 40
@@ -287,7 +289,7 @@ export function generateDoughGraph(opts: GenerateOptions): RecipeGraph {
 
   // Calculate baseDur to match the profile's calculated duration (no mismatch warning)
   const bakeDur = bakeProfile
-    ? calcBakeDuration(bakeProfile, bakeOvenCfg, portioning.thickness)
+    ? calcBakeDuration(bakeProfile, bakeOvenCfg, portioning.thickness, provider)
     : 30
 
   addNode({

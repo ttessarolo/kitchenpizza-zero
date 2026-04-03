@@ -213,7 +213,7 @@ describe('suggestPhaseRedistribution', () => {
       phase('r3', 90, 'room', 1),       // 1.5h equiv
     ]
     // Total current = 7.5h equiv. Target = 8h. Scale = 8/7.5 = 1.067
-    const suggestions = suggestPhaseRedistribution(8, phases)
+    const suggestions = suggestPhaseRedistribution(provider, 8, phases)
     expect(suggestions).toHaveLength(3)
     // All durations should be scaled up by ~6.7%
     const r1 = suggestions.find((s) => s.nodeId === 'r1')!
@@ -229,7 +229,7 @@ describe('suggestPhaseRedistribution', () => {
     ]
     // r1 equiv = 1h (fixed). adjustable equiv = 5 + 1.5 = 6.5h
     // target = 10h → remaining = 9h → scale = 9/6.5 = 1.385
-    const suggestions = suggestPhaseRedistribution(10, phases)
+    const suggestions = suggestPhaseRedistribution(provider, 10, phases)
     expect(suggestions).toHaveLength(2) // only adjustable
     expect(suggestions.find((s) => s.nodeId === 'r1')).toBeUndefined()
   })

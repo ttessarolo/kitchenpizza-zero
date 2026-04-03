@@ -5,13 +5,7 @@
 
 import { z } from 'zod'
 import { authProcedure } from '../middleware/auth'
-import { FileScienceProvider } from '@commons/utils/science/science-provider'
-import * as path from 'path'
-
-// Singleton provider (reused across requests)
-const scienceDir = path.resolve(process.cwd(), 'science')
-const i18nDir = path.resolve(process.cwd(), 'commons/i18n')
-const provider = new FileScienceProvider(scienceDir, i18nDir)
+import { getScienceProvider } from '../middleware/science'
 
 // ── List all science blocks ────────────────────────────────────
 
@@ -31,6 +25,7 @@ export const listBlocks = authProcedure
     })),
   }))
   .handler(async () => {
+    const provider = await getScienceProvider()
     const all = provider.listAll()
     return {
       blocks: all.map((b) => ({
@@ -46,9 +41,10 @@ export const listBlocks = authProcedure
 export const getBlock = authProcedure
   .input(z.object({ id: z.string() }))
   .output(z.object({ block: z.record(z.string(), z.unknown()).nullable() }))
-  .handler(async ({ input }) => ({
-    block: provider.getBlock(input.id) as any,
-  }))
+  .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
+    return { block: provider.getBlock(input.id) as any }
+  })
 
 // ── Update block ───────────────────────────────────────────────
 
@@ -58,6 +54,7 @@ export const updateBlock = authProcedure
   }))
   .output(z.object({ success: z.boolean() }))
   .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
     provider.saveBlock(input.block as any)
     return { success: true }
   })
@@ -67,9 +64,10 @@ export const updateBlock = authProcedure
 export const listI18n = authProcedure
   .input(z.object({ locale: z.string() }))
   .output(z.object({ keys: z.record(z.string(), z.string()) }))
-  .handler(async ({ input }) => ({
-    keys: provider.getI18nKeys(input.locale),
-  }))
+  .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
+    return { keys: provider.getI18nKeys(input.locale) }
+  })
 
 // ── Update i18n key ────────────────────────────────────────────
 
@@ -81,6 +79,7 @@ export const updateI18n = authProcedure
   }))
   .output(z.object({ success: z.boolean() }))
   .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
     provider.saveI18nKey(input.locale, input.key, input.value)
     return { success: true }
   })

@@ -1,0 +1,113 @@
+{
+  "id": "fermentation_coherence_constraint",
+  "type": "multi_node_constraint",
+  "_meta": {
+    "tags": ["fermentation", "coherence", "multi-node", "constraint", "cross-node"],
+    "author": "system",
+    "section": "fermentation_coherence",
+    "description": "meta.constraint.fermentation_coherence.desc",
+    "displayName": "meta.constraint.fermentation_coherence.name",
+    "lastModified": "2026-04-03"
+  },
+  "selector": {
+    "nodeFilter": { "type": "rise" },
+    "description": "Select all rise-type nodes from the recipe graph plus portioning and flour data from the dough layer.",
+    "contextSources": [
+      { "from": "portioning", "fields": ["doughHours", "yeastPct"] },
+      { "from": "flour_blend", "fields": ["flourW"] },
+      { "from": "graph", "fields": ["nodeSequence"] }
+    ]
+  },
+  "projection": {
+    "perNode": {
+      "fields": ["nodeId", "title", "riseMethod", "baseDur", "userOverride"],
+      "lookup": {
+        "tf": { "catalog": "rise_methods", "key": "$riseMethod", "field": "tf" }
+      }
+    },
+    "description": "For each selected rise node, extract riseMethod, baseDur, tf, userOverride. The tf (time factor) comes from the rise_methods catalog."
+  },
+  "aggregation": {
+    "description": "Compute derived aggregate values from all selected rise phases.",
+    "computations": [
+      {
+        "id": "equivalentRoomHours",
+        "formula": "SUM(baseDur_i / 60 / tf_i)",
+        "round": 2,
+        "description": "Sum of (baseDur/60)/tf for each phase. Converts wall-clock time to equivalent room-temperature hours."
+      },
+      {
+        "id": "mismatchPct",
+        "formula": "abs(equivalentRoomHours - doughHours) / doughHours * 100",
+        "round": 0,
+        "requiresPositive": "doughHours",
+        "description": "Percentage mismatch between equivalentRoomHours and portioning.doughHours."
+      },
+      {
+        "id": "maxFridgeWallHours",
+        "formula": "MAX(baseDur_i / 60) WHERE riseMethod_i == fridge",
+        "round": 2,
+        "description": "Maximum wall-clock hours among fridge-method phases."
+      },
+      {
+        "id": "fridgeFollowedByBake",
+        "algorithm": "scan nodeSequence for fridge-rise → bake/pre_bake without intervening room-temp rise",
+        "description": "Boolean: true if a fridge rise is directly followed by bake/pre_bake with no room-temp acclimatization in between."
+      },
+      {
+        "id": "expectedYeastPct",
+        "formula": "evaluateFormula(yeast_pct, {hours: equivalentRoomHours, tempC: 24, hydration: 56})",
+        "round": 3,
+        "description": "Expected yeast percentage based on equivalentRoomHours, using Formula L (yeast_pct)."
+      },
+      {
+        "id": "yeastMismatchPct",
+        "formula": "abs(expectedYeastPct - actualYeastPct) / actualYeastPct * 100",
+        "round": 0,
+        "requiresPositive": "actualYeastPct",
+        "description": "Percentage mismatch between expected and actual yeast percentage."
+      }
+    ]
+  },
+  "validation": {
+    "rulesDomain": "fermentation_coherence",
+    "description": "Evaluate fermentation_coherence rules against the aggregated context.",
+    "contextMapping": {
+      "equivalentRoomHours": "equivalentRoomHours",
+      "doughHours": "portioning.doughHours",
+      "flourW": "flour_blend.flourW",
+      "minHoursForW": "evaluatePiecewise(min_fermentation_hours_for_W, {W: flourW})",
+      "maxHoursForW": "evaluatePiecewise(max_rise_hours_for_W, {W: flourW})",
+      "maxFridgeWallHours": "maxFridgeWallHours",
+      "fridgeFollowedByBake": "fridgeFollowedByBake",
+      "fridgeNodeTitle": "fridgeNodeTitle",
+      "fridgeNodeId": "fridgeNodeId",
+      "expectedYeastPct": "expectedYeastPct",
+      "actualYeastPct": "portioning.yeastPct",
+      "mismatchPct": "mismatchPct",
+      "_mismatchPct": "mismatchPct",
+      "_minFermentationHoursForW": "minHoursForW",
+      "_maxRiseHoursForW": "maxHoursForW",
+      "_yeastMismatchPct": "yeastMismatchPct"
+    }
+  },
+  "adaptationStrategies": {
+    "parametric": {
+      "id": "phase_redistribution",
+      "description": "Redistribute rise phase durations so equivalent room-hours match the target. Preserves user-overridden phases; adjusts only non-overridden ones by applying a uniform scale factor.",
+      "preserves": "userOverride",
+      "minBaseDur": 15,
+      "algorithm": "fixedEquiv = SUM(baseDur_i/60/tf_i) for userOverride phases; remainingEquiv = max(0, target - fixedEquiv); scaleFactor = remainingEquiv / currentAdjustableEquiv; newBaseDur_i = max(15, round(baseDur_i * scaleFactor))"
+    },
+    "suggestion": {
+      "id": "yeast_suggestion",
+      "description": "Suggest yeast percentage for given equivalent room-temperature hours using Formula L.",
+      "formula": "evaluateFormula(yeast_pct, {hours: equivalentRoomHours, tempC, hydration})",
+      "defaults": {
+        "tempC": 24,
+        "hydration": 56
+      }
+    }
+  },
+  "description": "Cross-node fermentation coherence validation. Checks that rise phases are coherent with each other, with portioning settings, and with flour properties. Implements the Selector \u2192 Projection \u2192 Aggregation \u2192 Validation pattern for multi-node constraints."
+}

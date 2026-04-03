@@ -21,7 +21,7 @@ import type {
   SugarIngredient,
   FatIngredient,
 } from '@commons/types/recipe'
-import { DOUGH_COMPOSITION_DEFAULTS, type DoughCompositionDefaults } from '../../local_data/dough-defaults'
+import type { DoughCompositionDefaults } from '../../local_data/dough-defaults'
 
 // ── Re-exports from FlourManager (flour is lower-level) ────────
 // DoughManager depends on FlourManager for flour operations.
@@ -145,19 +145,12 @@ export function calcFinalDoughTemp(
  * Base 2.5% with minor adjustment for high hydration, clamped to 2.0–3.0%.
  * [C] Cap. 53 — Salt in pizza doughs: 2.3-2.8% typical.
  */
-export function computeSuggestedSalt(totalFlour: number, hydration: number, provider?: ScienceProvider): number {
-  let basePct = 2.5, adjFactor = 0.01, minPct = 2.0, maxPct = 3.0
-  if (provider) {
-    try {
-      const formula = provider.getFormula('suggested_salt')
-      if (formula?.constants) {
-        basePct = formula.constants.basePct ?? basePct
-        adjFactor = formula.constants.adjustFactor ?? adjFactor
-        minPct = formula.constants.minPct ?? minPct
-        maxPct = formula.constants.maxPct ?? maxPct
-      }
-    } catch { /* fallback to hardcoded */ }
-  }
+export function computeSuggestedSalt(totalFlour: number, hydration: number, provider: ScienceProvider): number {
+  const formula = provider.getFormula('suggested_salt')
+  const basePct = formula?.constants?.basePct ?? 2.5
+  const adjFactor = formula?.constants?.adjustFactor ?? 0.01
+  const minPct = formula?.constants?.minPct ?? 2.0
+  const maxPct = formula?.constants?.maxPct ?? 3.0
   const adjustment = Math.max(0, (hydration - 60) * adjFactor)
   const pct = Math.min(maxPct, Math.max(minPct, basePct + adjustment))
   return rnd(totalFlour * pct / 100)
@@ -191,11 +184,8 @@ export function getFatPct(fats: FatIngredient[], totalFlour: number): number {
  * Fallback chain: exact match → type-level → 'altro' catch-all.
  * [C] Cap. 44, 53, 54 — Per-style composition ranges.
  */
-export function getDoughDefaults(type: string, subtype: string | null): DoughCompositionDefaults {
-  const exact = DOUGH_COMPOSITION_DEFAULTS.find((d) => d.type === type && d.subtype === subtype)
-  if (exact) return exact
-  return DOUGH_COMPOSITION_DEFAULTS.find((d) => d.type === type && d.subtype === null)
-    ?? DOUGH_COMPOSITION_DEFAULTS[DOUGH_COMPOSITION_DEFAULTS.length - 1]
+export function getDoughDefaults(provider: ScienceProvider, type: string, subtype: string | null): DoughCompositionDefaults {
+  return provider.getDefaults('dough_composition', type, subtype) as DoughCompositionDefaults
 }
 
 // ── Warnings ───────────────────────────────────────────────────
@@ -227,7 +217,7 @@ export function getDoughWarnings(
   provider: ScienceProvider,
   profile: DoughProfileInput,
 ): RuleResult[] {
-  const defaults = getDoughDefaults(profile.recipeType, profile.recipeSubtype)
+  const defaults = getDoughDefaults(provider, profile.recipeType, profile.recipeSubtype)
   const ctx: Record<string, unknown> = {
     ...profile,
     _saltMin: defaults.saltPctRange[0],

@@ -14,12 +14,7 @@ import {
   calcDurationFromYeast, getSaltPct, getSugarPct, getFatPct,
 } from '@commons/utils/dough-manager'
 import { FLOUR_CATALOG } from '../../../local_data/flour-catalog'
-import { resolve } from 'path'
-import { FileScienceProvider } from '@commons/utils/science/science-provider'
-
-const scienceDir = resolve(process.cwd(), 'science')
-const i18nDir = resolve(process.cwd(), 'commons/i18n')
-const provider = new FileScienceProvider(scienceDir, i18nDir)
+import { getScienceProvider } from '../middleware/science'
 
 export const blendFlours = baseProcedure
   .input(blendFloursInputSchema)
@@ -31,37 +26,42 @@ export const blendFlours = baseProcedure
 export const calcYeast = baseProcedure
   .input(calcYeastInputSchema)
   .output(calcYeastOutputSchema)
-  .handler(async ({ input }) => ({
-    yeastPct: calcYeastPct(provider, input.hours, input.tempC),
-  }))
+  .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
+    return { yeastPct: calcYeastPct(provider, input.hours, input.tempC) }
+  })
 
 export const calcTemp = baseProcedure
   .input(calcTempInputSchema)
   .output(calcTempOutputSchema)
-  .handler(async ({ input }) => ({
-    finalTemp: calcFinalDoughTemp(input.flours as any, input.liquids as any, input.ambientTemp, input.frictionFactor),
-  }))
+  .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
+    return { finalTemp: calcFinalDoughTemp(input.flours as any, input.liquids as any, input.ambientTemp, input.frictionFactor, provider) }
+  })
 
 export const getDefaults = baseProcedure
   .input(getDefaultsInputSchema)
   .output(getDefaultsOutputSchema)
   .handler(async ({ input }) => {
-    return getDoughDefaults(input.recipeType, input.recipeSubtype)
+    const provider = await getScienceProvider()
+    return getDoughDefaults(provider, input.recipeType, input.recipeSubtype)
   })
 
 export const getWarnings = baseProcedure
   .input(getWarningsInputSchema)
   .output(getWarningsOutputSchema)
-  .handler(async ({ input }) => ({
-    warnings: getDoughWarnings(provider, input),
-  }))
+  .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
+    return { warnings: getDoughWarnings(provider, input) }
+  })
 
 export const calcDuration = baseProcedure
   .input(calcDurationInputSchema)
   .output(calcDurationOutputSchema)
-  .handler(async ({ input }) => ({
-    hours: calcDurationFromYeast(provider, input.yeastPct, input.hydration, input.tempC),
-  }))
+  .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
+    return { hours: calcDurationFromYeast(provider, input.yeastPct, input.hydration, input.tempC) }
+  })
 
 export const getCompositionPcts = baseProcedure
   .input(getCompositionPctsInputSchema)

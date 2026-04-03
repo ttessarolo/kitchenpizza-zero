@@ -11,45 +11,14 @@ import { evaluateRules } from './science/rule-engine'
 import type { RuleResult } from './science/rule-engine'
 import { evaluateClassification } from './science/formula-engine'
 
-// ── Constants (hardcoded fallbacks, prefer ScienceProvider) ──
-
-// ── Per-subtype defaults ──
-
-const PASTRY_SUBTYPE_DEFAULTS: Record<string, Partial<PastryMasterConfig>> = {
-  cioccolato: { targetWeight: 300, servings: 6, temperatureNotes: '' },
-  crema: { targetWeight: 500, servings: 6, temperatureNotes: '' },
-  meringa: { targetWeight: 200, servings: 8, temperatureNotes: '' },
-  mousse: { targetWeight: 400, servings: 6, temperatureNotes: '' },
-  glassa: { targetWeight: 250, servings: 8, temperatureNotes: '' },
-  generic: { targetWeight: 500, servings: 6, temperatureNotes: '' },
-}
-
-/** Returns sensible defaults for a pastry subtype. Reads from ScienceProvider when available. */
-export function getDefaults(subtype: string, provider?: ScienceProvider): Partial<PastryMasterConfig> {
-  if (provider) {
-    const d = provider.getDefaults('pastry_subtype_defaults', subtype, null) as Record<string, unknown>
-    if (d && Object.keys(d).length > 0 && d.targetWeight != null) {
-      return d as unknown as Partial<PastryMasterConfig>
-    }
+/** Returns sensible defaults for a pastry subtype from ScienceProvider. */
+export function getDefaults(subtype: string, provider: ScienceProvider): Partial<PastryMasterConfig> {
+  const d = provider.getDefaults('pastry_subtype_defaults', subtype, null) as Record<string, unknown>
+  if (d && Object.keys(d).length > 0 && d.targetWeight != null) {
+    return d as unknown as Partial<PastryMasterConfig>
   }
-  return PASTRY_SUBTYPE_DEFAULTS[subtype] ?? {}
+  return {}
 }
-
-/** Tempering ranges per chocolate type (fallback) */
-const TEMPER_RANGES: Record<string, { workMin: number; workMax: number }> = {
-  dark: { workMin: 31, workMax: 32 },
-  milk: { workMin: 29, workMax: 30 },
-  white: { workMin: 27, workMax: 28 },
-}
-
-/** Minimum custard temperature for pasteurization (Celsius). */
-const CUSTARD_SAFE_TEMP = 82
-
-/** Minimum custard duration at safe temp (seconds). */
-const CUSTARD_MIN_DURATION_S = 10
-
-/** Minimum stable sugar:egg-white ratio for meringue. */
-const MERINGUE_STABLE_RATIO = 1.5
 
 // ── 1. validateTemperingCurve ────────────────────────────────
 
@@ -71,30 +40,19 @@ export function validateTemperingCurve(
 ): { valid: boolean; warnings: string[] } {
   const warnings: string[] = []
 
-  // Try to read temper ranges from provider defaults block
-  let range = TEMPER_RANGES[chocolateType]
-  try {
-    const block = provider.getBlock('pastry_subtype_defaults') as any
-    if (block?.temperRanges?.[chocolateType]) {
-      range = block.temperRanges[chocolateType]
-    }
-  } catch { /* fallback to hardcoded */ }
+  // Read temper ranges from provider
+  const block = provider.getBlock('pastry_subtype_defaults') as any
+  const range = block?.temperRanges?.[chocolateType]
 
   if (!range) {
     return { valid: false, warnings: ['unknown_chocolate_type'] }
   }
 
   // Classify the working temperature
-  let zone: string
-  try {
-    zone = evaluateClassification(
-      provider.getClassification('pastry_temper_zone'),
-      { workTemp },
-    )
-  } catch {
-    // Fallback: manual classification
-    zone = workTemp < range.workMin ? 'too_cold' : workTemp > range.workMax ? 'over_tempered' : 'working_zone'
-  }
+  const zone = evaluateClassification(
+    provider.getClassification('pastry_temper_zone'),
+    { workTemp },
+  )
 
   const valid = zone === 'working_zone'
 
@@ -132,13 +90,9 @@ export function checkCustardPasteurization(
 ): { safe: boolean } {
   if (!hasEggs) return { safe: true }
 
-  let safeTemp = CUSTARD_SAFE_TEMP
-  let minDur = CUSTARD_MIN_DURATION_S
-  try {
-    const block = provider.getBlock('pastry_subtype_defaults') as any
-    if (block?.custard?.safeTemp != null) safeTemp = block.custard.safeTemp
-    if (block?.custard?.minDurationS != null) minDur = block.custard.minDurationS
-  } catch { /* fallback to hardcoded */ }
+  const block = provider.getBlock('pastry_subtype_defaults') as any
+  const safeTemp = block?.custard?.safeTemp ?? 82
+  const minDur = block?.custard?.minDurationS ?? 10
 
   return { safe: temp >= safeTemp && duration >= minDur }
 }
@@ -162,11 +116,8 @@ export function calcMeringueRatio(
 ): { ratio: number; stable: boolean } {
   if (eggWhiteG <= 0) return { ratio: 0, stable: false }
 
-  let stableRatio = MERINGUE_STABLE_RATIO
-  try {
-    const block = provider.getBlock('pastry_subtype_defaults') as any
-    if (block?.meringue?.stableRatio != null) stableRatio = block.meringue.stableRatio
-  } catch { /* fallback to hardcoded */ }
+  const block = provider.getBlock('pastry_subtype_defaults') as any
+  const stableRatio = block?.meringue?.stableRatio ?? 1.5
 
   const ratio = Math.round((sugarG / eggWhiteG) * 100) / 100
   return { ratio, stable: ratio >= stableRatio }

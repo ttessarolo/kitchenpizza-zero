@@ -1,13 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { FileScienceProvider } from '@commons/utils/science/science-provider'
-import * as path from 'path'
+import { getScienceProvider } from '~/server/middleware/science'
 
 const loadBlocks = createServerFn().handler(async () => {
-  const provider = new FileScienceProvider(
-    path.resolve(process.cwd(), 'science'),
-    path.resolve(process.cwd(), 'commons/i18n'),
-  )
+  const provider = await getScienceProvider()
   const blocks = provider.listAll()
   const i18nIt = provider.getI18nKeys('it')
   const i18nEn = provider.getI18nKeys('en')

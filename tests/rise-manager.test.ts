@@ -7,9 +7,8 @@ import {
   getYeastType,
   maxRiseHoursForW,
   getRiseWarnings,
-  RISE_METHODS,
-  YEAST_TYPES,
 } from '@commons/utils/rise-manager'
+import { RISE_METHODS, YEAST_TYPES } from '@/local_data/rise-methods'
 import type { BlendedFlourProps } from '@commons/types/recipe'
 import { FileScienceProvider } from '@commons/utils/science/science-provider'
 import { resolve } from 'path'
@@ -142,20 +141,20 @@ describe('RiseManager — calcRiseDuration', () => {
 
 describe('RiseManager — riseTemperatureFactor', () => {
   it('returns 1.0 at 24°C for room method', () => {
-    expect(riseTemperatureFactor(null, 24, 'room')).toBeCloseTo(1.0, 3)
+    expect(riseTemperatureFactor(provider, 24, 'room')).toBeCloseTo(1.0, 3)
   })
 
   it('warmer FDT → factor < 1 (faster rise)', () => {
-    expect(riseTemperatureFactor(null, 30, 'room')).toBeLessThan(1)
+    expect(riseTemperatureFactor(provider, 30, 'room')).toBeLessThan(1)
   })
 
   it('cooler FDT → factor > 1 (slower rise)', () => {
-    expect(riseTemperatureFactor(null, 18, 'room')).toBeGreaterThan(1)
+    expect(riseTemperatureFactor(provider, 18, 'room')).toBeGreaterThan(1)
   })
 
   it('fridge method dampens FDT effect', () => {
-    const roomEffect = Math.abs(riseTemperatureFactor(null, 30, 'room') - 1)
-    const fridgeEffect = Math.abs(riseTemperatureFactor(null, 30, 'fridge') - 1)
+    const roomEffect = Math.abs(riseTemperatureFactor(provider, 30, 'room') - 1)
+    const fridgeEffect = Math.abs(riseTemperatureFactor(provider, 30, 'fridge') - 1)
     expect(fridgeEffect).toBeLessThan(roomEffect)
   })
 })
@@ -166,26 +165,26 @@ describe('RiseManager — riseTemperatureFactor', () => {
 
 describe('RiseManager — lookups', () => {
   it('getRiseMethod returns correct method', () => {
-    expect(getRiseMethod('fridge').key).toBe('fridge')
-    expect(getRiseMethod('fridge').tf).toBe(3.6)
+    expect(getRiseMethod('fridge', provider).key).toBe('fridge')
+    expect(getRiseMethod('fridge', provider).tf).toBe(3.6)
   })
 
-  it('getRiseMethod falls back to room', () => {
-    expect(getRiseMethod('unknown').key).toBe('room')
+  it('getRiseMethod falls back to first entry', () => {
+    expect(getRiseMethod('unknown', provider).key).toBe('room')
   })
 
   it('getAllRiseMethods returns all methods', () => {
-    expect(getAllRiseMethods()).toHaveLength(4)
+    expect(getAllRiseMethods(provider)).toHaveLength(4)
   })
 
   it('getYeastType returns correct type', () => {
-    const fresh = getYeastType('fresh')
+    const fresh = getYeastType('fresh', provider)
     expect(fresh.key).toBe('fresh')
     expect(fresh.toFresh).toBe(1)
   })
 
-  it('getYeastType falls back to fresh', () => {
-    expect(getYeastType('unknown').key).toBe('fresh')
+  it('getYeastType falls back to first entry', () => {
+    expect(getYeastType('unknown', provider).key).toBe('fresh')
   })
 })
 

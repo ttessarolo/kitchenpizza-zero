@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { useT } from '~/hooks/useTranslation'
-import { FLOUR_CATALOG, FLOUR_GROUPS } from '@/local_data/flour-catalog'
+import { useFlourCatalog } from '~/hooks/useScienceCatalogs'
 import { estimateBlendWRPC, blendFlourPropertiesRPC } from '~/lib/recipe-rpc'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { Command, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from '~/components/ui/command'
 import { Badge } from '~/components/ui/badge'
 
-const catalog = FLOUR_CATALOG as unknown as FlourCatalogEntry[]
-
 export function FlourMixSelector() {
+  const { flours: FLOUR_CATALOG, groups: _flourGroups } = useFlourCatalog()
+  const FLOUR_GROUPS = _flourGroups.map((g) => g.key)
+  const catalog = FLOUR_CATALOG as unknown as FlourCatalogEntry[]
   const t = useT()
   const [open, setOpen] = useState(false)
   const flourMix = useRecipeFlowStore((s) => selectPortioning(s).flourMix ?? [])

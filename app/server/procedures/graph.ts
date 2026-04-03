@@ -1,19 +1,13 @@
-import { resolve } from 'path'
 import { baseProcedure } from '../middleware/auth'
 import { reconcileInputSchema, reconcileOutputSchema } from '../schemas/graph'
 import { reconcileGraph } from '../services/graph-reconciler.service'
 import { reconcileGraphV2 } from '../services/graph-reconciler-v2.service'
-import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { getScienceProvider } from '../middleware/science'
 import { getFlags } from '../lib/feature-flags'
 import { verifyReconciliation } from '../services/llm/verify-reconciliation'
 import { applyWarningActionPure } from '@commons/utils/graph-mutation-engine'
 import { applyLlmPerimeter } from '../services/llm/apply-perimeter'
 import { getActivePerimeter } from '../../../local_data/llm-perimeter'
-
-const provider = new FileScienceProvider(
-  resolve(process.cwd(), 'science'),
-  resolve(process.cwd(), 'commons/i18n'),
-)
 
 const AUTO_PILOT_CONFIDENCE_THRESHOLD = 0.7
 
@@ -21,6 +15,7 @@ export const reconcile = baseProcedure
   .input(reconcileInputSchema)
   .output(reconcileOutputSchema)
   .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
     const flags = getFlags()
     const reconcileFn = flags.USE_V2_RECONCILER ? reconcileGraphV2 : reconcileGraph
     const locale = input.locale ?? 'it'

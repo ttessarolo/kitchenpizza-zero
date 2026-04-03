@@ -24,16 +24,17 @@ import type {
 } from '@commons/types/recipe'
 import type { NodeData } from '@commons/types/recipe-graph'
 import type { BakingProfile } from '../../local_data/baking-profiles'
-import { BAKING_PROFILES } from '../../local_data/baking-profiles'
-import { FAT_TYPES } from '../../local_data/fat-catalog'
 import type { ScienceProvider } from './science/science-provider'
 import { evaluateRules } from './science/rule-engine'
 import type { RuleResult } from './science/rule-engine'
 
 // ── Constants ────────────────────────────────────────────────────
 
-/** Fat types suitable for frying (filtered from unified catalog). */
-export const FRYABLE_FAT_KEYS = FAT_TYPES.filter((f) => f.fryable).map((f) => f.key)
+/** Fat types suitable for frying (from provider catalog). */
+export function getFryableFatKeys(provider: ScienceProvider): string[] {
+  const fats = provider.getCatalog('fats') as any[]
+  return fats.filter((f) => f.fryable).map((f) => f.key)
+}
 
 /** All supported cooking sub-types. */
 const COOKING_SUBTYPES = ['forno', 'pentola', 'vapore', 'frittura', 'aria', 'griglia', 'padella'] as const
@@ -47,17 +48,14 @@ type CookingSubtype = (typeof COOKING_SUBTYPES)[number]
  * First tries exact subtype match, then falls back to type-level default (subtype: null).
  */
 export function getBakingProfile(
+  provider: ScienceProvider,
   recipeType: string,
   recipeSubtype: string | null,
 ): BakingProfile | null {
-  const exact = BAKING_PROFILES.find(
-    (p) => p.type === recipeType && p.subtype === recipeSubtype,
-  )
+  const catalog = provider.getCatalog('baking_profiles') as unknown as BakingProfile[]
+  const exact = catalog.find((p) => p.type === recipeType && p.subtype === recipeSubtype)
   if (exact) return exact
-  return (
-    BAKING_PROFILES.find((p) => p.type === recipeType && p.subtype === null) ??
-    null
-  )
+  return catalog.find((p) => p.type === recipeType && p.subtype === null) ?? null
 }
 
 // ── 2. getDefaultConfig ──────────────────────────────────────────
@@ -67,110 +65,12 @@ export function getBakingProfile(
  * Reads from ScienceProvider when available, falls back to hardcoded switch.
  * Throws if the subtype is not recognized.
  */
-export function getDefaultConfig(subtype: string, provider?: ScienceProvider): CookingConfig {
-  if (provider) {
-    const d = provider.getDefaults('cooking_config_defaults', subtype, null) as Record<string, unknown>
-    if (d && d.method != null && d.cfg != null) {
-      return { method: d.method as string, cfg: d.cfg } as CookingConfig
-    }
+export function getDefaultConfig(subtype: string, provider: ScienceProvider): CookingConfig {
+  const d = provider.getDefaults('cooking_config_defaults', subtype, null) as Record<string, unknown>
+  if (d && d.method != null && d.cfg != null) {
+    return { method: d.method as string, cfg: d.cfg } as CookingConfig
   }
-
-  switch (subtype as CookingSubtype) {
-    case 'forno':
-      return {
-        method: 'forno',
-        cfg: {
-          panType: 'stone',
-          ovenType: 'electric',
-          ovenMode: 'static',
-          temp: 250,
-          cieloPct: 50,
-          shelfPosition: 2,
-        },
-      }
-
-    case 'pentola':
-      return {
-        method: 'pentola',
-        cfg: {
-          panType: 'ci_lid',
-          ovenType: 'electric',
-          ovenMode: 'steam',
-          temp: 240,
-          cieloPct: 50,
-          shelfPosition: 2,
-          lidOn: true,
-        },
-      }
-
-    case 'vapore':
-      return {
-        method: 'vapore',
-        cfg: {
-          steamerType: 'bamboo',
-          temp: 100,
-          lidLift: false,
-          waterLevel: 'full',
-          paperLiner: true,
-        },
-      }
-
-    case 'frittura':
-      return {
-        method: 'frittura',
-        cfg: {
-          fryMethod: 'deep',
-          oilTemp: 180,
-          flipHalf: true,
-          maxDoughWeight: 175,
-        },
-      }
-
-    case 'aria':
-      return {
-        method: 'aria',
-        cfg: {
-          temp: 180,
-          preheat: true,
-          preheatDur: 3,
-          oilSpray: true,
-          flipHalf: true,
-          basketType: 'drawer',
-          capacity: 'standard',
-        },
-      }
-
-    case 'griglia':
-      return {
-        method: 'griglia',
-        cfg: {
-          grillType: 'gas',
-          directTemp: 400,
-          indirectTemp: 200,
-          twoZone: true,
-          lidClosed: true,
-          oilSpray: true,
-          flipOnce: true,
-          dockDough: false,
-        },
-      }
-
-    case 'padella':
-      return {
-        method: 'padella',
-        cfg: {
-          panMaterial: 'cast_iron',
-          panSize: 30,
-          temp: 220,
-          oilSpray: true,
-          flipOnce: true,
-          lidUsed: false,
-        },
-      }
-
-    default:
-      throw new Error(`Unknown cooking subtype: ${subtype}`)
-  }
+  throw new Error(`No cooking config defaults found for subtype: ${subtype}`)
 }
 
 // ── 3. calcDuration ──────────────────────────────────────────────
@@ -187,12 +87,12 @@ export function calcDuration(
   recipeType: string,
   recipeSubtype: string | null,
   thickness: number,
-  provider?: ScienceProvider,
+  provider: ScienceProvider,
 ): number {
   // Look up profile — try the cooking method type first, then fall back to recipe type
   const profile =
-    getBakingProfile(recipeType, recipeSubtype) ??
-    getBakingProfile(subtype, null)
+    getBakingProfile(provider, recipeType, recipeSubtype) ??
+    getBakingProfile(provider, subtype, null)
 
   if (!profile) {
     // No profile found; return a safe default
@@ -202,20 +102,12 @@ export function calcDuration(
   const [tMin, tMax] = profile.timeRange
   const baseTime = (tMin + tMax) / 2
 
-  // Load cooking factors from provider if available
-  let modeFactors: Record<string, number> = { static: 1.0, fan: 0.85, steam: 1.0 }
-  let steamerFactors: Record<string, number> = { bamboo: 1.0, electric: 0.9 }
-  let fryMethodFactors: Record<string, number> = { deep: 1.0, shallow: 1.2 }
-  let fuelFactors: Record<string, number> = { gas: 1.0, charcoal: 1.1, electric: 1.0 }
-  if (provider) {
-    try {
-      const block = provider.getBlock('cooking_factors') as any
-      if (block?.modeFactor) modeFactors = block.modeFactor
-      if (block?.steamerFactor) steamerFactors = block.steamerFactor
-      if (block?.fryMethodFactor) fryMethodFactors = block.fryMethodFactor
-      if (block?.fuelFactor) fuelFactors = block.fuelFactor
-    } catch { /* fallback to hardcoded */ }
-  }
+  // Load cooking factors from provider
+  const block = provider.getBlock('cooking_factors') as any
+  const modeFactors: Record<string, number> = block?.modeFactor ?? { static: 1.0, fan: 0.85, steam: 1.0 }
+  const steamerFactors: Record<string, number> = block?.steamerFactor ?? { bamboo: 1.0, electric: 0.9 }
+  const fryMethodFactors: Record<string, number> = block?.fryMethodFactor ?? { deep: 1.0, shallow: 1.2 }
+  const fuelFactors: Record<string, number> = block?.fuelFactor ?? { gas: 1.0, charcoal: 1.1, electric: 1.0 }
 
   switch (subtype as CookingSubtype) {
     // ── Oven-based methods (forno, pentola) ──
@@ -285,69 +177,34 @@ export function calcDuration(
  * Validate a CookingConfig for a given sub-type.
  * Returns an array of error message strings (empty = valid).
  */
-export function validateConfig(subtype: string, config: CookingConfig): string[] {
+export function validateConfig(subtype: string, config: CookingConfig, provider: ScienceProvider): string[] {
   const errors: string[] = []
 
-  // Method must match subtype
   if (config.method !== subtype) {
     errors.push(`Config method "${config.method}" does not match subtype "${subtype}"`)
   }
 
-  switch (subtype as CookingSubtype) {
-    case 'forno':
-    case 'pentola': {
-      // Oven configs are validated by the advisory system; no additional range checks here
-      break
-    }
+  const ranges = provider.getDefaults('cooking_validation_ranges', subtype, null) as any
+  if (!ranges || !ranges.tempMin) return errors  // No ranges for this subtype (e.g., forno/pentola use advisory system)
 
-    case 'vapore': {
-      const cfg = config.cfg as SteamerConfig
-      if (cfg.temp < 95 || cfg.temp > 105) {
-        errors.push(`Steam temperature ${cfg.temp} C is outside valid range (95-105 C)`)
-      }
-      break
-    }
+  // Generic temperature validation
+  const cfg = config.cfg as any
+  const tempField = subtype === 'griglia' ? 'directTemp' : (subtype === 'frittura' ? 'oilTemp' : 'temp')
+  const temp = cfg?.[tempField]
+  if (temp != null && (temp < ranges.tempMin || temp > ranges.tempMax)) {
+    errors.push(`Temperature ${temp}${ranges.tempUnit} is outside valid range (${ranges.tempMin}-${ranges.tempMax}${ranges.tempUnit})`)
+  }
 
-    case 'frittura': {
-      const cfg = config.cfg as FryConfig
-      if (cfg.oilTemp < 170 || cfg.oilTemp > 195) {
-        errors.push(`Oil temperature ${cfg.oilTemp} C is outside valid range (170-195 C)`)
-      }
-      if (cfg.maxDoughWeight < 120 || cfg.maxDoughWeight > 200) {
-        errors.push(`Max dough weight ${cfg.maxDoughWeight}g is outside valid range (120-200g)`)
-      }
-      break
+  // Subtype-specific validations
+  if (ranges.maxDoughWeightMin != null && cfg?.maxDoughWeight != null) {
+    if (cfg.maxDoughWeight < ranges.maxDoughWeightMin || cfg.maxDoughWeight > ranges.maxDoughWeightMax) {
+      errors.push(`Max dough weight ${cfg.maxDoughWeight}${ranges.maxDoughWeightUnit} is outside valid range (${ranges.maxDoughWeightMin}-${ranges.maxDoughWeightMax}${ranges.maxDoughWeightUnit})`)
     }
-
-    case 'aria': {
-      const cfg = config.cfg as AirFryerConfig
-      if (cfg.temp < 150 || cfg.temp > 220) {
-        errors.push(`Air fryer temperature ${cfg.temp} C is outside valid range (150-220 C)`)
-      }
-      break
+  }
+  if (ranges.panSizeMin != null && cfg?.panSize != null) {
+    if (cfg.panSize < ranges.panSizeMin || cfg.panSize > ranges.panSizeMax) {
+      errors.push(`Pan size ${cfg.panSize}${ranges.panSizeUnit} is outside valid range (${ranges.panSizeMin}-${ranges.panSizeMax}${ranges.panSizeUnit})`)
     }
-
-    case 'griglia': {
-      const cfg = config.cfg as GrillConfig
-      if (cfg.directTemp < 370 || cfg.directTemp > 480) {
-        errors.push(`Direct grill temperature ${cfg.directTemp} C is outside valid range (370-480 C)`)
-      }
-      break
-    }
-
-    case 'padella': {
-      const cfg = config.cfg as PanConfig
-      if (cfg.temp < 180 || cfg.temp > 250) {
-        errors.push(`Pan temperature ${cfg.temp} C is outside valid range (180-250 C)`)
-      }
-      if (cfg.panSize < 20 || cfg.panSize > 36) {
-        errors.push(`Pan size ${cfg.panSize}cm is outside valid range (20-36cm)`)
-      }
-      break
-    }
-
-    default:
-      errors.push(`Unknown cooking subtype: ${subtype}`)
   }
 
   return errors
@@ -366,25 +223,20 @@ export function validateConfig(subtype: string, config: CookingConfig): string[]
 export function syncCookingFats(
   cookingFats: FatIngredient[],
   fryConfig: FryConfig,
-  provider?: ScienceProvider,
+  provider: ScienceProvider,
 ): FatIngredient[] {
   // If user already has cooking fats configured, don't override
   if (cookingFats.length > 0) return cookingFats
 
-  // Read frying amounts from provider if available
-  let deepAmount = 500
-  let shallowAmount = 150
-  if (provider) {
-    try {
-      const block = provider.getBlock('frying_amounts') as any
-      if (block?.defaults?.deep != null) deepAmount = block.defaults.deep
-      if (block?.defaults?.shallow != null) shallowAmount = block.defaults.shallow
-    } catch { /* fallback to hardcoded */ }
-  }
+  // Read frying amounts from provider
+  const block = provider.getBlock('frying_amounts') as any
+  const deepAmount = block?.defaults?.deep ?? 500
+  const shallowAmount = block?.defaults?.shallow ?? 150
 
   // Auto-add a default frying fat
   const estimatedG = fryConfig.fryMethod === 'deep' ? deepAmount : shallowAmount
-  const defaultOil = FRYABLE_FAT_KEYS[0] ?? 'olio_arachidi'
+  const fryableKeys = getFryableFatKeys(provider)
+  const defaultOil = fryableKeys[0] ?? 'olio_arachidi'
 
   return [{
     id: Date.now(),
@@ -412,7 +264,7 @@ export function getWarnings(
   baseDur: number,
   nodeData: NodeData,
 ): RuleResult[] {
-  const profile = getBakingProfile(recipeType, recipeSubtype)
+  const profile = getBakingProfile(provider, recipeType, recipeSubtype)
 
   // Extract ovenCfg for oven-based methods
   const isOvenBased = cookingCfg.method === 'forno' || cookingCfg.method === 'pentola'
@@ -446,12 +298,15 @@ export function getWarnings(
     _cookingMethod: cookingCfg.method,
     _cookingCfg: cookingCfg.cfg,
     // Frying-specific fields
-    ...(cookingCfg.method === 'frittura' && cookingCfg.cfg ? {
-      _oilTemp: (cookingCfg.cfg as any).oilTemp,
-      _oilTempMin: 170,
-      _oilTempMax: 195,
-      _maxDoughWeight: (cookingCfg.cfg as any).maxDoughWeight,
-    } : {}),
+    ...(cookingCfg.method === 'frittura' && cookingCfg.cfg ? (() => {
+      const valRanges = provider.getDefaults('cooking_validation_ranges', 'frittura', null) as any
+      return {
+        _oilTemp: (cookingCfg.cfg as any).oilTemp,
+        _oilTempMin: valRanges?.tempMin ?? 170,
+        _oilTempMax: valRanges?.tempMax ?? 195,
+        _maxDoughWeight: (cookingCfg.cfg as any).maxDoughWeight,
+      }
+    })() : {}),
     // Grilling-specific fields
     ...(cookingCfg.method === 'griglia' && cookingCfg.cfg ? {
       _directTemp: (cookingCfg.cfg as any).directTemp,
@@ -466,33 +321,26 @@ export function getWarnings(
     if (r.id !== 'steam_too_long' || !r.actions) return r
 
     const isPentola = cookingCfg.method === 'pentola'
+    const splitType = isPentola ? 'pentola' : 'forno'
+    const splitConfig = provider.getDefaults('steam_split_phase_configs', splitType, null) as any
+
     return {
       ...r,
       actions: r.actions.map((action) => ({
         ...action,
-        labelKey: isPentola ? 'action.split_steam_phases_pentola' : action.labelKey,
+        labelKey: splitConfig?.labelKey ?? action.labelKey,
         mutations: action.mutations.map((m) => {
           if (m.type !== 'addNodeAfter') return m
-          if (isPentola) {
-            return {
-              ...m,
-              subtype: 'pentola',
-              data: {
-                ...(m.data ?? {}),
-                baseDur: 12,
-                title: 'Doratura (senza coperchio)',
-                ovenCfg: { ...((ovenCfg ?? {}) as Record<string, unknown>), lidOn: false, ovenMode: 'static' },
-              },
-            }
-          }
-          // forno: enrich with oven config for dry phase
           return {
             ...m,
-            subtype: 'forno',
+            subtype: splitType,
             data: {
               ...(m.data ?? {}),
-              title: 'Doratura (senza vapore)',
-              ovenCfg: { panType: 'stone', ovenType: 'electric', ovenMode: 'static', temp: 220, cieloPct: 50, shelfPosition: 2 },
+              baseDur: splitConfig?.baseDur ?? (isPentola ? 12 : 10),
+              title: splitConfig?.title ?? (isPentola ? 'Doratura (senza coperchio)' : 'Doratura (senza vapore)'),
+              ovenCfg: splitConfig?.ovenCfg ?? (isPentola
+                ? { ...((ovenCfg ?? {}) as Record<string, unknown>), lidOn: false, ovenMode: 'static' }
+                : { panType: 'stone', ovenType: 'electric', ovenMode: 'static', temp: 220, cieloPct: 50, shelfPosition: 2 }),
             },
           }
         }),

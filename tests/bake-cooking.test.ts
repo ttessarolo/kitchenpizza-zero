@@ -76,7 +76,7 @@ function makeBakeGraph(bakeOverrides: Record<string, unknown> = {}): RecipeGraph
 describe('reconcileGraph — bake node auto-group', () => {
   it('assigns "Cottura" group to bake nodes even when inherited group is "Impasto"', () => {
     const graph = makeBakeGraph()
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, testProvider)
     const bake = result.graph.nodes.find((n) => n.id === 'bake')!
     expect(bake.data.group).toMatch(/^Cottura/)
     expect(bake.data.group).not.toBe('Impasto')
@@ -84,7 +84,7 @@ describe('reconcileGraph — bake node auto-group', () => {
 
   it('includes upstream dough title in the group name', () => {
     const graph = makeBakeGraph()
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, testProvider)
     const bake = result.graph.nodes.find((n) => n.id === 'bake')!
     expect(bake.data.group).toBe('Cottura Impasto')
   })
@@ -116,7 +116,7 @@ describe('computeGroupedIngredients — cookingFats in Cottura group', () => {
 describe('reconcileGraph — cookingFats lifecycle', () => {
   it('auto-adds cookingFats for frittura node with empty cookingFats', () => {
     const graph = makeBakeGraph({ cookingFats: [] })
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, testProvider)
     const bake = result.graph.nodes.find((n) => n.id === 'bake')!
     expect((bake.data.cookingFats ?? []).length).toBeGreaterThan(0)
   })
@@ -127,7 +127,7 @@ describe('reconcileGraph — cookingFats lifecycle', () => {
       cookingCfg: PENTOLA_CFG,  // NOW pentola
       cookingFats: [{ id: 1, type: 'olio_arachidi', g: 500 }] as FatIngredient[],
     })
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, testProvider)
     const bake = result.graph.nodes.find((n) => n.id === 'bake')!
     // cookingFats should be empty for pentola
     expect(bake.data.cookingFats ?? []).toHaveLength(0)
@@ -142,7 +142,7 @@ describe('reconcileGraph — cookingFats lifecycle', () => {
       cookingCfg: vaporeCfg,
       cookingFats: [{ id: 1, type: 'olio_arachidi', g: 500 }] as FatIngredient[],
     })
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, testProvider)
     const bake = result.graph.nodes.find((n) => n.id === 'bake')!
     expect(bake.data.cookingFats ?? []).toHaveLength(0)
   })
@@ -196,7 +196,7 @@ describe('reconcileGraph — advisorySourceId preservation', () => {
       ],
     )
 
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, testProvider)
     const dryPhase = result.graph.nodes.find((n) => n.id === 'dry_phase')!
     expect(dryPhase.data.advisorySourceId).toBe('steam_too_long')
   })
@@ -341,7 +341,7 @@ describe('advisory deduplication — steam_too_long', () => {
           : n,
       ),
     }
-    const afterForno = reconcileGraph(fornoGraph, defaultPortioning, defaultMeta)
+    const afterForno = reconcileGraph(fornoGraph, defaultPortioning, defaultMeta, testProvider)
 
     // dry_phase must still have advisorySourceId
     const dryAfterForno = afterForno.graph.nodes.find((n) => n.id === 'dry_phase')!
@@ -364,7 +364,7 @@ describe('advisory deduplication — steam_too_long', () => {
           : n,
       ),
     }
-    const afterPentola = reconcileGraph(pentolaGraph, defaultPortioning, defaultMeta)
+    const afterPentola = reconcileGraph(pentolaGraph, defaultPortioning, defaultMeta, testProvider)
 
     // dry_phase must STILL have advisorySourceId after the full round-trip
     const dryAfterPentola = afterPentola.graph.nodes.find((n) => n.id === 'dry_phase')!
@@ -592,7 +592,7 @@ describe('pentola lid parameter — lidOn preserved through reconciliation', () 
       [makeEdge('dough', 'bake'), makeEdge('bake', 'bake_dry')],
     )
 
-    const result = reconcileGraph(graph, defaultPortioning, defaultMeta)
+    const result = reconcileGraph(graph, defaultPortioning, defaultMeta, testProvider)
 
     const coveredNode = result.graph.nodes.find((n) => n.id === 'bake')!
     expect(coveredNode.data.ovenCfg?.lidOn).toBe(true)

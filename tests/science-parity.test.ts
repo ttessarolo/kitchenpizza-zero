@@ -59,7 +59,7 @@ describe('Science parity — calcFinalDoughTemp', () => {
 
   for (const c of cases) {
     it(`matches with/without provider: ${c.label}`, () => {
-      const without = calcFinalDoughTemp(c.flours, c.liquids, c.ambient, c.friction)
+      const without = calcFinalDoughTemp(c.flours, c.liquids, c.ambient, c.friction, provider)
       const withProv = calcFinalDoughTemp(c.flours, c.liquids, c.ambient, c.friction, provider)
       expect(withProv).toBeCloseTo(without, 1) // ±0.1°C
     })
@@ -74,7 +74,7 @@ describe('Science parity — computeSuggestedSalt', () => {
 
   for (const hyd of hydrations) {
     it(`matches at hydration ${hyd}%`, () => {
-      const without = computeSuggestedSalt(totalFlour, hyd)
+      const without = computeSuggestedSalt(totalFlour, hyd, provider)
       const withProv = computeSuggestedSalt(totalFlour, hyd, provider)
       expect(withProv).toBeCloseTo(without, 2) // ±0.01g
     })
@@ -90,7 +90,7 @@ describe('Science parity — riseTemperatureFactor', () => {
   for (const method of methods) {
     for (const fdt of fdts) {
       it(`matches for method=${method}, fdt=${fdt}`, () => {
-        const without = riseTemperatureFactor(null, fdt, method)
+        const without = riseTemperatureFactor(provider, fdt, method)
         const withProv = riseTemperatureFactor(provider, fdt, method)
         expect(withProv).toBeCloseTo(without, 3) // ±0.001
       })
@@ -105,7 +105,7 @@ describe('Science parity — estimateW', () => {
 
   for (const protein of proteins) {
     it(`matches for protein=${protein}%`, () => {
-      const without = estimateW(protein)
+      const without = estimateW(protein, provider)
       const withProv = estimateW(protein, provider)
       expect(withProv).toBe(without) // integers, exact match
     })
@@ -128,13 +128,13 @@ describe('Science parity — calcDuration (forno)', () => {
   }
 
   it('matches with/without provider for forno bake', () => {
-    const without = calcDuration('forno', cookingCfg, 'pizza', 'napoletana', 0.5)
+    const without = calcDuration('forno', cookingCfg, 'pizza', 'napoletana', 0.5, provider)
     const withProv = calcDuration('forno', cookingCfg, 'pizza', 'napoletana', 0.5, provider)
     expect(withProv).toBeCloseTo(without, 0) // ±1 minute (integers)
   })
 
   it('matches with/without provider for pane bake', () => {
-    const without = calcDuration('forno', cookingCfg, 'pane', 'pane_comune', 0.6)
+    const without = calcDuration('forno', cookingCfg, 'pane', 'pane_comune', 0.6, provider)
     const withProv = calcDuration('forno', cookingCfg, 'pane', 'pane_comune', 0.6, provider)
     expect(withProv).toBeCloseTo(without, 0)
   })

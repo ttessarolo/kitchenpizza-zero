@@ -8,6 +8,7 @@
 import type { RecipeGraph, RecipeNode, RecipeEdge } from '@commons/types/recipe-graph'
 import type { RecipeMeta } from '@commons/types/recipe'
 import type { MasterConfig } from '@commons/types/recipe-layers'
+import type { ScienceProvider } from '@commons/utils/science/science-provider'
 import {
   type TemplateEntry,
   type LayerTemplate,
@@ -29,6 +30,7 @@ interface GenerateLayerOptions {
   masterConfig: MasterConfig
   meta: RecipeMeta
   t: (key: string, vars?: Record<string, unknown>) => string
+  provider: ScienceProvider
 }
 
 /**
@@ -36,7 +38,7 @@ interface GenerateLayerOptions {
  * Returns null if the template is declarative but has no nodes (shouldn't happen).
  */
 export function generateLayerGraph(opts: GenerateLayerOptions): RecipeGraph | null {
-  const { template, masterConfig, meta, t } = opts
+  const { template, masterConfig, meta, t, provider } = opts
   tplIdCounter = 0
 
   // Impasto: delegate to the procedural generator
@@ -50,7 +52,7 @@ export function generateLayerGraph(opts: GenerateLayerOptions): RecipeGraph | nu
       ? Math.round(portioning.thickness * portioning.tray.l * portioning.tray.w * portioning.tray.count)
       : portioning.ball.weight * portioning.ball.count
 
-    return generateDoughGraph({ meta, portioning, totalDough, t })
+    return generateDoughGraph({ meta, portioning, totalDough, t, provider })
   }
 
   // Declarative template

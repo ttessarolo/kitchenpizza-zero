@@ -21,7 +21,7 @@ const FERMENT_SUBTYPE_DEFAULTS: Record<string, Partial<FermentMasterConfig>> = {
 }
 
 /** Returns sensible defaults for a ferment subtype. Reads from ScienceProvider when available. */
-export function getDefaults(subtype: string, provider?: ScienceProvider): Partial<FermentMasterConfig> {
+export function getDefaults(subtype: string, provider: ScienceProvider): Partial<FermentMasterConfig> {
   if (provider) {
     const d = provider.getDefaults('ferment_subtype_defaults', subtype, null) as Record<string, unknown>
     if (d && Object.keys(d).length > 0 && d.saltPercentage != null) {

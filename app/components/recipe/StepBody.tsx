@@ -3,7 +3,7 @@ import { useT } from '~/hooks/useTranslation'
 import type { RecipeStep, TemperatureUnit, CookingConfig, FatIngredient, SteamerConfig, FryConfig, AirFryerConfig, GrillConfig, PanConfig, SaltIngredient, SugarIngredient } from '@commons/types/recipe'
 import { getDefaultBakeConfigRPC, blendFlourPropertiesRPC } from '~/lib/recipe-rpc'
 import type { ActionableWarning } from '@commons/types/recipe-graph'
-import { FAT_TYPES } from '@/local_data/fat-catalog'
+import { useRiseMethods, useYeastTypes, useFatTypes } from '~/hooks/useScienceCatalogs'
 import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/recipe-flow-store'
 import { rnd, nextId, fmtDuration, celsiusToFahrenheit, fahrenheitToCelsius } from '@commons/utils/format'
 import { getAncestorIds, getStepTotalWeight } from '@commons/utils/recipe'
@@ -27,8 +27,6 @@ function getFatPct(fats: FatIngredient[], totalFlour: number): number {
 import {
   STEP_TYPES,
   KNEAD_METHODS,
-  RISE_METHODS,
-  YEAST_TYPES,
   OVEN_TYPES,
   OVEN_MODES,
   MODE_MAP,
@@ -113,6 +111,8 @@ interface StepBodyProps {
 }
 
 export function StepBody({ step: s }: StepBodyProps) {
+  const RISE_METHODS = useRiseMethods()
+  const YEAST_TYPES = useYeastTypes()
   const t = useT()
   const {
     recipe,
@@ -1733,7 +1733,6 @@ function PanEditor({ cfg, onChange: ch, dT }: { cfg: PanConfig; onChange: (f: st
 }
 
 // ── CookingFatsEditor — dropdown fryable fats + grams ─────────
-const fryableFats = FAT_TYPES.filter((f) => f.fryable)
 
 function CookingFatsEditor({
   cookingFats,
@@ -1742,6 +1741,8 @@ function CookingFatsEditor({
   cookingFats: FatIngredient[]
   onChange: (fats: FatIngredient[]) => void
 }) {
+  const FAT_TYPES = useFatTypes()
+  const fryableFats = FAT_TYPES.filter((f) => f.fryable)
   const t = useT()
   const addFat = () => {
     const defaultType = fryableFats[0]?.key ?? 'olio_arachidi'

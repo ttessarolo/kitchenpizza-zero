@@ -179,6 +179,60 @@ export interface DefaultsBlock {
   fallback?: { chain: string[] }
 }
 
+/** 8. Blend formula — weighted property aggregation */
+export interface BlendFormulaBlock {
+  type: 'blend_formula'
+  id: string
+  _meta?: BlockMeta
+  blendMethod: 'weighted_average'
+  weightField: string
+  sourceField: string
+  sourceCatalog: string
+  properties: {
+    field: string
+    round: number
+    default?: number
+  }[]
+  fallbackDefaults: string
+  estimateBlendW?: {
+    method: 'equal_weight_average'
+    field: string
+    fallback: number
+  }
+}
+
+/** 9. Multi-node constraint — cross-node validation with S→P→A→V pattern */
+export interface MultiNodeConstraintBlock {
+  type: 'multi_node_constraint'
+  id: string
+  _meta?: BlockMeta
+  selector: {
+    nodeFilter: Record<string, unknown>
+    contextSources: { from: string; fields: string[] }[]
+  }
+  projection: {
+    perNode: {
+      fields: string[]
+      lookup?: Record<string, { catalog: string; key: string; field: string }>
+    }
+  }
+  aggregation: {
+    computations: {
+      id: string
+      description: string
+      formula: string
+      round?: number
+      requiresPositive?: string
+      algorithm?: string
+    }[]
+  }
+  validation: {
+    rulesDomain: string
+    contextMapping: Record<string, string>
+  }
+  adaptationStrategies?: Record<string, unknown>
+}
+
 // ── Union type ─────────────────────────────────────────────────
 
 export type ScienceBlock =
@@ -189,3 +243,5 @@ export type ScienceBlock =
   | RuleBlock
   | CatalogBlock
   | DefaultsBlock
+  | BlendFormulaBlock
+  | MultiNodeConstraintBlock

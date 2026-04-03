@@ -1,0 +1,56 @@
+{
+  "id": "cooking_validation_ranges",
+  "type": "defaults",
+  "_meta": {
+    "tags": ["bake", "validation", "temperature", "ranges"],
+    "author": "system",
+    "section": "bake",
+    "description": "meta.defaults.cooking_validation_ranges.desc",
+    "displayName": "meta.defaults.cooking_validation_ranges.name",
+    "lastModified": "2026-04-03"
+  },
+  "entries": [
+    {
+      "type": "vapore",
+      "subtype": null,
+      "tempMin": 95,
+      "tempMax": 105,
+      "tempUnit": "C"
+    },
+    {
+      "type": "frittura",
+      "subtype": null,
+      "tempMin": 170,
+      "tempMax": 195,
+      "tempUnit": "C",
+      "maxDoughWeightMin": 120,
+      "maxDoughWeightMax": 200,
+      "maxDoughWeightUnit": "g"
+    },
+    {
+      "type": "aria",
+      "subtype": null,
+      "tempMin": 150,
+      "tempMax": 220,
+      "tempUnit": "C"
+    },
+    {
+      "type": "griglia",
+      "subtype": null,
+      "tempMin": 370,
+      "tempMax": 480,
+      "tempUnit": "C"
+    },
+    {
+      "type": "padella",
+      "subtype": null,
+      "tempMin": 180,
+      "tempMax": 250,
+      "tempUnit": "C",
+      "panSizeMin": 20,
+      "panSizeMax": 36,
+      "panSizeUnit": "cm"
+    }
+  ],
+  "description": "Temperature and size validation ranges for each cooking method. Used by validateConfig() to check user inputs are within safe operating parameters."
+}

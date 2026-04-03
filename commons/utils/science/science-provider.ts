@@ -12,6 +12,8 @@ import type {
   PiecewiseBlock,
   ClassificationBlock,
   RuleBlock,
+  BlendFormulaBlock,
+  MultiNodeConstraintBlock,
 } from './types'
 
 // ── Provider interface ─────────────────────────────────────────
@@ -25,6 +27,10 @@ export interface ScienceProvider {
   // Read — rules & classification
   getRules(domain: string): RuleBlock[]
   getClassification(id: string): ClassificationBlock
+
+  // Read — specialized blocks
+  getBlendFormula(id: string): BlendFormulaBlock
+  getMultiNodeConstraint(id: string): MultiNodeConstraintBlock
 
   // Read — data
   getCatalog(name: string): Record<string, unknown>[]
@@ -66,7 +72,7 @@ export class FileScienceProvider implements ScienceProvider {
     this.catalogs.clear()
     this.i18nCache.clear()
 
-    const dirs = ['formulas', 'rules', 'catalogs', 'defaults', 'classifications']
+    const dirs = ['formulas', 'rules', 'catalogs', 'defaults', 'classifications', 'constraints']
     for (const dir of dirs) {
       const dirPath = path.join(this.scienceDir, dir)
       if (!fs.existsSync(dirPath)) continue
@@ -132,6 +138,18 @@ export class FileScienceProvider implements ScienceProvider {
     return block
   }
 
+  getBlendFormula(id: string): BlendFormulaBlock {
+    const block = this.blocks.get(id)
+    if (!block || block.type !== 'blend_formula') throw new Error(`Blend formula "${id}" not found`)
+    return block
+  }
+
+  getMultiNodeConstraint(id: string): MultiNodeConstraintBlock {
+    const block = this.blocks.get(id)
+    if (!block || block.type !== 'multi_node_constraint') throw new Error(`Multi-node constraint "${id}" not found`)
+    return block
+  }
+
   getCatalog(name: string): Record<string, unknown>[] {
     return this.catalogs.get(name) ?? []
   }
@@ -168,6 +186,8 @@ export class FileScienceProvider implements ScienceProvider {
       rule: 'rules',
       catalog: 'catalogs',
       defaults: 'defaults',
+      blend_formula: 'formulas',
+      multi_node_constraint: 'constraints',
     }
     const dir = dirMap[block.type] ?? 'formulas'
     const filePath = path.join(this.scienceDir, dir, `${block.id}.json`)

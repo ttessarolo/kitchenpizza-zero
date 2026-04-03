@@ -1,14 +1,8 @@
-import { resolve } from 'path'
 import { baseProcedure } from '../middleware/auth'
 import { z } from 'zod'
 import { reconcileLayer } from '@commons/utils/layer-reconciler'
 import { reconcileGraph } from '../services/graph-reconciler.service'
-import { FileScienceProvider } from '@commons/utils/science/science-provider'
-
-const provider = new FileScienceProvider(
-  resolve(process.cwd(), 'science'),
-  resolve(process.cwd(), 'commons/i18n'),
-)
+import { getScienceProvider } from '../middleware/science'
 
 export const reconcileLayerProcedure = baseProcedure
   .input(z.object({
@@ -22,5 +16,6 @@ export const reconcileLayerProcedure = baseProcedure
     }),
   }))
   .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
     return reconcileLayer(provider, input.layer as any, input.meta, reconcileGraph)
   })

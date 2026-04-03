@@ -1,13 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { FileScienceProvider } from '@commons/utils/science/science-provider'
-import * as path from 'path'
+import { getScienceProvider } from '~/server/middleware/science'
 
 const loadI18n = createServerFn().handler(async () => {
-  const provider = new FileScienceProvider(
-    path.resolve(process.cwd(), 'science'),
-    path.resolve(process.cwd(), 'commons/i18n'),
-  )
+  const provider = await getScienceProvider()
   return {
     en: provider.getI18nKeys('en'),
     it: provider.getI18nKeys('it'),

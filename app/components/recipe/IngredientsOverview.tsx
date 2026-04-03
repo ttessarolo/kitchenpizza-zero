@@ -4,8 +4,7 @@ import { SectionHeader } from './shared/SectionHeader'
 import { IngredientRow } from './shared/IngredientRow'
 import { rnd } from '@commons/utils/format'
 import { getFlourRPC } from '~/lib/recipe-rpc'
-import { FLOUR_CATALOG, YEAST_TYPES } from '@/local_data'
-import { FAT_TYPES } from '@/local_data/fat-catalog'
+import { useFlourCatalog, useYeastTypes, useFatTypes } from '~/hooks/useScienceCatalogs'
 import { useT } from '~/hooks/useTranslation'
 import type { GroupedIngredients } from '~/hooks/useRecipeCalculator'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
@@ -14,6 +13,7 @@ import type { FlourCatalogEntry } from '@commons/types/recipe'
 const flourLabelCache = new Map<string, string>()
 
 function useFlourLabel(type: string): string {
+  const { flours: FLOUR_CATALOG } = useFlourCatalog()
   const t = useT()
   // Try local catalog first (sync)
   const catalogEntry = (FLOUR_CATALOG as unknown as FlourCatalogEntry[]).find((f) => f.key === type)
@@ -61,6 +61,8 @@ export function IngredientsOverview({
   groupedIngredients,
   hideHeader,
 }: IngredientsOverviewProps) {
+  const YEAST_TYPES = useYeastTypes()
+  const FAT_TYPES = useFatTypes()
   const t = useT()
   return (
     <section className={hideHeader ? '' : 'mt-3.5'}>

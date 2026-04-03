@@ -21,7 +21,7 @@ const PREP_SUBTYPE_DEFAULTS: Record<string, Partial<PrepMasterConfig>> = {
 }
 
 /** Returns sensible defaults for a prep subtype. Reads from ScienceProvider when available. */
-export function getDefaults(subtype: string, provider?: ScienceProvider): Partial<PrepMasterConfig> {
+export function getDefaults(subtype: string, provider: ScienceProvider): Partial<PrepMasterConfig> {
   if (provider) {
     const d = provider.getDefaults('prep_subtype_defaults', subtype, null) as Record<string, unknown>
     if (d && Object.keys(d).length > 0 && d.servings != null) {

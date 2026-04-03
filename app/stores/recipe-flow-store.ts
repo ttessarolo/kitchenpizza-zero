@@ -29,6 +29,7 @@ import { computeGraphTotals, scaleNodeData } from '~/hooks/useGraphCalculator'
 import { generateDoughGraph } from '~/lib/generate-dough'
 import { resolveTemplate } from '@commons/constants/layer-templates'
 import { generateLayerGraph } from '~/lib/generate-layer-graph'
+import { staticProvider } from '@commons/utils/science/static-science-provider'
 import { useLocaleStore, getMessages } from '~/hooks/useTranslation'
 import { RECIPE_SUBTYPES } from '@/local_data'
 import type { ActionableWarning as RecipeWarning } from '@commons/types/recipe-graph'
@@ -1274,6 +1275,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
           portioning,
           totalDough: portioningTarget,
           t,
+          provider: staticProvider,
         })
         const newLayers = withGraphUpdate(s, graph)
         return {
@@ -1540,6 +1542,7 @@ export const useRecipeFlowStore = create<RecipeFlowState>((set, get) => {
             masterConfig,
             meta: recipeMeta,
             t,
+            provider: staticProvider,
           })
           if (graph) {
             newLayer.nodes = graph.nodes

@@ -23,10 +23,11 @@ export type { BakingProfile }
  * @deprecated Use BakeManager.getBakingProfile() instead.
  */
 export function getBakingProfile(
+  provider: ScienceProvider,
   recipeType: string,
   recipeSubtype: string | null,
 ): BakingProfile | null {
-  return _getBakingProfile(recipeType, recipeSubtype)
+  return _getBakingProfile(provider, recipeType, recipeSubtype)
 }
 
 /**
@@ -36,9 +37,10 @@ export function calcBakeDuration(
   profile: BakingProfile,
   ovenCfg: OvenConfig,
   thickness: number,
+  provider: ScienceProvider,
 ): number {
   const cookingCfg: CookingConfig = { method: 'forno', cfg: ovenCfg }
-  return _calcDuration('forno', cookingCfg, profile.type, profile.subtype, thickness)
+  return _calcDuration('forno', cookingCfg, profile.type, profile.subtype, thickness, provider)
 }
 
 // ── Advisory warnings (backward compat) ────────────────────────

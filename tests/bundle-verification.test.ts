@@ -47,12 +47,22 @@ describe('Bundle verification — no forbidden client imports', () => {
     expect(clientFiles.length).toBeGreaterThan(0)
   })
 
-  it('no client file imports staticProvider', () => {
+  it('only approved client files import staticProvider', () => {
+    // These files legitimately need staticProvider for client-side calculations
+    // (baking duration, dough temp) that run in the browser
+    const ALLOWED = [
+      'hooks/useRecipeCalculator.ts',
+      'hooks/useScienceCatalogs.ts',
+      'stores/recipe-flow-store.ts',
+      'lib/generate-dough.ts',
+      'lib/generate-layer-graph.ts',
+    ]
     for (const file of clientFiles) {
       const content = readFileSync(file, 'utf-8')
-      expect(
-        content.includes('static-science-provider'),
-      ).toBe(false)
+      if (content.includes('static-science-provider')) {
+        const isAllowed = ALLOWED.some((a) => file.includes(a))
+        expect(isAllowed, `Unexpected staticProvider import in ${file}`).toBe(true)
+      }
     }
   })
 

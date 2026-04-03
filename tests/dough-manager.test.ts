@@ -104,16 +104,16 @@ describe('DoughManager — blendFlourProperties', () => {
 
 describe('DoughManager — estimateW', () => {
   it('estimates W for typical soft wheat protein levels', () => {
-    expect(estimateW(12)).toBe(194)   // 22*12-70 = 194
-    expect(estimateW(14)).toBe(238)   // 22*14-70 = 238
+    expect(estimateW(12, provider)).toBe(194)   // 22*12-70 = 194
+    expect(estimateW(14, provider)).toBe(238)   // 22*14-70 = 238
   })
 
   it('clamps to minimum 60', () => {
-    expect(estimateW(5)).toBe(60)
+    expect(estimateW(5, provider)).toBe(60)
   })
 
   it('clamps to maximum 420', () => {
-    expect(estimateW(25)).toBe(420)
+    expect(estimateW(25, provider)).toBe(420)
   })
 })
 
@@ -168,14 +168,14 @@ describe('DoughManager — yeastGrams', () => {
 
 describe('DoughManager — calcFinalDoughTemp', () => {
   it('returns ambient temp when no ingredients', () => {
-    expect(calcFinalDoughTemp([], [], 22, 0)).toBe(22)
+    expect(calcFinalDoughTemp([], [], 22, 0, provider)).toBe(22)
   })
 
   it('calculates weighted average with friction', () => {
     const flours = [makeFlour('gt_00_for', 500)]
     const liquids = [makeLiquid('Acqua', 300, 10)]
     // Flour at ambient (22°C), water at 10°C, friction 2°C
-    const result = calcFinalDoughTemp(flours, liquids, 22, 2)
+    const result = calcFinalDoughTemp(flours, liquids, 22, 2, provider)
     // Should be between 10 and 22, plus friction
     expect(result).toBeGreaterThan(12)
     expect(result).toBeLessThan(25)
@@ -184,7 +184,7 @@ describe('DoughManager — calcFinalDoughTemp', () => {
   it('includes 15% air incorporation at ambient temp', () => {
     const flours = [makeFlour('gt_00_for', 500)]
     const liquids = [makeLiquid('Acqua', 300, 5)]
-    const withAir = calcFinalDoughTemp(flours, liquids, 25, 0)
+    const withAir = calcFinalDoughTemp(flours, liquids, 25, 0, provider)
     // Air incorporation pulls result slightly toward ambient
     expect(withAir).toBeGreaterThan(10) // not just flour+water average
   })
@@ -210,8 +210,8 @@ describe('DoughManager — composition percentages', () => {
   })
 
   it('computeSuggestedSalt stays in 2.0-3.0% range', () => {
-    const low = computeSuggestedSalt(1000, 50)
-    const high = computeSuggestedSalt(1000, 90)
+    const low = computeSuggestedSalt(1000, 50, provider)
+    const high = computeSuggestedSalt(1000, 90, provider)
     expect(low).toBeGreaterThanOrEqual(20) // 2.0% of 1000g
     expect(high).toBeLessThanOrEqual(30)   // 3.0% of 1000g
   })
@@ -223,7 +223,7 @@ describe('DoughManager — composition percentages', () => {
 
 describe('DoughManager — getDoughDefaults', () => {
   it('returns exact match for pizza napoletana', () => {
-    const d = getDoughDefaults('pizza', 'napoletana')
+    const d = getDoughDefaults(provider, 'pizza', 'napoletana')
     expect(d.type).toBe('pizza')
     expect(d.subtype).toBe('napoletana')
     expect(d.defaultDoughHours).toBe(18)
@@ -231,18 +231,18 @@ describe('DoughManager — getDoughDefaults', () => {
   })
 
   it('falls back to type-level default', () => {
-    const d = getDoughDefaults('pizza', 'unknown_subtype')
+    const d = getDoughDefaults(provider, 'pizza', 'unknown_subtype')
     expect(d.type).toBe('pizza')
     expect(d.subtype).toBeNull()
   })
 
   it('falls back to "altro" for unknown type', () => {
-    const d = getDoughDefaults('sconosciuto', null)
+    const d = getDoughDefaults(provider, 'sconosciuto', null)
     expect(d.type).toBe('altro')
   })
 
   it('returns dolce defaults for brioche', () => {
-    const d = getDoughDefaults('dolce', 'brioche')
+    const d = getDoughDefaults(provider, 'dolce', 'brioche')
     expect(d.fatPctDefault).toBe(18)
     expect(d.saltPctDefault).toBe(0.8)
   })

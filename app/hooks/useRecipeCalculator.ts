@@ -40,6 +40,7 @@ import {
   KNEAD_METHODS,
 } from '@/local_data'
 import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
+import { staticProvider } from '@commons/utils/science/static-science-provider'
 
 // ── Grouped ingredients type ──────────────────────────────────────
 export interface GroupedIngredients {
@@ -667,9 +668,9 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
       return s.baseDur + rest
     }
     if (s.type === 'bake' && s.ovenCfg) {
-      const profile = getBakingProfile(recipe.meta.type, recipe.meta.subtype)
+      const profile = getBakingProfile(staticProvider, recipe.meta.type, recipe.meta.subtype)
       if (profile) {
-        return calcBakeDuration(profile, s.ovenCfg, po.thickness) + rest
+        return calcBakeDuration(profile, s.ovenCfg, po.thickness, staticProvider) + rest
       }
       // Fallback: legacy formula if no profile found
       const tm = TRAY_MATERIALS.find((m) => m.key === s.ovenCfg!.panType) || TRAY_MATERIALS[0]

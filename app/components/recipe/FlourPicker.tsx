@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { FLOUR_CATALOG, FLOUR_GROUPS } from '@/local_data'
+import { useFlourCatalog } from '~/hooks/useScienceCatalogs'
 import { getFlourRPC, estimateWFromProteinRPC } from '~/lib/recipe-rpc'
 import type { FlourCatalogEntry } from '@commons/types/recipe'
 import { useT } from '~/hooks/useTranslation'
@@ -22,6 +22,8 @@ interface FlourPickerProps {
 }
 
 export function FlourPicker({ value, onChange, customFlours = [], onAddCustomFlour, allowedKeys }: FlourPickerProps) {
+  const { flours: FLOUR_CATALOG, groups: _flourGroups } = useFlourCatalog()
+  const FLOUR_GROUPS = _flourGroups.map((g) => g.key)
   const t = useT()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -179,6 +181,8 @@ function CreateFlourDialog({
   onOpenChange: (open: boolean) => void
   onSave: (flour: FlourCatalogEntry) => void
 }) {
+  const { groups: _flourGroups } = useFlourCatalog()
+  const FLOUR_GROUPS = _flourGroups.map((g) => g.key)
   const t = useT()
   const [label, setLabel] = useState('')
   const [group, setGroup] = useState('flour_group_grano_tenero')

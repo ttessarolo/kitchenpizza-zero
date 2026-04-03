@@ -1,14 +1,8 @@
-import { resolve } from 'path'
 import { baseProcedure } from '../middleware/auth'
 import { z } from 'zod'
 import { computePanoramica } from '@commons/utils/panoramica-manager'
-import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { getScienceProvider } from '../middleware/science'
 import type { RecipeLayer, CrossLayerEdge } from '@commons/types/recipe-layers'
-
-const provider = new FileScienceProvider(
-  resolve(process.cwd(), 'science'),
-  resolve(process.cwd(), 'commons/i18n'),
-)
 
 const layerSummarySchema = z.object({
   layerId: z.string(),
@@ -51,6 +45,7 @@ export const computePanoramicaProcedure = baseProcedure
   .input(panoramicaInputSchema)
   .output(panoramicaOutputSchema)
   .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
     const layers = input.layers as unknown as RecipeLayer[]
     const crossEdges = (input.crossEdges ?? []) as unknown as CrossLayerEdge[]
     return computePanoramica(provider, layers, crossEdges)

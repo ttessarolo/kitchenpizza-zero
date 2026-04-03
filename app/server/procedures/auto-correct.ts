@@ -1,17 +1,11 @@
 import { z } from 'zod'
-import { resolve } from 'path'
 import { baseProcedure } from '../middleware/auth'
-import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { getScienceProvider } from '../middleware/science'
 import { autoCorrectGraph } from '@commons/utils/recipe-auto-correct-manager'
 import { reconcileGraph } from '../services/graph-reconciler.service'
 import { reconcileGraphV2 } from '../services/graph-reconciler-v2.service'
 import { reconcileInputSchema } from '../schemas/graph'
 import { getFlags } from '../lib/feature-flags'
-
-const provider = new FileScienceProvider(
-  resolve(process.cwd(), 'science'),
-  resolve(process.cwd(), 'commons/i18n'),
-)
 
 const autoCorrectInputSchema = z.object({
   graph: reconcileInputSchema.shape.graph,
@@ -35,6 +29,7 @@ export const autoCorrect = baseProcedure
   .input(autoCorrectInputSchema)
   .output(autoCorrectOutputSchema)
   .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
     const { USE_V2_RECONCILER } = getFlags()
     const reconcileFn = USE_V2_RECONCILER ? reconcileGraphV2 : reconcileGraph
     const result = autoCorrectGraph(

@@ -3,7 +3,7 @@ import { useRecipeFlowStore, selectGraph, selectPortioning } from '~/stores/reci
 import { calcYeastPctRPC, calcDurationFromYeastRPC } from '~/lib/recipe-rpc'
 import { rnd } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
-import { YEAST_TYPES } from '@/local_data'
+import { useYeastTypes } from '~/hooks/useScienceCatalogs'
 import { WarningCard } from './WarningCard'
 import { ActionableWarningBox } from './ActionableWarningBox'
 import { FlourMixSelector } from './FlourMixSelector'
@@ -53,6 +53,7 @@ function SliderRow({
 // ── Tab content: reads/writes from a specific dough node ────────
 
 function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) {
+  const YEAST_TYPES = useYeastTypes()
   const t = useT()
   const graph = useRecipeFlowStore(selectGraph)
   const updateNodeData = useRecipeFlowStore((s) => s.updateNodeData)

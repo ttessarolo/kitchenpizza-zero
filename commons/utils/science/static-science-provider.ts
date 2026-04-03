@@ -12,6 +12,8 @@ import type {
   PiecewiseBlock,
   ClassificationBlock,
   RuleBlock,
+  BlendFormulaBlock,
+  MultiNodeConstraintBlock,
 } from './types'
 import type { ScienceProvider } from './science-provider'
 
@@ -52,6 +54,22 @@ import pastryTypes from '@/science/catalogs/pastry-types.json'
 
 // Defaults
 import doughDefaults from '@/science/defaults/dough.json'
+import sauceTypeDefaults from '@/science/defaults/sauce-types.json'
+import fermentTypeDefaults from '@/science/defaults/ferment-types.json'
+import pastryTypeDefaults from '@/science/defaults/pastry-types.json'
+import prepTypeDefaults from '@/science/defaults/prep-types.json'
+import cookingConfigDefaults from '@/science/defaults/cooking-configs.json'
+import fryingAmounts from '@/science/defaults/frying-amounts.json'
+import cookingValidationRanges from '@/science/defaults/cooking-validation-ranges.json'
+import flourBlendFallback from '@/science/defaults/flour-blend-fallback.json'
+import sauceEvaporation from '@/science/defaults/sauce-evaporation.json'
+import steamSplitConfigs from '@/science/defaults/steam-split-configs.json'
+
+// Formulas (new)
+import blendFlour from '@/science/formulas/blend-flour.json'
+
+// Constraints
+import fermentationCoherenceConstraint from '@/science/constraints/fermentation-coherence.json'
 
 // Classifications
 import flourStrength from '@/science/classifications/flour-strength.json'
@@ -68,7 +86,11 @@ const allFiles = [
   sauceWarnings, fermentWarnings, pastryWarnings, prepWarnings,
   flours, fats, bakingProfiles, ovenConfig, riseMethods, saltsSugars,
   sauceTypes, fermentTypes, pastryTypes,
-  doughDefaults,
+  doughDefaults, sauceTypeDefaults, fermentTypeDefaults, pastryTypeDefaults, prepTypeDefaults,
+  cookingConfigDefaults, fryingAmounts, cookingValidationRanges, flourBlendFallback,
+  sauceEvaporation, steamSplitConfigs,
+  blendFlour,
+  fermentationCoherenceConstraint,
   flourStrength, riseCapacity, minFermentationHours,
   pastryTemper,
 ]
@@ -133,6 +155,18 @@ export const staticProvider: ScienceProvider = {
     const b = blocks.get(id)
     if (!b || b.type !== 'classification') throw new Error(`Classification "${id}" not found`)
     return b as ClassificationBlock
+  },
+
+  getBlendFormula(id: string): BlendFormulaBlock {
+    const b = blocks.get(id)
+    if (!b || b.type !== 'blend_formula') throw new Error(`Blend formula "${id}" not found`)
+    return b as BlendFormulaBlock
+  },
+
+  getMultiNodeConstraint(id: string): MultiNodeConstraintBlock {
+    const b = blocks.get(id)
+    if (!b || b.type !== 'multi_node_constraint') throw new Error(`Multi-node constraint "${id}" not found`)
+    return b as MultiNodeConstraintBlock
   },
 
   getCatalog(name: string): Record<string, unknown>[] {

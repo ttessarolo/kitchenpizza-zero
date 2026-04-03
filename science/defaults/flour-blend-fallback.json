@@ -1,0 +1,41 @@
+{
+  "id": "flour_blend_fallback",
+  "type": "defaults",
+  "_meta": {
+    "tags": ["flour", "blend", "defaults", "fallback"],
+    "author": "system",
+    "section": "flour",
+    "description": "meta.defaults.flour_blend_fallback.desc",
+    "displayName": "meta.defaults.flour_blend_fallback.name",
+    "lastModified": "2026-04-03"
+  },
+  "entries": [
+    {
+      "type": "empty_blend",
+      "subtype": null,
+      "protein": 12,
+      "W": 280,
+      "PL": 0.55,
+      "absorption": 60,
+      "ash": 0.55,
+      "fiber": 2.5,
+      "starchDamage": 7,
+      "fermentSpeed": 1,
+      "fallingNumber": 300
+    }
+  ],
+  "description": "Default blended flour properties used when no flours are present in the recipe. Represents a generic medium-strength Italian soft wheat flour (tipo 0/00).",
+  "wholeGrainThreshold": {
+    "field": "fiber",
+    "op": "gt",
+    "value": 6,
+    "description": "Flour is considered whole grain when fiber content exceeds 6%. Used by isWholeGrain() classification."
+  },
+  "glutenFreeCondition": {
+    "conditions": [
+      { "field": "W", "op": "eq", "value": 0 },
+      { "field": "fermentSpeed", "op": "eq", "value": 0 }
+    ],
+    "description": "Flour is gluten-free when W === 0 AND fermentSpeed === 0."
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "id": "blend_flour_properties",
+  "type": "blend_formula",
+  "_meta": {
+    "tags": ["flour", "blend", "weighted-average", "W", "protein", "absorption"],
+    "author": "system",
+    "section": "flour",
+    "description": "meta.formula.blend_flour.desc",
+    "displayName": "meta.formula.blend_flour.name",
+    "lastModified": "2026-04-03"
+  },
+  "blendMethod": "weighted_average",
+  "weightField": "g",
+  "sourceField": "type",
+  "sourceCatalog": "flours",
+  "properties": [
+    { "field": "protein", "round": 1 },
+    { "field": "W", "round": 0 },
+    { "field": "PL", "round": 2 },
+    { "field": "absorption", "round": 0 },
+    { "field": "ash", "round": 2 },
+    { "field": "fiber", "round": 1 },
+    { "field": "starchDamage", "round": 1 },
+    { "field": "fermentSpeed", "round": 2 },
+    { "field": "fallingNumber", "round": 0, "default": 300 }
+  ],
+  "fallbackDefaults": "flour_blend_fallback",
+  "estimateBlendW": {
+    "method": "equal_weight_average",
+    "field": "W",
+    "fallback": 280,
+    "description": "Quick W estimation from flour keys using equal-weight assumption (before user sets gram weights)."
+  },
+  "description": "Weighted average blending of flour properties. For each property, computes SUM(g_i * prop_i) / SUM(g_i). Valid for same-grain-type mixtures where linear interpolation holds ([C] Cap. 17-23)."
+}

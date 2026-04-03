@@ -17,11 +17,6 @@ import type {
   FlourIngredient,
   BlendedFlourProps,
 } from '@commons/types/recipe'
-import { FLOUR_CATALOG, FLOUR_GROUPS } from '../../local_data/flour-catalog'
-
-// Re-export catalog data for convenience
-export { FLOUR_CATALOG, FLOUR_GROUPS }
-
 import { rnd } from './format'
 
 // ── Science imports ────────────────────────────────────────────
@@ -32,17 +27,17 @@ import { evaluateClassification, evaluateFormula } from './science/formula-engin
 // ── Catalog lookup ─────────────────────────────────────────────
 
 /** Find a flour by key in the catalog, fallback to index 5 (00 forte). */
-export function getFlour(key: string, catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[]): FlourCatalogEntry {
+export function getFlour(key: string, catalog: FlourCatalogEntry[]): FlourCatalogEntry {
   return catalog.find((f) => f.key === key) || catalog[5]
 }
 
 /** Get all flours belonging to a group ("Grano Tenero", "Grano Duro", "Speciali"). */
-export function getFloursByGroup(group: string, catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[]): FlourCatalogEntry[] {
+export function getFloursByGroup(group: string, catalog: FlourCatalogEntry[]): FlourCatalogEntry[] {
   return catalog.filter((f) => f.groupKey === group)
 }
 
 /** Search flours by query string (matches label, sub, group). Case-insensitive. */
-export function searchFlours(query: string, catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[]): FlourCatalogEntry[] {
+export function searchFlours(query: string, catalog: FlourCatalogEntry[]): FlourCatalogEntry[] {
   const q = query.toLowerCase()
   return catalog.filter((f) =>
     (f.labelKey + ' ' + f.subKey + ' ' + f.groupKey).toLowerCase().includes(q),
@@ -61,7 +56,7 @@ export function searchFlours(query: string, catalog: FlourCatalogEntry[] = FLOUR
  */
 export function blendFlourProperties(
   flours: FlourIngredient[],
-  catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[],
+  catalog: FlourCatalogEntry[],
 ): BlendedFlourProps {
   let t = 0
   let wP = 0, wW = 0, wPL = 0, wA = 0, wAsh = 0, wFib = 0, wSD = 0, wFS = 0, wFN = 0
@@ -111,7 +106,7 @@ export function blendFlourProperties(
  */
 export function estimateBlendW(
   keys: string[],
-  catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[],
+  catalog: FlourCatalogEntry[],
 ): number {
   if (keys.length === 0) return 280
   let totalW = 0
@@ -128,14 +123,10 @@ export function estimateBlendW(
  *
  * [C] Cap. 20 — Relationship between protein content and alveographic W.
  */
-export function estimateW(protein: number, provider?: ScienceProvider): number {
-  if (provider) {
-    try {
-      const formula = provider.getFormula('estimate_W_from_protein')
-      if (formula?.expression) {
-        return evaluateFormula(formula, { protein })
-      }
-    } catch { /* fallback to hardcoded */ }
+export function estimateW(protein: number, provider: ScienceProvider): number {
+  const formula = provider.getFormula('estimate_W_from_protein')
+  if (formula?.expression) {
+    return evaluateFormula(formula, { protein })
   }
   return Math.round(Math.max(60, Math.min(420, 22 * protein - 70)))
 }
@@ -176,7 +167,7 @@ export function isGlutenFree(flour: FlourCatalogEntry): boolean {
  */
 export function suggestForW(
   targetW: number,
-  catalog: FlourCatalogEntry[] = FLOUR_CATALOG as unknown as FlourCatalogEntry[],
+  catalog: FlourCatalogEntry[],
   tolerance = 50,
 ): FlourCatalogEntry[] {
   return catalog

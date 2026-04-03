@@ -1,0 +1,23 @@
+{
+  "id": "sauce_evaporation_constants",
+  "type": "defaults",
+  "_meta": {
+    "tags": ["sauce", "evaporation", "reduction", "lid"],
+    "author": "system",
+    "section": "sauce",
+    "description": "meta.defaults.sauce_evaporation.desc",
+    "displayName": "meta.defaults.sauce_evaporation.name",
+    "lastModified": "2026-04-03"
+  },
+  "entries": [
+    {
+      "type": "evaporation_model",
+      "subtype": null,
+      "evapRatePer10Min": 0.15,
+      "lidDampeningFactor": 0.4,
+      "maxEvaporationPct": 0.8,
+      "description": "15% volume loss per 10 min open; lid reduces evaporation by 60% (factor 0.4)"
+    }
+  ],
+  "description": "Evaporation model constants for sauce reduction calculations. DEFAULT_EVAP_RATE is volume loss per 10 minutes without lid. LID_FACTOR dampens evaporation when lid is used (~60% reduction)."
+}

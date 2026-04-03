@@ -1,0 +1,42 @@
+{
+  "id": "steam_split_phase_configs",
+  "type": "defaults",
+  "_meta": {
+    "tags": ["bake", "steam", "split", "mutation", "advisory"],
+    "author": "system",
+    "section": "bake",
+    "description": "meta.defaults.steam_split.desc",
+    "displayName": "meta.defaults.steam_split.name",
+    "lastModified": "2026-04-03"
+  },
+  "entries": [
+    {
+      "type": "pentola",
+      "subtype": null,
+      "labelKey": "action.split_steam_phases_pentola",
+      "titleKey": "bake.steam_split.pentola_title",
+      "title": "Doratura (senza coperchio)",
+      "baseDur": 12,
+      "ovenCfg": {
+        "lidOn": false,
+        "ovenMode": "static"
+      }
+    },
+    {
+      "type": "forno",
+      "subtype": null,
+      "titleKey": "bake.steam_split.forno_title",
+      "title": "Doratura (senza vapore)",
+      "baseDur": 10,
+      "ovenCfg": {
+        "panType": "stone",
+        "ovenType": "electric",
+        "ovenMode": "static",
+        "temp": 220,
+        "cieloPct": 50,
+        "shelfPosition": 2
+      }
+    }
+  ],
+  "description": "Default configurations for the second bake phase when splitting a steam-too-long advisory. Used by the steam_too_long rule post-processing in bake-manager to generate addNodeAfter mutations."
+}

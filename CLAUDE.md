@@ -146,6 +146,18 @@ Se crei un nuovo testo, aggiungi SEMPRE la chiave in `commons/i18n/it/*.json` E 
 - Schemas: Zod — single source of truth for types + validation
 - Auth: middleware-based, never checked inside Manager or service functions
 
+### ScienceProvider (CookingScienceBrain)
+
+- **All scientific logic** (formulas, rules, catalogs, defaults, classifications) lives in the `science_blocks` table on Neon PostgreSQL
+- **DbScienceProvider** (`commons/utils/science/db-science-provider.ts`) reads from Neon; lazy singleton via `app/server/middleware/science.ts`
+- **FileScienceProvider** reads from `/science/` JSON directory — used by tests and local dev (fallback when `NEON_CSB_DATABASE_URL` is not set)
+- **StaticScienceProvider** bundles JSON via Vite imports — used client-side (browser)
+- **Provider is REQUIRED** in all manager functions — no `provider?` optional, no hardcoded fallbacks
+- **Managers are pure orchestrators** — they build context, call the provider, return results. Zero domain-specific scientific values in TypeScript.
+- **9 block types**: formula, factor_chain, piecewise, classification, rule, catalog, defaults, blend_formula, multi_node_constraint
+- **Environment**: `NEON_CSB_DATABASE_URL` for the cooking-science-brain Neon project
+- **Admin panel**: `/admin/science` for CRUD operations on science blocks
+
 ### State Management
 
 - All state mutations through Immer (mutable syntax, immutable result)

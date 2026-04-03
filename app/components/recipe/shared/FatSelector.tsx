@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FAT_TYPES } from '@/local_data'
+import { useFatTypes } from '~/hooks/useScienceCatalogs'
 import { useT } from '~/hooks/useTranslation'
 
 interface FatSelectorProps {
@@ -8,6 +8,7 @@ interface FatSelectorProps {
 }
 
 export function FatSelector({ value, onChange }: FatSelectorProps) {
+  const FAT_TYPES = useFatTypes()
   const t = useT()
   const [custom, setCustom] = useState(false)
 

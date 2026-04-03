@@ -184,9 +184,17 @@ export function validateFermentationCoherence(
  * Preserves user-overridden phases; adjusts only non-overridden ones.
  */
 export function suggestPhaseRedistribution(
+  provider: ScienceProvider,
   targetEquivHours: number,
   currentPhases: RisePhaseInfo[],
 ): { nodeId: string; newBaseDur: number }[] {
+  // Read minBaseDur from constraint spec
+  let minBaseDur = 15
+  try {
+    const constraint = provider.getMultiNodeConstraint('fermentation_coherence_constraint')
+    minBaseDur = (constraint.adaptationStrategies as any)?.parametric?.minBaseDur ?? 15
+  } catch { /* fallback */ }
+
   const adjustable = currentPhases.filter((p) => !p.userOverride)
   if (adjustable.length === 0) return []
 
@@ -204,7 +212,7 @@ export function suggestPhaseRedistribution(
 
   return adjustable.map((p) => ({
     nodeId: p.nodeId,
-    newBaseDur: Math.max(15, Math.round(p.baseDur * scaleFactor)),
+    newBaseDur: Math.max(minBaseDur, Math.round(p.baseDur * scaleFactor)),
   }))
 }
 
@@ -217,14 +225,23 @@ export function suggestPhaseRedistribution(
 export function suggestYeastPct(
   provider: ScienceProvider,
   equivalentRoomHours: number,
-  tempC = 24,
-  hydration = 56,
+  tempC?: number,
+  hydration?: number,
 ): number {
+  let defaultTempC = 24
+  let defaultHydration = 56
+  try {
+    const constraint = provider.getMultiNodeConstraint('fermentation_coherence_constraint')
+    const defaults = (constraint.adaptationStrategies as any)?.suggestion?.defaults
+    if (defaults?.tempC) defaultTempC = defaults.tempC
+    if (defaults?.hydration) defaultHydration = defaults.hydration
+  } catch { /* fallback */ }
+
   if (equivalentRoomHours <= 0) return 0
   const formulaBlock = provider.getFormula('yeast_pct')
   return Math.round(evaluateFormula(formulaBlock, {
     hours: equivalentRoomHours,
-    tempC,
-    hydration,
+    tempC: tempC ?? defaultTempC,
+    hydration: hydration ?? defaultHydration,
   }) * 1000) / 1000
 }

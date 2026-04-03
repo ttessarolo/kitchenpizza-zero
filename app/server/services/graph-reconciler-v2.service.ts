@@ -43,7 +43,6 @@ import { nodeToStep, stepToNodeData } from '@commons/utils/graph-adapter'
 import { getBakingProfile, calcBakeDuration } from '@commons/utils/baking'
 import { calcDuration as calcBakeDurationV2, syncCookingFats, getWarnings as getBakeWarnings } from '@commons/utils/bake-manager'
 import { toActionableWarnings } from '@commons/utils/science/rule-engine'
-import { RISE_METHODS, YEAST_TYPES, FLOUR_CATALOG } from '../../../local_data'
 import { validateFermentationCoherence } from '@commons/utils/fermentation-coherence-manager'
 import type { ScienceProvider } from '@commons/utils/science/science-provider'
 import { DEFAULT_LOCKS } from '@commons/types/recipe'
@@ -61,7 +60,7 @@ const DOUGH_NODE_TYPES = new Set([
 
 // ── Helpers ────────────────────────────────────────────────
 
-function getDoughFlourProps(data: RecipeNode['data']): BlendedFlourProps {
+function getDoughFlourProps(data: RecipeNode['data'], flourCatalog: any[]): BlendedFlourProps {
   if (data.flours.length === 0) {
     return {
       protein: 12, W: 280, PL: 0.55, absorption: 58,
@@ -69,16 +68,16 @@ function getDoughFlourProps(data: RecipeNode['data']): BlendedFlourProps {
       fermentSpeed: 1, fallingNumber: 340,
     }
   }
-  return blendFlourProperties(data.flours, [...FLOUR_CATALOG])
+  return blendFlourProperties(data.flours, [...flourCatalog])
 }
 
-function getYeastInfo(data: RecipeNode['data']): { yPct: number; ySF: number } {
+function getYeastInfo(data: RecipeNode['data'], yeastTypesCatalog: any[]): { yPct: number; ySF: number } {
   const totalFlour = data.flours.reduce((a, f) => a + f.g, 0)
   const totalYeast = (data.yeasts ?? []).reduce((a, y) => a + y.g, 0)
   const yPct = totalFlour > 0 ? (totalYeast / totalFlour) * 100 : 0
 
   const yeastType = (data.yeasts ?? [])[0]?.type
-  const yt = YEAST_TYPES.find((y) => y.key === yeastType)
+  const yt = yeastTypesCatalog.find((y: any) => y.key === yeastType)
   const ySF = yt?.speedF ?? 1
 
   return { yPct, ySF }
@@ -108,8 +107,13 @@ export function reconcileGraphV2(
   graph: RecipeGraph,
   portioning: Portioning,
   meta: RecipeMeta,
-  provider?: ScienceProvider,
+  provider: ScienceProvider,
 ): ReconcileResult {
+  // Cache provider catalogs for use throughout reconciliation
+  const flourCatalog = provider.getCatalog('flours') as any[]
+  const riseMethodsCatalog = provider.getCatalog('rise_methods') as any[]
+  const yeastTypesCatalog = provider.getCatalog('ferment_types') as any[]
+
   if (graph.nodes.length === 0) {
     return { graph, portioning, warnings: [] }
   }
@@ -170,8 +174,8 @@ export function reconcileGraphV2(
 
     // ── Dough: extract flour properties ──
     if (nodeRef.type === 'dough') {
-      const bp = getDoughFlourProps(nodeRef.data)
-      const { yPct, ySF } = getYeastInfo(nodeRef.data)
+      const bp = getDoughFlourProps(nodeRef.data, flourCatalog)
+      const { yPct, ySF } = getYeastInfo(nodeRef.data, yeastTypesCatalog)
       const totalFlour = nodeRef.data.flours.reduce((a, f) => a + f.g, 0)
 
       doughPropsCache.set(nodeRef.id, {
@@ -219,7 +223,7 @@ export function reconcileGraphV2(
         const props = doughPropsCache.get(upstreamDoughId)
         if (props && props.yPct > 0) {
           const rm = nodeRef.data.riseMethod || 'room'
-          const rmEntry = RISE_METHODS.find((m) => m.key === rm)
+          const rmEntry = riseMethodsCatalog.find((m: any) => m.key === rm)
           const tf = rmEntry?.tf ?? 1
 
           const newDur = provider ? calcRiseDuration(provider, {
@@ -241,12 +245,12 @@ export function reconcileGraphV2(
         nodeRef.data.baseDur = calcBakeDurationV2(
           nodeRef.subtype ?? 'forno',
           nodeRef.data.cookingCfg,
-          meta.type, meta.subtype, portioning.thickness,
+          meta.type, meta.subtype, portioning.thickness, provider,
         )
       } else if (nodeRef.data.ovenCfg) {
-        const profile = getBakingProfile(meta.type, meta.subtype)
+        const profile = getBakingProfile(provider, meta.type, meta.subtype)
         if (profile) {
-          nodeRef.data.baseDur = calcBakeDuration(profile, nodeRef.data.ovenCfg, portioning.thickness)
+          nodeRef.data.baseDur = calcBakeDuration(profile, nodeRef.data.ovenCfg, portioning.thickness, provider)
         }
       }
     }
@@ -256,7 +260,7 @@ export function reconcileGraphV2(
       const method = nodeRef.data.cookingCfg?.method
       const OIL_METHODS = ['frittura', 'aria', 'padella']
       if (method === 'frittura') {
-        nodeRef.data.cookingFats = syncCookingFats(nodeRef.data.cookingFats ?? [], nodeRef.data.cookingCfg!.cfg as FryConfig)
+        nodeRef.data.cookingFats = syncCookingFats(nodeRef.data.cookingFats ?? [], nodeRef.data.cookingCfg!.cfg as FryConfig, provider)
       } else if (!OIL_METHODS.includes(method ?? '')) {
         nodeRef.data.cookingFats = []
       }
@@ -305,7 +309,7 @@ export function reconcileGraphV2(
   if (provider) {
     const risePhases = nodes.filter((n) => n.type === 'rise').map((n) => {
       const rm = n.data.riseMethod || 'room'
-      const rmEntry = RISE_METHODS.find((m) => m.key === rm)
+      const rmEntry = riseMethodsCatalog.find((m: any) => m.key === rm)
       return {
         nodeId: n.id, title: n.data.title, riseMethod: rm,
         baseDur: n.data.baseDur, tf: rmEntry?.tf ?? 1,
@@ -372,7 +376,7 @@ export function reconcileGraphV2(
       if (yt.totalFlour > 0) {
         const currentFreshEquiv = nodes.reduce((a, n) =>
           a + (n.data.yeasts ?? []).reduce((s, y) => {
-            const yType = YEAST_TYPES.find((t) => t.key === y.type)
+            const yType = yeastTypesCatalog.find((t: any) => t.key === y.type)
             return s + y.g * (yType?.toFresh ?? 1)
           }, 0), 0)
         const targetFreshEquiv = yt.totalFlour * portioning.yeastPct / 100
@@ -430,12 +434,12 @@ export function reconcileGraphV2(
 
   const doughFlours = mainDoughForWarnings?.data.flours ?? []
   const _hasGlutenFreeFlour = doughFlours.some((f) => {
-    const entry = getFlour(f.type)
+    const entry = getFlour(f.type, flourCatalog as any)
     return isGlutenFree(entry)
   })
   const totalFlourForWG = doughFlours.reduce((a, f) => a + f.g, 0)
   const wholeGrainG = doughFlours.reduce((a, f) => {
-    const entry = getFlour(f.type)
+    const entry = getFlour(f.type, flourCatalog as any)
     return a + (isWholeGrain(entry) ? f.g : 0)
   }, 0)
   const _wholeGrainPct = totalFlourForWG > 0 ? Math.round(wholeGrainG / totalFlourForWG * 100) : 0

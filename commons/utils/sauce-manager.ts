@@ -11,34 +11,13 @@ import { evaluateRules } from './science/rule-engine'
 import type { RuleResult } from './science/rule-engine'
 import { evaluateFormula } from './science/formula-engine'
 
-// ── Constants (fallbacks when science formula unavailable) ────
-
-/** Default evaporation rate: 15% volume loss per 10 min without lid. */
-const DEFAULT_EVAP_RATE = 0.15
-
-/** Lid reduces evaporation by ~60%. */
-const LID_FACTOR = 0.4
-
-// ── Per-subtype defaults (hardcoded fallback, prefer ScienceProvider) ──
-
-const SAUCE_SUBTYPE_DEFAULTS: Record<string, Partial<SauceMasterConfig>> = {
-  sugo: { targetVolume: 500, targetConsistency: 'medium', shelfLife: 3 },
-  emulsione: { targetVolume: 300, targetConsistency: 'thin', shelfLife: 2 },
-  pesto: { targetVolume: 250, targetConsistency: 'thick', shelfLife: 5 },
-  crema: { targetVolume: 400, targetConsistency: 'medium', shelfLife: 2 },
-  ragu: { targetVolume: 600, targetConsistency: 'thick', shelfLife: 4 },
-  besciamella: { targetVolume: 500, targetConsistency: 'medium', shelfLife: 2 },
-}
-
-/** Returns sensible defaults for a sauce subtype. Reads from ScienceProvider when available. */
-export function getDefaults(subtype: string, provider?: ScienceProvider): Partial<SauceMasterConfig> {
-  if (provider) {
-    const d = provider.getDefaults('sauce_subtype_defaults', subtype, null) as Record<string, unknown>
-    if (d && Object.keys(d).length > 0 && d.targetVolume != null) {
-      return d as unknown as Partial<SauceMasterConfig>
-    }
+/** Returns sensible defaults for a sauce subtype from ScienceProvider. */
+export function getDefaults(subtype: string, provider: ScienceProvider): Partial<SauceMasterConfig> {
+  const d = provider.getDefaults('sauce_subtype_defaults', subtype, null) as Record<string, unknown>
+  if (d && Object.keys(d).length > 0 && d.targetVolume != null) {
+    return d as unknown as Partial<SauceMasterConfig>
   }
-  return SAUCE_SUBTYPE_DEFAULTS[subtype] ?? {}
+  return {}
 }
 
 // ── 1. calcReductionVolume ───────────────────────────────────
@@ -60,14 +39,17 @@ export function calcReductionVolume(
   cookDuration: number,
   lidUsed: boolean,
 ): number {
-  const lidFactor = lidUsed ? LID_FACTOR : 1.0
+  const evapBlock = provider.getDefaults('sauce_evaporation_constants', 'evaporation_model', null) as any
+  const evapRate = evapBlock?.evapRatePer10Min ?? 0.15
+  const lidDampening = evapBlock?.lidDampeningFactor ?? 0.4
+  const lidFactor = lidUsed ? lidDampening : 1.0
 
   try {
     const formula = provider.getFormula('sauce_reduction_volume')
     return evaluateFormula(formula, { startVolume, cookDuration, lidFactor })
   } catch {
-    // Fallback: manual calculation with defaults
-    const loss = Math.min(cookDuration * DEFAULT_EVAP_RATE * lidFactor / 100, 0.8)
+    const maxEvap = evapBlock?.maxEvaporationPct ?? 0.8
+    const loss = Math.min(cookDuration * evapRate * lidFactor / 100, maxEvap)
     return Math.max(0, Math.round(startVolume * (1 - loss)))
   }
 }

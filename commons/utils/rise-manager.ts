@@ -16,10 +16,6 @@
  */
 
 import type { RiseMethod } from '@commons/types/recipe'
-import { RISE_METHODS, YEAST_TYPES } from '../../local_data/rise-methods'
-
-// Re-export config data
-export { RISE_METHODS, YEAST_TYPES }
 
 // ── Science imports ────────────────────────────────────────────
 
@@ -67,38 +63,34 @@ export function calcRiseDuration(
  *
  * [C] Cap. 39 — Temperature and fermentation kinetics.
  */
-export function riseTemperatureFactor(provider: ScienceProvider | null, fdt: number, riseMethod: string): number {
+export function riseTemperatureFactor(provider: ScienceProvider, fdt: number, riseMethod: string): number {
   let coeff = 1
   let baseline = 24
-  if (provider) {
-    const catalog = provider.getCatalog('rise_methods')
-    const entry = (catalog as any[]).find((e: any) => e.key === riseMethod)
-    if (entry?.q10Coeff != null) coeff = entry.q10Coeff
-    // baseline from top-level catalog block
-    if ((catalog as any).baselineTemp != null) baseline = (catalog as any).baselineTemp
-  } else {
-    const fallback: Record<string, number> = { room: 1, ctrl18: 0.2, ctrl12: 0.1, fridge: 0.05 }
-    coeff = fallback[riseMethod] ?? 1
-  }
+  const catalog = provider.getCatalog('rise_methods')
+  const entry = (catalog as any[]).find((e: any) => e.key === riseMethod)
+  if (entry?.q10Coeff != null) coeff = entry.q10Coeff
+  if ((catalog as any).baselineTemp != null) baseline = (catalog as any).baselineTemp
   return Math.pow(2, (-(fdt - baseline) * coeff) / 10)
 }
 
 // ── Method lookup ──────────────────────────────────────────────
 
-/** Get a rise method by key, fallback to 'room'. */
-export function getRiseMethod(key: string): RiseMethod {
-  return (RISE_METHODS as unknown as RiseMethod[]).find((m) => m.key === key)
-    || (RISE_METHODS[0] as unknown as RiseMethod)
+/** Get a rise method by key, fallback to first entry. */
+export function getRiseMethod(key: string, provider: ScienceProvider): RiseMethod {
+  const catalog = provider.getCatalog('rise_methods') as unknown as RiseMethod[]
+  return catalog.find((m) => m.key === key) || catalog[0]
 }
 
 /** Get all available rise methods. */
-export function getAllRiseMethods(): RiseMethod[] {
-  return RISE_METHODS as unknown as RiseMethod[]
+export function getAllRiseMethods(provider: ScienceProvider): RiseMethod[] {
+  return provider.getCatalog('rise_methods') as unknown as RiseMethod[]
 }
 
 /** Get yeast type info by key. */
-export function getYeastType(key: string) {
-  return YEAST_TYPES.find((y) => y.key === key) || YEAST_TYPES[0]
+export function getYeastType(key: string, provider: ScienceProvider) {
+  const block = provider.getBlock('rise_methods') as any
+  const yeastTypes: any[] = block?.yeastTypes ?? []
+  return yeastTypes.find((y: any) => y.key === key) || yeastTypes[0]
 }
 
 // ── Max rise hours ─────────────────────────────────────────────

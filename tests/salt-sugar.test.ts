@@ -7,26 +7,32 @@ import {
   getStepTotalWeight,
 } from '@commons/utils/recipe'
 import { makeStep } from './synthetic_data/helpers'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { resolve } from 'path'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 describe('computeSuggestedSalt', () => {
   it('returns ~2.5% at standard hydration (60%)', () => {
-    const salt = computeSuggestedSalt(1000, 60)
+    const salt = computeSuggestedSalt(1000, 60, provider)
     expect(salt).toBeCloseTo(25, 0)
   })
 
   it('increases salt with higher hydration', () => {
-    const salt70 = computeSuggestedSalt(1000, 70)
-    const salt60 = computeSuggestedSalt(1000, 60)
+    const salt70 = computeSuggestedSalt(1000, 70, provider)
+    const salt60 = computeSuggestedSalt(1000, 60, provider)
     expect(salt70).toBeGreaterThan(salt60)
   })
 
   it('caps at 3%', () => {
-    const salt = computeSuggestedSalt(1000, 100)
+    const salt = computeSuggestedSalt(1000, 100, provider)
     expect(salt).toBeLessThanOrEqual(30)
   })
 
   it('minimum 2%', () => {
-    const salt = computeSuggestedSalt(1000, 40)
+    const salt = computeSuggestedSalt(1000, 40, provider)
     expect(salt).toBeGreaterThanOrEqual(20)
   })
 })
