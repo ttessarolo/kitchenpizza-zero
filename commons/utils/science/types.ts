@@ -1,10 +1,19 @@
 /**
  * CookingScienceBrain JSON format — TypeScript type definitions.
  *
- * Defines the 8 block types that express all scientific logic as data:
- * formula, factor_chain, piecewise, classification, rule, catalog, defaults.
+ * Defines the 9 block types that express all scientific logic as data:
+ * formula, factor_chain, piecewise, classification, rule, catalog, defaults,
+ * blend_formula, multi_node_constraint.
  * Plus _meta for admin presentation and variants for alternative approaches.
+ *
+ * All mathematical expressions use MathJSON format (CortexJS standard):
+ * JSON S-expression arrays evaluated by @cortex-js/compute-engine.
  */
+
+// ── MathJSON expression type ──────────────────────────────────
+// MathJSON is a JSON S-expression: a number, a string (variable name),
+// or an array like ["Add", "x", 1] or ["Power", "base", 2].
+export type MathJSON = number | string | [string, ...MathJSON[]]
 
 // ── Metadata (for admin panel presentation) ────────────────────
 
@@ -33,7 +42,8 @@ export interface FormulaVariant {
   key: string
   nameKey: string              // i18n key
   descriptionKey: string       // i18n key
-  expression: string           // expr-eval expression string
+  expr: MathJSON               // MathJSON expression (CortexJS standard)
+  latex?: string               // LaTeX representation (auto-generated)
   constants?: Record<string, number>
   applicability?: {
     minHours?: number
@@ -51,9 +61,11 @@ export interface FormulaVariant {
 export interface FormulaBlock {
   type: 'formula'
   id: string
+  title?: string                 // SQL-level: short human-readable title (Italian, for UI)
   ref?: string                 // scientific reference "[C] Cap. 44"
   _meta?: BlockMeta
-  expression?: string          // expr-eval expression (if no variants)
+  expr?: MathJSON              // MathJSON expression (if no variants)
+  latex?: string               // LaTeX representation (auto-generated)
   constants?: Record<string, number>
   variants?: FormulaVariant[]  // alternative formulas
   inputs: string[]
@@ -65,7 +77,8 @@ export interface FormulaBlock {
 export interface FactorDef {
   id: string
   ref?: string
-  expression?: string          // expr-eval expression for this factor
+  expr?: MathJSON              // MathJSON expression for this factor
+  latex?: string               // LaTeX representation (auto-generated)
   source?: 'lookup' | 'input'  // lookup from catalog or direct input
   table?: string               // catalog name (if source=lookup)
   key?: string                 // lookup key ($ prefix = variable)
@@ -75,9 +88,10 @@ export interface FactorDef {
 export interface FactorChainBlock {
   type: 'factor_chain'
   id: string
+  title?: string
   ref?: string
   _meta?: BlockMeta
-  base: { value: number; unit?: string }
+  base: { value: number; unit?: string; expr?: MathJSON; latex?: string }
   factors: FactorDef[]
   output: OutputSpec
 }
@@ -91,11 +105,14 @@ export interface PiecewiseSegment {
   eq?: unknown
   default?: boolean
   value: unknown
+  expr?: MathJSON              // MathJSON expression (if value is computed)
+  latex?: string               // LaTeX representation
 }
 
 export interface PiecewiseBlock {
   type: 'piecewise'
   id: string
+  title?: string
   ref?: string
   _meta?: BlockMeta
   input: string
@@ -117,6 +134,7 @@ export interface ClassificationClass {
 export interface ClassificationBlock {
   type: 'classification'
   id: string
+  title?: string
   _meta?: BlockMeta
   input: string
   classes: ClassificationClass[]
@@ -149,6 +167,7 @@ export interface RuleAction {
 export interface RuleBlock {
   type: 'rule'
   id: string
+  title?: string
   ref?: string
   _meta?: BlockMeta
   category: string
@@ -166,6 +185,7 @@ export interface RuleBlock {
 export interface CatalogBlock {
   type: 'catalog'
   id: string
+  title?: string
   _meta?: BlockMeta
   entries: Record<string, unknown>[]
 }
@@ -174,6 +194,7 @@ export interface CatalogBlock {
 export interface DefaultsBlock {
   type: 'defaults'
   id: string
+  title?: string
   _meta?: BlockMeta
   entries: Record<string, unknown>[]
   fallback?: { chain: string[] }
@@ -183,6 +204,7 @@ export interface DefaultsBlock {
 export interface BlendFormulaBlock {
   type: 'blend_formula'
   id: string
+  title?: string
   _meta?: BlockMeta
   blendMethod: 'weighted_average'
   weightField: string
@@ -205,6 +227,7 @@ export interface BlendFormulaBlock {
 export interface MultiNodeConstraintBlock {
   type: 'multi_node_constraint'
   id: string
+  title?: string
   _meta?: BlockMeta
   selector: {
     nodeFilter: Record<string, unknown>
@@ -220,10 +243,10 @@ export interface MultiNodeConstraintBlock {
     computations: {
       id: string
       description: string
-      formula: string
+      formula?: string             // Pseudocode describing aggregate computation (NOT MathJSON)
+      algorithm?: string           // Natural-language algorithm description (for non-formulaic computations)
       round?: number
       requiresPositive?: string
-      algorithm?: string
     }[]
   }
   validation: {

@@ -1,0 +1,9 @@
+{
+  "type": "defaults",
+  "id": "sauce_method_modifiers",
+  "_meta": { "section": "sauce", "description": "Sauce method multipliers and fallbacks" },
+  "entries": [],
+  "baseMinPerLiterFallback": 30,
+  "methodMultipliers": { "rapid": 0.6, "cold": null },
+  "coldFixedMinutes": 5
+}

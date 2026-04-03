@@ -652,7 +652,7 @@ export function useRecipeCalculator(initialRecipe: Recipe): RecipeCalculator {
   function getFDT(ps: RecipeStep | null): number {
     if (!ps || !ps.flours.length) return ambientTemp
     const km = KNEAD_METHODS.find((m) => m.key === ps.kneadMethod) || KNEAD_METHODS[0]
-    return calcFinalDoughTemp(ps.flours, ps.liquids, ambientTemp, km.ff)
+    return calcFinalDoughTemp(undefined, ps.flours, ps.liquids, ambientTemp, km.ff)
   }
 
   // ── Step duration calculation ────────────────────────────────

@@ -1,0 +1,10 @@
+{
+  "type": "defaults",
+  "id": "pre_ferment_constants",
+  "_meta": { "section": "ferment", "description": "Pre-ferment allowance margin and default ingredient types" },
+  "entries": [],
+  "allowanceMargin": 1.01,
+  "defaultFlourType": "gt_0_for",
+  "defaultLiquidType": "Acqua",
+  "defaultYeastType": "fresh"
+}

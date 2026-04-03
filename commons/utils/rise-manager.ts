@@ -64,12 +64,12 @@ export function calcRiseDuration(
  * [C] Cap. 39 — Temperature and fermentation kinetics.
  */
 export function riseTemperatureFactor(provider: ScienceProvider, fdt: number, riseMethod: string): number {
-  let coeff = 1
-  let baseline = 24
+  const constants = provider.getBlock('rise_constants') as any
+  let coeff = constants?.defaultQ10Coeff ?? 1
+  let baseline = constants?.baselineTemp ?? 24
   const catalog = provider.getCatalog('rise_methods')
   const entry = (catalog as any[]).find((e: any) => e.key === riseMethod)
   if (entry?.q10Coeff != null) coeff = entry.q10Coeff
-  if ((catalog as any).baselineTemp != null) baseline = (catalog as any).baselineTemp
   return Math.pow(2, (-(fdt - baseline) * coeff) / 10)
 }
 

@@ -78,7 +78,9 @@ export function calcSauceDuration(
     | Record<string, unknown>
     | undefined
 
-  const baseMinPerLiter = Number(entry?.baseMinPerLiter ?? 30)
+  const modifiers = provider.getBlock('sauce_method_modifiers') as any
+  const fallbackBase = modifiers?.baseMinPerLiterFallback ?? 30
+  const baseMinPerLiter = Number(entry?.baseMinPerLiter ?? fallbackBase)
 
   // Volume factor: scale linearly from liters
   const volumeLiters = volume / 1000
@@ -86,11 +88,13 @@ export function calcSauceDuration(
 
   // Method multiplier
   switch (method) {
-    case 'rapid':
-      duration *= 0.6
+    case 'rapid': {
+      const mult = modifiers?.methodMultipliers?.rapid ?? 0.6
+      duration *= mult
       break
+    }
     case 'cold':
-      duration = 5 // minimal mixing time
+      duration = modifiers?.coldFixedMinutes ?? 5
       break
     case 'simmer':
     default:

@@ -1,0 +1,9 @@
+{
+  "type": "defaults",
+  "id": "flour_suggestion",
+  "_meta": { "section": "dough", "description": "Flour suggestion tolerance and fallback index" },
+  "entries": [],
+  "tolerance": 50,
+  "fallbackFlourIndex": 5,
+  "estimateW_fallback": { "slope": 22, "intercept": -70, "clampMin": 60, "clampMax": 420 }
+}

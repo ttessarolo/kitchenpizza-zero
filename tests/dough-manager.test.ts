@@ -62,14 +62,14 @@ describe('DoughManager — rnd', () => {
 
 describe('DoughManager — blendFlourProperties', () => {
   it('returns defaults for empty flour array', () => {
-    const result = blendFlourProperties([], [...FLOUR_CATALOG])
+    const result = blendFlourProperties(provider, [], [...FLOUR_CATALOG])
     expect(result.W).toBe(280)
     expect(result.protein).toBe(12)
   })
 
   it('returns exact values for single flour', () => {
     const flour = FLOUR_CATALOG.find((f) => f.key === 'gt_00_for')!
-    const result = blendFlourProperties([makeFlour('gt_00_for', 500)], [...FLOUR_CATALOG])
+    const result = blendFlourProperties(provider, [makeFlour('gt_00_for', 500)], [...FLOUR_CATALOG])
     expect(result.W).toBe(flour.W)
     expect(result.protein).toBeCloseTo(flour.protein, 0)
   })
@@ -79,6 +79,7 @@ describe('DoughManager — blendFlourProperties', () => {
     const f1 = FLOUR_CATALOG.find((f) => f.key === 'gt_00_for')!
     const f2 = FLOUR_CATALOG.find((f) => f.key === 'gt_00_deb')!
     const result = blendFlourProperties(
+      provider,
       [makeFlour('gt_00_for', 500), makeFlour('gt_00_deb', 500)],
       [...FLOUR_CATALOG],
     )
@@ -90,6 +91,7 @@ describe('DoughManager — blendFlourProperties', () => {
     // 80/20 mix: result should be closer to the 80% flour
     const f1 = FLOUR_CATALOG.find((f) => f.key === 'gt_00_for')!
     const result = blendFlourProperties(
+      provider,
       [makeFlour('gt_00_for', 800), makeFlour('gt_00_deb', 200)],
       [...FLOUR_CATALOG],
     )
@@ -168,14 +170,14 @@ describe('DoughManager — yeastGrams', () => {
 
 describe('DoughManager — calcFinalDoughTemp', () => {
   it('returns ambient temp when no ingredients', () => {
-    expect(calcFinalDoughTemp([], [], 22, 0, provider)).toBe(22)
+    expect(calcFinalDoughTemp(provider, [], [], 22, 0)).toBe(22)
   })
 
   it('calculates weighted average with friction', () => {
     const flours = [makeFlour('gt_00_for', 500)]
     const liquids = [makeLiquid('Acqua', 300, 10)]
     // Flour at ambient (22°C), water at 10°C, friction 2°C
-    const result = calcFinalDoughTemp(flours, liquids, 22, 2, provider)
+    const result = calcFinalDoughTemp(provider, flours, liquids, 22, 2)
     // Should be between 10 and 22, plus friction
     expect(result).toBeGreaterThan(12)
     expect(result).toBeLessThan(25)
@@ -184,7 +186,7 @@ describe('DoughManager — calcFinalDoughTemp', () => {
   it('includes 15% air incorporation at ambient temp', () => {
     const flours = [makeFlour('gt_00_for', 500)]
     const liquids = [makeLiquid('Acqua', 300, 5)]
-    const withAir = calcFinalDoughTemp(flours, liquids, 25, 0, provider)
+    const withAir = calcFinalDoughTemp(provider, flours, liquids, 25, 0)
     // Air incorporation pulls result slightly toward ambient
     expect(withAir).toBeGreaterThan(10) // not just flour+water average
   })
@@ -210,8 +212,8 @@ describe('DoughManager — composition percentages', () => {
   })
 
   it('computeSuggestedSalt stays in 2.0-3.0% range', () => {
-    const low = computeSuggestedSalt(1000, 50, provider)
-    const high = computeSuggestedSalt(1000, 90, provider)
+    const low = computeSuggestedSalt(provider, 1000, 50)
+    const high = computeSuggestedSalt(provider, 1000, 90)
     expect(low).toBeGreaterThanOrEqual(20) // 2.0% of 1000g
     expect(high).toBeLessThanOrEqual(30)   // 3.0% of 1000g
   })

@@ -6,82 +6,28 @@
  * brush, topping, scoring, generic).
  */
 
-import type { PreBakeConfig, BoilConfig, DockConfig, FlourDustConfig, OilCoatConfig, SteamInjectConfig } from '@commons/types/recipe'
+import type { PreBakeConfig } from '@commons/types/recipe'
 import type { ScienceProvider } from './science/science-provider'
 import { evaluateRules } from './science/rule-engine'
 import type { RuleResult } from './science/rule-engine'
 
-// ── Valid enum values ────────────────────────────────────────────
+// ── Helper: load pre-bake block ─────────────────────────────────
 
-const VALID_LIQUID_TYPES: BoilConfig['liquidType'][] = ['water_malt', 'water_honey', 'water_sugar', 'lye_solution', 'baking_soda']
-const VALID_DOCK_TOOLS: DockConfig['tool'][] = ['fork', 'docker_roller', 'skewer']
-const VALID_DOCK_PATTERNS: DockConfig['pattern'][] = ['uniform', 'center_only', 'edge_sparing']
-const VALID_FLOUR_TYPES: FlourDustConfig['flourType'][] = ['rice', 'semolina', 'tipo00', 'rye', 'cornmeal']
-const VALID_FLOUR_APPLICATIONS: FlourDustConfig['application'][] = ['surface', 'base_only', 'all_over']
-const VALID_OIL_TYPES: OilCoatConfig['oilType'][] = ['olive', 'canola', 'peanut', 'sunflower', 'avocado']
-const VALID_OIL_METHODS: OilCoatConfig['method'][] = ['spray', 'brush', 'drizzle']
-const VALID_OIL_SURFACES: OilCoatConfig['surface'][] = ['top', 'bottom', 'both']
-const VALID_STEAM_METHODS: SteamInjectConfig['method'][] = ['water_pan', 'ice_cubes', 'spray_bottle', 'steam_injection']
-const VALID_STEAM_VOLUMES: SteamInjectConfig['waterVolume'][] = ['small', 'medium', 'large']
-
-const ALL_SUBTYPES = ['boil', 'dock', 'flour_dust', 'oil_coat', 'steam_inject', 'brush', 'topping', 'scoring', 'generic'] as const
-
-// ── Suggestions map ──────────────────────────────────────────────
-
-const SUGGESTIONS: Record<string, string[]> = {
-  griglia: ['dock', 'oil_coat'],
-  padella: ['oil_coat'],
-  aria: ['oil_coat'],
-  frittura: [],
-  vapore: [],
-  forno: ['scoring', 'steam_inject', 'flour_dust'],
-  pentola: ['scoring', 'flour_dust'],
+function getPreBakeBlock(provider: ScienceProvider): any {
+  return provider.getBlock('pre_bake_configs') as any
 }
 
 // ── 1. Default config ────────────────────────────────────────────
 
 /**
  * Returns the default PreBakeConfig for a given pre_bake sub-type.
- * Throws if the sub-type is unknown.
+ * Reads from ScienceProvider. Throws if the sub-type is unknown.
  */
-export function getDefaultConfig(subtype: string): PreBakeConfig {
-  switch (subtype) {
-    case 'boil':
-      return {
-        method: 'boil',
-        cfg: { liquidType: 'water_malt', liquidTemp: 100, additivePct: 2, flipOnce: true, drainTime: 1 },
-      }
-    case 'dock':
-      return {
-        method: 'dock',
-        cfg: { tool: 'fork', pattern: 'uniform' },
-      }
-    case 'flour_dust':
-      return {
-        method: 'flour_dust',
-        cfg: { flourType: 'rice', application: 'surface' },
-      }
-    case 'oil_coat':
-      return {
-        method: 'oil_coat',
-        cfg: { oilType: 'olive', method: 'spray', surface: 'both' },
-      }
-    case 'steam_inject':
-      return {
-        method: 'steam_inject',
-        cfg: { method: 'water_pan', waterVolume: 'small', removeAfter: 15 },
-      }
-    case 'brush':
-      return { method: 'brush', cfg: null }
-    case 'topping':
-      return { method: 'topping', cfg: null }
-    case 'scoring':
-      return { method: 'scoring', cfg: null }
-    case 'generic':
-      return { method: 'generic', cfg: null }
-    default:
-      throw new Error(`Unknown pre_bake sub-type: "${subtype}"`)
-  }
+export function getDefaultConfig(provider: ScienceProvider, subtype: string): PreBakeConfig {
+  const block = getPreBakeBlock(provider)
+  const cfg = block?.defaultConfigs?.[subtype]
+  if (!cfg) throw new Error(`Unknown pre_bake sub-type: "${subtype}"`)
+  return cfg as PreBakeConfig
 }
 
 // ── 2. Validate config ──────────────────────────────────────────
@@ -95,13 +41,18 @@ export function validateConfig(
   subtype: string,
   config: PreBakeConfig,
 ): RuleResult[] {
+  const block = getPreBakeBlock(provider)
+  const enums = block?.validEnums ?? {}
+  const ranges = block?.validationRanges ?? {}
+
   const ctx: Record<string, unknown> = {
     subtype,
     method: config.method,
   }
 
   // Sub-type must be known
-  if (!ALL_SUBTYPES.includes(subtype as typeof ALL_SUBTYPES[number])) {
+  const allSubtypes: string[] = enums.allSubtypes ?? []
+  if (allSubtypes.length > 0 && !allSubtypes.includes(subtype)) {
     ctx.unknownSubtype = true
   }
 
@@ -121,36 +72,38 @@ export function validateConfig(
   switch (config.method) {
     case 'boil': {
       const c = config.cfg
-      ctx.liquidTempValid = c.liquidTemp >= 85 && c.liquidTemp <= 100
-      ctx.additivePctValid = c.additivePct >= 1 && c.additivePct <= 5
-      ctx.drainTimeValid = c.drainTime >= 0.5 && c.drainTime <= 2
-      ctx.liquidTypeValid = VALID_LIQUID_TYPES.includes(c.liquidType)
+      const r = ranges.boil ?? {}
+      ctx.liquidTempValid = c.liquidTemp >= (r.liquidTemp?.[0] ?? 85) && c.liquidTemp <= (r.liquidTemp?.[1] ?? 100)
+      ctx.additivePctValid = c.additivePct >= (r.additivePct?.[0] ?? 1) && c.additivePct <= (r.additivePct?.[1] ?? 5)
+      ctx.drainTimeValid = c.drainTime >= (r.drainTime?.[0] ?? 0.5) && c.drainTime <= (r.drainTime?.[1] ?? 2)
+      ctx.liquidTypeValid = (enums.liquidTypes ?? []).includes(c.liquidType)
       break
     }
     case 'dock': {
       const c = config.cfg
-      ctx.toolValid = VALID_DOCK_TOOLS.includes(c.tool)
-      ctx.patternValid = VALID_DOCK_PATTERNS.includes(c.pattern)
+      ctx.toolValid = (enums.dockTools ?? []).includes(c.tool)
+      ctx.patternValid = (enums.dockPatterns ?? []).includes(c.pattern)
       break
     }
     case 'flour_dust': {
       const c = config.cfg
-      ctx.flourTypeValid = VALID_FLOUR_TYPES.includes(c.flourType)
-      ctx.applicationValid = VALID_FLOUR_APPLICATIONS.includes(c.application)
+      ctx.flourTypeValid = (enums.flourTypes ?? []).includes(c.flourType)
+      ctx.applicationValid = (enums.flourApplications ?? []).includes(c.application)
       break
     }
     case 'oil_coat': {
       const c = config.cfg
-      ctx.oilTypeValid = VALID_OIL_TYPES.includes(c.oilType)
-      ctx.oilMethodValid = VALID_OIL_METHODS.includes(c.method)
-      ctx.surfaceValid = VALID_OIL_SURFACES.includes(c.surface)
+      ctx.oilTypeValid = (enums.oilTypes ?? []).includes(c.oilType)
+      ctx.oilMethodValid = (enums.oilMethods ?? []).includes(c.method)
+      ctx.surfaceValid = (enums.oilSurfaces ?? []).includes(c.surface)
       break
     }
     case 'steam_inject': {
       const c = config.cfg
-      ctx.removeAfterValid = c.removeAfter >= 10 && c.removeAfter <= 25
-      ctx.steamMethodValid = VALID_STEAM_METHODS.includes(c.method)
-      ctx.waterVolumeValid = VALID_STEAM_VOLUMES.includes(c.waterVolume)
+      const r = ranges.steam_inject ?? {}
+      ctx.removeAfterValid = c.removeAfter >= (r.removeAfter?.[0] ?? 10) && c.removeAfter <= (r.removeAfter?.[1] ?? 25)
+      ctx.steamMethodValid = (enums.steamMethods ?? []).includes(c.method)
+      ctx.waterVolumeValid = (enums.steamVolumes ?? []).includes(c.waterVolume)
       break
     }
     default:
@@ -209,8 +162,9 @@ export function getWarnings(
 
 /**
  * Given a bake sub-type, suggests useful pre_bake sub-types.
- * Returns an empty array if no suggestions are available.
+ * Reads from ScienceProvider. Returns an empty array if no suggestions are available.
  */
-export function suggestPreBakeFor(bakeSubtype: string): string[] {
-  return SUGGESTIONS[bakeSubtype] ?? []
+export function suggestPreBakeFor(provider: ScienceProvider, bakeSubtype: string): string[] {
+  const block = getPreBakeBlock(provider)
+  return block?.suggestions?.[bakeSubtype] ?? []
 }

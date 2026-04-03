@@ -10,11 +10,6 @@ import { evaluateRules } from './science/rule-engine'
 import type { RuleResult } from './science/rule-engine'
 import { evaluatePiecewise } from './science/formula-engine'
 
-// ── Constants ────────────────────────────────────────────────
-
-/** Minimum safe salt percentage for lacto-fermentation. */
-const MIN_SAFE_SALT_PCT = 2
-
 // ── 1. calcBrineConcentration ────────────────────────────────
 
 /**
@@ -26,16 +21,18 @@ const MIN_SAFE_SALT_PCT = 2
  * @returns { pct: salt percentage, safe: whether above minimum }
  */
 export function calcBrineConcentration(
-  _provider: ScienceProvider,
+  provider: ScienceProvider,
   saltG: number,
   vegetableG: number,
   waterG: number,
 ): { pct: number; safe: boolean } {
+  const block = provider.getBlock('ferment_layer_constants') as any
+  const minSafeSaltPct = block?.minSafeSaltPct ?? 2
   const totalWeight = saltG + vegetableG + waterG
   if (totalWeight <= 0) return { pct: 0, safe: false }
 
   const pct = Math.round((saltG / totalWeight) * 1000) / 10 // 1 decimal
-  return { pct, safe: pct >= MIN_SAFE_SALT_PCT }
+  return { pct, safe: pct >= minSafeSaltPct }
 }
 
 // ── 2. calcFermentDuration ───────────────────────────────────
@@ -57,6 +54,7 @@ export function calcFermentDuration(
   tempC: number,
   saltPct: number,
 ): { minDays: number; maxDays: number } {
+  const block = provider.getBlock('ferment_layer_constants') as any
   let baseDuration: { minDays: number; maxDays: number }
 
   try {
@@ -66,14 +64,19 @@ export function calcFermentDuration(
     ) as { minDays: number; maxDays: number }
     baseDuration = result
   } catch {
-    // Fallback: rough estimate
-    if (tempC < 15) baseDuration = { minDays: 7, maxDays: 14 }
-    else if (tempC < 25) baseDuration = { minDays: 3, maxDays: 7 }
-    else baseDuration = { minDays: 2, maxDays: 5 }
+    // Fallback from provider constants
+    const ranges: { maxTemp: number; minDays: number; maxDays: number }[] = block?.tempRanges ?? []
+    const match = ranges.find(r => tempC < r.maxTemp)
+    baseDuration = match
+      ? { minDays: match.minDays, maxDays: match.maxDays }
+      : { minDays: 3, maxDays: 7 }
   }
 
-  // Salt adjustment: higher salt slows fermentation
-  const saltAdjust = saltPct > 3 ? 1 + (saltPct - 3) * 0.1 : 1
+  // Salt adjustment from provider
+  const saltAdj = block?.saltAdjustment ?? { threshold: 3, factorPerPct: 0.1 }
+  const saltAdjust = saltPct > saltAdj.threshold
+    ? 1 + (saltPct - saltAdj.threshold) * saltAdj.factorPerPct
+    : 1
   return {
     minDays: Math.round(baseDuration.minDays * saltAdjust),
     maxDays: Math.round(baseDuration.maxDays * saltAdjust),

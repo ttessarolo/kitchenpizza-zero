@@ -117,14 +117,14 @@ describe('FlourManager — searchFlours', () => {
 
 describe('FlourManager — blendFlourProperties', () => {
   it('returns defaults for empty array', () => {
-    const bp = blendFlourProperties([], catalog)
+    const bp = blendFlourProperties(provider, [], catalog)
     expect(bp.W).toBe(280)
     expect(bp.protein).toBe(12)
   })
 
   it('returns exact values for single flour', () => {
     const flour = getFlour('gt_00_for', catalog)
-    const bp = blendFlourProperties([makeFlour('gt_00_for', 500)], catalog)
+    const bp = blendFlourProperties(provider, [makeFlour('gt_00_for', 500)], catalog)
     expect(bp.W).toBe(flour.W)
     expect(bp.protein).toBeCloseTo(flour.protein, 0)
   })
@@ -132,13 +132,13 @@ describe('FlourManager — blendFlourProperties', () => {
   it('50/50 blend gives average W', () => {
     const f1 = getFlour('gt_00_deb', catalog) // W=130
     const f2 = getFlour('gt_00_for', catalog) // W=290
-    const bp = blendFlourProperties([makeFlour('gt_00_deb', 500), makeFlour('gt_00_for', 500)], catalog)
+    const bp = blendFlourProperties(provider, [makeFlour('gt_00_deb', 500), makeFlour('gt_00_for', 500)], catalog)
     expect(bp.W).toBe(Math.round((f1.W + f2.W) / 2)) // 210
   })
 
   it('80/20 blend weights heavier flour more', () => {
     getFlour('gt_00_for', catalog) // W=290
-    const bp = blendFlourProperties([makeFlour('gt_00_for', 800), makeFlour('gt_00_deb', 200)], catalog)
+    const bp = blendFlourProperties(provider, [makeFlour('gt_00_for', 800), makeFlour('gt_00_deb', 200)], catalog)
     // Should be closer to 290 than to 130
     expect(bp.W).toBeGreaterThan(250)
   })
@@ -203,27 +203,27 @@ describe('FlourManager — isGlutenFree', () => {
 
 describe('FlourManager — suggestForW', () => {
   it('suggests flours near target W', () => {
-    const results = suggestForW(280, catalog)
+    const results = suggestForW(provider, 280, catalog)
     expect(results.length).toBeGreaterThan(0)
     // First result should be closest to 280
     expect(Math.abs(results[0].W - 280)).toBeLessThanOrEqual(50)
   })
 
   it('sorts by distance from target', () => {
-    const results = suggestForW(290, catalog)
+    const results = suggestForW(provider, 290, catalog)
     for (let i = 1; i < results.length; i++) {
       expect(Math.abs(results[i].W - 290)).toBeGreaterThanOrEqual(Math.abs(results[i - 1].W - 290))
     }
   })
 
   it('excludes gluten-free flours (W=0)', () => {
-    const results = suggestForW(50, catalog, 100)
+    const results = suggestForW(provider, 50, catalog, 100)
     expect(results.every((f) => f.W > 0)).toBe(true)
   })
 
   it('respects tolerance', () => {
-    const narrow = suggestForW(290, catalog, 10)
-    const wide = suggestForW(290, catalog, 100)
+    const narrow = suggestForW(provider, 290, catalog, 10)
+    const wide = suggestForW(provider, 290, catalog, 100)
     expect(wide.length).toBeGreaterThanOrEqual(narrow.length)
   })
 })

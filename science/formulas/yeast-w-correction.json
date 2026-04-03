@@ -15,7 +15,8 @@
       "key": "linear_280",
       "nameKey": "variant.yeast_w.linear_280",
       "descriptionKey": "variant.yeast_w.linear_280.desc",
-      "expression": "max(MIN_FACTOR, min(MAX_FACTOR, REF_W / W))",
+      "expr": ["Max", "MIN_FACTOR", ["Min", "MAX_FACTOR", ["Divide", "REF_W", "W"]]],
+      "latex": "\\max(MIN\\_FACTOR, \\min(MAX\\_FACTOR, \\frac{REF\\_W}{W}))",
       "constants": { "REF_W": 280, "MIN_FACTOR": 0.6, "MAX_FACTOR": 2.0 },
       "default": true
     }

@@ -26,9 +26,11 @@ import { evaluateClassification, evaluateFormula } from './science/formula-engin
 
 // ── Catalog lookup ─────────────────────────────────────────────
 
-/** Find a flour by key in the catalog, fallback to index 5 (00 forte). */
-export function getFlour(key: string, catalog: FlourCatalogEntry[]): FlourCatalogEntry {
-  return catalog.find((f) => f.key === key) || catalog[5]
+/** Find a flour by key in the catalog, fallback to provider-configured index. */
+export function getFlour(key: string, catalog: FlourCatalogEntry[], provider?: ScienceProvider): FlourCatalogEntry {
+  const block = provider?.getBlock('flour_suggestion') as any
+  const fallbackIdx = block?.fallbackFlourIndex ?? 5
+  return catalog.find((f) => f.key === key) || catalog[fallbackIdx]
 }
 
 /** Get all flours belonging to a group ("Grano Tenero", "Grano Duro", "Speciali"). */
@@ -55,14 +57,18 @@ export function searchFlours(query: string, catalog: FlourCatalogEntry[]): Flour
  * [C] Cap. 17-23 — W, P/L, and absorption blend linearly for same-grain mixtures.
  */
 export function blendFlourProperties(
+  provider: ScienceProvider | undefined,
   flours: FlourIngredient[],
   catalog: FlourCatalogEntry[],
 ): BlendedFlourProps {
+  const fallbackBlock = provider?.getBlock('flour_blend_fallback') as any
+  const defaultFN = fallbackBlock?.emptyBlend?.fallingNumber ?? 300
+
   let t = 0
   let wP = 0, wW = 0, wPL = 0, wA = 0, wAsh = 0, wFib = 0, wSD = 0, wFS = 0, wFN = 0
 
   for (const f of flours) {
-    const c = getFlour(f.type, catalog)
+    const c = getFlour(f.type, catalog, provider)
     t += f.g
     wP += f.g * c.protein
     wW += f.g * c.W
@@ -72,10 +78,13 @@ export function blendFlourProperties(
     wFib += f.g * c.fiber
     wSD += f.g * c.starchDamage
     wFS += f.g * c.fermentSpeed
-    wFN += f.g * (c.fallingNumber ?? 300)
+    wFN += f.g * (c.fallingNumber ?? defaultFN)
   }
 
   if (t <= 0) {
+    if (fallbackBlock?.emptyBlend) {
+      return fallbackBlock.emptyBlend as BlendedFlourProps
+    }
     return {
       protein: 12, W: 280, PL: 0.55, absorption: 60, ash: 0.55,
       fiber: 2.5, starchDamage: 7, fermentSpeed: 1, fallingNumber: 300,
@@ -107,8 +116,12 @@ export function blendFlourProperties(
 export function estimateBlendW(
   keys: string[],
   catalog: FlourCatalogEntry[],
+  provider?: ScienceProvider,
 ): number {
-  if (keys.length === 0) return 280
+  if (keys.length === 0) {
+    const block = provider?.getBlock('flour_blend_fallback') as any
+    return block?.emptyBlend?.W ?? 280
+  }
   let totalW = 0
   for (const key of keys) {
     totalW += getFlour(key, catalog).W
@@ -124,11 +137,19 @@ export function estimateBlendW(
  * [C] Cap. 20 — Relationship between protein content and alveographic W.
  */
 export function estimateW(protein: number, provider: ScienceProvider): number {
-  const formula = provider.getFormula('estimate_W_from_protein')
-  if (formula?.expression) {
-    return evaluateFormula(formula, { protein })
-  }
-  return Math.round(Math.max(60, Math.min(420, 22 * protein - 70)))
+  try {
+    const formula = provider.getFormula('estimate_W_from_protein')
+    if (formula?.expr) {
+      return evaluateFormula(formula, { protein })
+    }
+  } catch { /* fall through to constants */ }
+  const block = provider.getBlock('flour_suggestion') as any
+  const est = block?.estimateW_fallback
+  const slope = est?.slope ?? 22
+  const intercept = est?.intercept ?? -70
+  const clampMin = est?.clampMin ?? 60
+  const clampMax = est?.clampMax ?? 420
+  return Math.round(Math.max(clampMin, Math.min(clampMax, slope * protein + intercept)))
 }
 
 // ── Classification ─────────────────────────────────────────────
@@ -166,12 +187,14 @@ export function isGlutenFree(flour: FlourCatalogEntry): boolean {
  * @param tolerance — max W distance (default 50)
  */
 export function suggestForW(
+  provider: ScienceProvider,
   targetW: number,
   catalog: FlourCatalogEntry[],
-  tolerance = 50,
+  tolerance?: number,
 ): FlourCatalogEntry[] {
+  const tol = tolerance ?? ((provider.getBlock('flour_suggestion') as any)?.tolerance ?? 50)
   return catalog
-    .filter((f) => Math.abs(f.W - targetW) <= tolerance && f.W > 0)
+    .filter((f) => Math.abs(f.W - targetW) <= tol && f.W > 0)
     .sort((a, b) => Math.abs(a.W - targetW) - Math.abs(b.W - targetW))
 }
 

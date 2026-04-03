@@ -1,0 +1,13 @@
+{
+  "type": "defaults",
+  "id": "ferment_layer_constants",
+  "_meta": { "section": "ferment", "description": "Fermentation layer constants: salt safety, temp ranges, salt adjustment" },
+  "entries": [],
+  "minSafeSaltPct": 2,
+  "tempRanges": [
+    { "maxTemp": 15, "minDays": 7, "maxDays": 14 },
+    { "maxTemp": 25, "minDays": 3, "maxDays": 7 },
+    { "maxTemp": 999, "minDays": 2, "maxDays": 5 }
+  ],
+  "saltAdjustment": { "threshold": 3, "factorPerPct": 0.1 }
+}

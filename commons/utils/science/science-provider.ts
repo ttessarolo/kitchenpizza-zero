@@ -1,8 +1,11 @@
 /**
  * ScienceProvider — Abstract interface for loading CookingScienceBrain JSON blocks.
  *
- * Today: FileScienceProvider reads from /science/ directory.
- * Tomorrow: DbScienceProvider reads from Neon PostgreSQL.
+ * FileScienceProvider reads from /science/ directory (local dev/tests).
+ * DbScienceProvider reads from Neon PostgreSQL (production).
+ * StaticScienceProvider bundles JSON via Vite (browser).
+ *
+ * All expressions use MathJSON format (CortexJS standard).
  */
 
 import type {

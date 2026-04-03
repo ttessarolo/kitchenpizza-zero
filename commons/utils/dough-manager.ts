@@ -110,13 +110,14 @@ export function yeastGrams(yeastPct: number, flourGrams: number): number {
  * @returns final dough temperature in °C
  */
 export function calcFinalDoughTemp(
+  provider: ScienceProvider | undefined,
   flours: FlourIngredient[],
   liquids: LiquidIngredient[],
   ambientTemp: number,
   frictionFactor: number,
-  provider?: ScienceProvider,
 ): number {
-  const airPct = provider?.getFormula('final_dough_temp')?.constants?.airIncorporationPct ?? 0.15
+  const block = provider?.getBlock('dough_salt_constants') as any
+  const airPct = block?.airIncorporationPct ?? 0.15
 
   let t = 0
   let s = 0
@@ -145,14 +146,20 @@ export function calcFinalDoughTemp(
  * Base 2.5% with minor adjustment for high hydration, clamped to 2.0–3.0%.
  * [C] Cap. 53 — Salt in pizza doughs: 2.3-2.8% typical.
  */
-export function computeSuggestedSalt(totalFlour: number, hydration: number, provider: ScienceProvider): number {
-  const formula = provider.getFormula('suggested_salt')
-  const basePct = formula?.constants?.basePct ?? 2.5
-  const adjFactor = formula?.constants?.adjustFactor ?? 0.01
-  const minPct = formula?.constants?.minPct ?? 2.0
-  const maxPct = formula?.constants?.maxPct ?? 3.0
-  const adjustment = Math.max(0, (hydration - 60) * adjFactor)
-  const pct = Math.min(maxPct, Math.max(minPct, basePct + adjustment))
+export function computeSuggestedSalt(provider: ScienceProvider, totalFlour: number, hydration: number): number {
+  try {
+    const formula = provider.getFormula('suggested_salt')
+    if (formula?.expr) {
+      return evaluateFormula(formula, { totalFlour, hydration })
+    }
+  } catch { /* fall through to constants-based calculation */ }
+  // Fallback from constants block
+  const block = provider.getBlock('dough_salt_constants') as any
+  const s = block?.suggestedSalt
+  const adjFactor = s?.adjustFactor ?? 0.01
+  const threshold = s?.hydrationThreshold ?? 60
+  const adjustment = Math.max(0, (hydration - threshold) * adjFactor)
+  const pct = Math.min(s?.maxPct ?? 3.0, Math.max(s?.minPct ?? 2.0, (s?.basePct ?? 2.5) + adjustment))
   return rnd(totalFlour * pct / 100)
 }
 

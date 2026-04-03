@@ -1,0 +1,8 @@
+{
+  "type": "defaults",
+  "id": "pastry_safety",
+  "_meta": { "section": "pastry", "description": "Custard pasteurization and meringue stability constants" },
+  "entries": [],
+  "custard": { "safeTemp": 82, "minDurationS": 10 },
+  "meringue": { "stableRatio": 1.5 }
+}

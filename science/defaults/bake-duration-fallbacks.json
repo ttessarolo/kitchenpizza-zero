@@ -1,0 +1,13 @@
+{
+  "type": "defaults",
+  "id": "bake_duration_fallbacks",
+  "_meta": { "section": "bake", "description": "Safe default duration and factor lookup tables" },
+  "entries": [],
+  "safeDefaultDuration": 10,
+  "factorFallbacks": {
+    "modeFactor": { "static": 1.0, "fan": 0.85, "steam": 1.0 },
+    "steamerFactor": { "bamboo": 1.0, "electric": 0.9 },
+    "fryMethodFactor": { "deep": 1.0, "shallow": 1.2 },
+    "fuelFactor": { "gas": 1.0, "charcoal": 1.1, "electric": 1.0 }
+  }
+}

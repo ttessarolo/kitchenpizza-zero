@@ -37,7 +37,9 @@ Manager (TypeScript)
 - **Region:** eu-central-1
 - **Table:** `science_blocks`
 - **Columns:** `id` (text PK), `type` (text), `domain` (text), `data` (jsonb), `description` (text), `version` (int), `status` (text), `source` (text), `source_id` (text), `created_at` (timestamptz), `updated_at` (timestamptz)
-- **Total blocks:** 46
+- **Total blocks:** 48 (was 46 — 2 formula-array rows were split into 4 individual rows)
+- **Expression format:** All mathematical expressions use **MathJSON** (CortexJS standard) — JSON arrays. Evaluated by `@cortex-js/compute-engine`. LaTeX auto-generated via `.latex` property for UI rendering (KaTeX).
+- **Structural rule:** Every row contains exactly ONE block (`data` is a JSON object). Exception: `rule/*` rows contain arrays of rules (batch evaluation with suppression chains).
 - **Connection:** Use Neon serverless driver (`@neondatabase/serverless`) — already in the project for other DB operations.
 
 ---
@@ -51,10 +53,12 @@ Implement the `ScienceProvider` interface (defined in `commons/utils/science/sci
 ### Design Requirements
 
 1. **Single query on init** — Load all `science_blocks` where `status = 'active'` into memory maps (same pattern as `FileScienceProvider.loadAll()`).
-2. **Block ID mapping** — The `data` column contains JSONB with an inner `id` field (e.g., `data.id = "cooking_factors"`). The `ScienceProvider` interface methods use this inner id (e.g., `getBlock("cooking_factors")`). Some rows contain arrays of blocks in `data` (e.g., `formula/composition` contains `[{id: "suggested_salt", ...}, {id: "estimate_W_from_protein", ...}]`). Flatten these during loading.
+2. **Block ID mapping** — The row `id` column (e.g., `formula/suggested-salt`) is the primary key. Formula/catalog/defaults/classification rows have `data` as a single JSON object. Rule rows have `data` as an array of rules — flatten these into individual rule entries indexed by their inner `id`. No formula-arrays exist anymore (they were split into individual rows).
 3. **Index by type** — Same indexes as `FileScienceProvider`: blocks by id, rules by domain, catalogs by id.
 4. **Cache invalidation** — For v1, load once at startup. Add a `reload()` method for future use.
 5. **i18n** — Read from `science_i18n` table: `SELECT key, value FROM science_i18n WHERE locale = $1`.
+6. **MathJSON evaluation** — Use `@cortex-js/compute-engine` to evaluate MathJSON expressions. Register custom functions: `Clamp(val, min, max)`. The Compute Engine replaces `expr-eval` entirely.
+7. **LaTeX generation** — Use the Compute Engine `.latex` property on boxed expressions. Store as render cache or generate on-the-fly for UI display via KaTeX.
 
 ### SQL Queries
 
@@ -92,17 +96,20 @@ export class DbScienceProvider implements ScienceProvider {
 
     for (const row of rows) {
       const data = row.data;
-      // Handle arrays (some rows contain multiple blocks)
-      const items: any[] = Array.isArray(data) ? data : [data];
-      for (const block of items) {
-        this.blocks.set(block.id, block);
-        if (block.type === 'rule') {
-          const domain = block._meta?.section ?? block.category;
+      if (row.type === 'rule' && Array.isArray(data)) {
+        // Rules are arrays — flatten into individual rule entries
+        for (const rule of data) {
+          this.blocks.set(rule.id, rule);
+          const domain = rule._meta?.section ?? row.domain;
           if (!this.rulesByDomain.has(domain)) this.rulesByDomain.set(domain, []);
-          this.rulesByDomain.get(domain)!.push(block);
+          this.rulesByDomain.get(domain)!.push(rule);
         }
-        if (block.type === 'catalog') {
-          this.catalogs.set(block.id, block.entries);
+      } else {
+        // All other types: data is a single object (one block per row)
+        const block = data as any;
+        this.blocks.set(row.id, block);
+        if (row.type === 'catalog') {
+          this.catalogs.set(row.id, block.entries);
         }
       }
     }
@@ -541,35 +548,40 @@ export async function reconcileGraph(provider: ScienceProvider, ...) { ... }
 
 ---
 
-## Neon Science Blocks Inventory (46 total)
+## Neon Science Blocks Inventory (48 total)
+
+> **Expression format:** All `expr` fields use MathJSON (JSON arrays). Evaluated by `@cortex-js/compute-engine`. LaTeX auto-generated for UI rendering.
+> **Structural rule:** Each row = one block (`data` is object). Exception: `rule/*` rows = array of rules.
 
 ### Catalogs (10)
-| DB id | Inner id | Domain | Description |
-|---|---|---|---|
-| catalog/baking-profiles | baking_profiles | bake | Baking profiles per type/subtype |
-| catalog/cooking-factors | cooking_factors | bake | Mode, steamer, fry, fuel factors |
-| catalog/fats | fats | dough | Fat types with ferment effect, smoke point |
-| catalog/ferment-types | ferment_types | ferment | Fermentation type catalog |
-| catalog/flours | flours | dough | Flour catalog with all properties |
-| catalog/oven-config | oven_config | bake | Oven configuration options |
-| catalog/pastry-types | pastry_types | pastry | Pastry type catalog |
-| catalog/rise-methods | rise_methods | dough | Rise methods with tf and q10Coeff |
-| catalog/salts-sugars | salts_sugars | dough | Salt and sugar type catalog |
-| catalog/sauce-types | sauce_types | sauce | Sauce type catalog with baseMinPerLiter |
+| DB id | Domain | Description |
+|---|---|---|
+| catalog/baking-profiles | bake | Baking profiles per type/subtype |
+| catalog/cooking-factors | bake | Mode, steamer, fry, fuel factors |
+| catalog/fats | dough | Fat types with ferment effect, smoke point |
+| catalog/ferment-types | ferment | Fermentation type catalog |
+| catalog/flours | dough | Flour catalog with all properties |
+| catalog/oven-config | bake | Oven configuration options |
+| catalog/pastry-types | pastry | Pastry type catalog |
+| catalog/rise-methods | dough | Rise methods with tf and q10Coeff |
+| catalog/salts-sugars | dough | Salt and sugar type catalog |
+| catalog/sauce-types | sauce | Sauce type catalog with baseMinPerLiter |
 
-### Formulas (9)
-| DB id | Inner id(s) | Domain | Description |
+### Formulas (12 — each row = 1 formula, no arrays)
+| DB id | Type | Domain | Description |
 |---|---|---|---|
-| formula/bake-duration | (2 formulas) | bake | Bake duration calculations |
-| formula/blend-flour | blend_flour_properties | dough | **NEW** — Blend formula spec |
-| formula/composition | suggested_salt, estimate_W_from_protein | dough | Composition formulas |
-| formula/dough-temp | final_dough_temp | dough | FDT with airIncorporationPct |
-| formula/ferment-duration | ferment_duration | ferment | Fermentation duration by temp |
-| formula/rise-duration | rise_duration | dough | Factor chain for rise duration |
-| formula/sauce-reduction | sauce_reduction_volume | sauce | Sauce reduction volume formula |
-| formula/yeast | yeast_pct | dough | Formula L (Casucci Cap. 44) |
-| formula/yeast-inverse | yeast_duration_inverse | dough | Inverse Formula L |
-| formula/yeast-w-correction | yeast_w_correction | dough | W correction for yeast |
+| formula/bake-duration-oven | factor_chain | bake | Factor chain for oven/pentola bake duration |
+| formula/blend-flour | blend_formula | dough | Weighted average of flour properties for multi-flour dough |
+| formula/dough-temp | formula | dough | FDT with airIncorporationPct |
+| formula/estimate-w-from-protein | formula | dough | Linear regression W from protein % |
+| formula/ferment-duration | piecewise | ferment | Fermentation duration by temp |
+| formula/rise-duration | factor_chain | dough | 11-factor chain for rise duration |
+| formula/rise-temp-factor | formula | dough | Q10 exponential temp factor for fermentation speed |
+| formula/sauce-reduction | formula | sauce | Sauce reduction volume formula |
+| formula/suggested-salt | formula | dough | Salt grams from flour weight + hydration |
+| formula/yeast | formula | dough | Formula L (Casucci Cap. 44) |
+| formula/yeast-inverse | formula | dough | Inverse Formula L |
+| formula/yeast-w-correction | formula | dough | W correction for yeast |
 
 ### Classifications (4)
 | DB id | Inner id | Domain |
@@ -617,9 +629,28 @@ export async function reconcileGraph(provider: ScienceProvider, ...) { ... }
 
 ## Migration Checklist
 
-- [ ] Create `DbScienceProvider` class
-- [ ] Add `BlendFormulaBlock` and `MultiNodeConstraintBlock` to types.ts
-- [ ] Add `getBlendFormula()` and `getMultiNodeConstraint()` to ScienceProvider interface
+### MathJSON Migration (COMPLETED 2026-04-03)
+- [x] Install `@cortex-js/compute-engine` — replaces `expr-eval`
+- [x] Create MathJSON evaluator in FormulaEngine (Compute Engine + custom `Clamp` function)
+- [x] Update `types.ts` — `expression: string` → `expr: MathJSON` + `latex: string` across FormulaBlock, FormulaVariant, FactorDef, PiecewiseSegment, MultiNodeConstraintBlock
+- [x] Rewrite `formula-engine.ts` — uses `@cortex-js/compute-engine` instead of `expr-eval`
+- [x] Export `mathJSONToLatex()` helper and `computeEngine` instance
+- [x] Convert all 21 expr-eval strings in Neon `science_blocks` to MathJSON arrays + LaTeX
+- [x] Convert all local `/science/formulas/*.json` to MathJSON format
+- [x] Update JSON schema (`cookingsciencebrain.schema.json`) for MathJSON
+- [x] Update admin UI (`rules.$id.tsx`) — `.expression` → `.expr` + LaTeX display
+- [x] Update manager references (`flour-manager.ts` `.expression` → `.expr`)
+- [x] Update test file (`formula-engine.test.ts`) — all inline test data uses MathJSON
+- [x] Remove `expr-eval` from `package.json`
+
+### DbScienceProvider (COMPLETED prior)
+- [x] Create `DbScienceProvider` class (reads MathJSON expressions natively)
+- [x] Add `BlendFormulaBlock` and `MultiNodeConstraintBlock` to types.ts
+- [x] Add `getBlendFormula()` and `getMultiNodeConstraint()` to ScienceProvider interface
+- [x] Create science middleware (`getScienceProvider()`)
+- [x] Add `NEON_CSB_DATABASE_URL` to .env
+
+### Manager Refactoring (pending)
 - [ ] Refactor `bake-manager.ts` — remove all hardcoded values, make provider required
 - [ ] Refactor `rise-manager.ts` — remove Q10 fallbacks, remove local_data imports
 - [ ] Refactor `flour-manager.ts` — remove blend fallbacks, flour catalog import, thresholds
@@ -627,12 +658,13 @@ export async function reconcileGraph(provider: ScienceProvider, ...) { ... }
 - [ ] Refactor `sauce-manager.ts` — remove evaporation constants and subtype defaults
 - [ ] Refactor `dough-manager.ts` — remove local_data imports, make provider required everywhere
 - [ ] Refactor `fermentation-coherence-manager.ts` — read constraint spec from provider
-- [ ] Create science middleware (`getScienceProvider()`)
-- [ ] Add `NEON_CSB_DATABASE_URL` to .env
+
+### Wiring & Cleanup (pending)
 - [ ] Update `graph-reconciler-v2.service.ts` to accept provider via DI
 - [ ] Update all oRPC procedures to pass provider to managers
 - [ ] Redirect UI catalog imports to server-provided data via oRPC
 - [ ] Delete unused `local_data/` files
+- [ ] Add LaTeX rendering component (`FormulaDisplay`) using KaTeX for Science admin panel
 - [ ] Run all existing tests and fix any broken ones
 - [ ] Verify the full recipe editing flow works end-to-end
 
@@ -650,4 +682,7 @@ export async function reconcileGraph(provider: ScienceProvider, ...) { ... }
 
 - The `FileScienceProvider` should NOT be deleted — it remains useful for local development, tests, and as a reference implementation.
 - The `local_data/` files should be kept temporarily (but unused) until the migration is verified in production, then deleted in a follow-up PR.
-- i18n keys referenced in science blocks (e.g., `meta.defaults.cooking_validation_ranges.name`) need entries in `commons/i18n/it/*.json` and `commons/i18n/en/*.json`.
+- i18n keys referenced in science blocks use the dual-field pattern: `label` (Italian text for LLM) + `labelKey` (i18n key resolved via `science_i18n` table on Neon or `commons/i18n/{locale}/*.json` in KPZ).
+- **MathJSON migration:** All `expr` fields in `science_blocks` on Neon will be converted from expr-eval strings to MathJSON arrays. The KPZ FormulaEngine must be updated to use `@cortex-js/compute-engine` for evaluation. The `expr-eval` package can then be removed.
+- **LaTeX rendering:** Each formula's LaTeX is auto-generated by the Compute Engine (`.latex` property). A `FormulaDisplay` component using KaTeX renders formulas in the Science admin panel and recipe editor tooltips.
+- **One block per row:** Formula rows are always single objects (no arrays). This was enforced by splitting the legacy array rows (`formula/bake-duration` → `formula/bake-duration-oven` + `formula/rise-temp-factor`; `formula/composition` → `formula/suggested-salt` + `formula/estimate-w-from-protein`).

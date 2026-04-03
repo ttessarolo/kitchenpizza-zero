@@ -33,7 +33,7 @@ export class DbScienceProvider implements ScienceProvider {
   // ── Initialization ────────────────────────────────────────────
 
   async init(): Promise<void> {
-    const rows = await this.sql`SELECT id, type, domain, data FROM science_blocks WHERE status = 'active'` as Record<string, unknown>[]
+    const rows = await this.sql`SELECT id, type, domain, title, data FROM science_blocks WHERE status = 'active'` as Record<string, unknown>[]
     this.blocks.clear()
     this.rulesByDomain.clear()
     this.catalogs.clear()
@@ -44,6 +44,8 @@ export class DbScienceProvider implements ScienceProvider {
       const items: ScienceBlock[] = Array.isArray(data) ? data : [data]
       for (const block of items) {
         if (!block || !block.id) continue
+        // Merge SQL-level title into the block for admin UI access
+        if (row.title) (block as any).title = row.title as string
         this.blocks.set(block.id, block)
 
         // Index rules by domain/section

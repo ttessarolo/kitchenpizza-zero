@@ -1,0 +1,8 @@
+{
+  "type": "defaults",
+  "id": "rise_constants",
+  "_meta": { "section": "dough", "description": "Default Q10 coefficient and baseline temperature for rise" },
+  "entries": [],
+  "defaultQ10Coeff": 1,
+  "baselineTemp": 24
+}

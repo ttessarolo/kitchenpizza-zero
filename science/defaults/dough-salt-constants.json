@@ -1,0 +1,8 @@
+{
+  "type": "defaults",
+  "id": "dough_salt_constants",
+  "_meta": { "section": "dough", "description": "Salt formula constants and air incorporation percentage" },
+  "entries": [],
+  "suggestedSalt": { "basePct": 2.5, "adjustFactor": 0.01, "minPct": 2.0, "maxPct": 3.0, "hydrationThreshold": 60 },
+  "airIncorporationPct": 0.15
+}

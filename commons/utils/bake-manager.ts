@@ -95,19 +95,21 @@ export function calcDuration(
     getBakingProfile(provider, subtype, null)
 
   if (!profile) {
-    // No profile found; return a safe default
-    return 10
+    // No profile found; return a safe default from provider
+    const fallbacks = provider.getBlock('bake_duration_fallbacks') as any
+    return fallbacks?.safeDefaultDuration ?? 10
   }
 
   const [tMin, tMax] = profile.timeRange
   const baseTime = (tMin + tMax) / 2
 
-  // Load cooking factors from provider
+  // Load cooking factors from provider, with secondary fallback from bake_duration_fallbacks
   const block = provider.getBlock('cooking_factors') as any
-  const modeFactors: Record<string, number> = block?.modeFactor ?? { static: 1.0, fan: 0.85, steam: 1.0 }
-  const steamerFactors: Record<string, number> = block?.steamerFactor ?? { bamboo: 1.0, electric: 0.9 }
-  const fryMethodFactors: Record<string, number> = block?.fryMethodFactor ?? { deep: 1.0, shallow: 1.2 }
-  const fuelFactors: Record<string, number> = block?.fuelFactor ?? { gas: 1.0, charcoal: 1.1, electric: 1.0 }
+  const fb = provider.getBlock('bake_duration_fallbacks') as any
+  const modeFactors: Record<string, number> = block?.modeFactor ?? fb?.factorFallbacks?.modeFactor ?? {}
+  const steamerFactors: Record<string, number> = block?.steamerFactor ?? fb?.factorFallbacks?.steamerFactor ?? {}
+  const fryMethodFactors: Record<string, number> = block?.fryMethodFactor ?? fb?.factorFallbacks?.fryMethodFactor ?? {}
+  const fuelFactors: Record<string, number> = block?.fuelFactor ?? fb?.factorFallbacks?.fuelFactor ?? {}
 
   switch (subtype as CookingSubtype) {
     // ── Oven-based methods (forno, pentola) ──

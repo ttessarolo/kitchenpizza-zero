@@ -59,8 +59,8 @@ describe('Science parity — calcFinalDoughTemp', () => {
 
   for (const c of cases) {
     it(`matches with/without provider: ${c.label}`, () => {
-      const without = calcFinalDoughTemp(c.flours, c.liquids, c.ambient, c.friction, provider)
-      const withProv = calcFinalDoughTemp(c.flours, c.liquids, c.ambient, c.friction, provider)
+      const without = calcFinalDoughTemp(provider, c.flours, c.liquids, c.ambient, c.friction)
+      const withProv = calcFinalDoughTemp(provider, c.flours, c.liquids, c.ambient, c.friction)
       expect(withProv).toBeCloseTo(without, 1) // ±0.1°C
     })
   }
@@ -74,8 +74,8 @@ describe('Science parity — computeSuggestedSalt', () => {
 
   for (const hyd of hydrations) {
     it(`matches at hydration ${hyd}%`, () => {
-      const without = computeSuggestedSalt(totalFlour, hyd, provider)
-      const withProv = computeSuggestedSalt(totalFlour, hyd, provider)
+      const without = computeSuggestedSalt(provider, totalFlour, hyd)
+      const withProv = computeSuggestedSalt(provider, totalFlour, hyd)
       expect(withProv).toBeCloseTo(without, 2) // ±0.01g
     })
   }

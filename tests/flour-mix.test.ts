@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { estimateBlendW, blendFlourProperties } from '@commons/utils/flour-manager'
 import { FLOUR_CATALOG } from '@/local_data/flour-catalog'
+import { FileScienceProvider } from '@commons/utils/science/science-provider'
+import { resolve } from 'path'
+
+const scienceDir = resolve(process.cwd(), 'science')
+const i18nDir = resolve(process.cwd(), 'commons/i18n')
+const provider = new FileScienceProvider(scienceDir, i18nDir)
 
 const catalog = FLOUR_CATALOG as any
 
@@ -36,17 +42,17 @@ describe('FlourManager — estimateBlendW', () => {
 
 describe('FlourManager — blendFlourProperties with gram weights', () => {
   it('returns default when empty', () => {
-    const result = blendFlourProperties([], catalog)
+    const result = blendFlourProperties(provider, [], catalog)
     expect(result.W).toBe(280)
   })
 
   it('returns single flour properties when only one flour', () => {
-    const result = blendFlourProperties([{ id: 0, type: 'gt_00_for', g: 500, temp: null }], catalog)
+    const result = blendFlourProperties(provider, [{ id: 0, type: 'gt_00_for', g: 500, temp: null }], catalog)
     expect(result.W).toBe(290)
   })
 
   it('weighted average favors heavier flour', () => {
-    const result = blendFlourProperties([
+    const result = blendFlourProperties(provider, [
       { id: 0, type: 'gt_00_deb', g: 100, temp: null }, // W=130
       { id: 1, type: 'gt_00_for', g: 400, temp: null }, // W=290
     ], catalog)
@@ -55,7 +61,7 @@ describe('FlourManager — blendFlourProperties with gram weights', () => {
   })
 
   it('equal weights match estimateBlendW', () => {
-    const blended = blendFlourProperties([
+    const blended = blendFlourProperties(provider, [
       { id: 0, type: 'gt_00_deb', g: 100, temp: null },
       { id: 1, type: 'gt_00_for', g: 100, temp: null },
     ], catalog)

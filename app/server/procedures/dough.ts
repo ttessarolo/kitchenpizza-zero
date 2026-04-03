@@ -20,7 +20,8 @@ export const blendFlours = baseProcedure
   .input(blendFloursInputSchema)
   .output(blendFloursOutputSchema)
   .handler(async ({ input }) => {
-    return blendFlourProperties(input.flours as any, FLOUR_CATALOG as any)
+    const provider = await getScienceProvider()
+    return blendFlourProperties(provider, input.flours as any, FLOUR_CATALOG as any)
   })
 
 export const calcYeast = baseProcedure
@@ -36,7 +37,7 @@ export const calcTemp = baseProcedure
   .output(calcTempOutputSchema)
   .handler(async ({ input }) => {
     const provider = await getScienceProvider()
-    return { finalTemp: calcFinalDoughTemp(input.flours as any, input.liquids as any, input.ambientTemp, input.frictionFactor, provider) }
+    return { finalTemp: calcFinalDoughTemp(provider, input.flours as any, input.liquids as any, input.ambientTemp, input.frictionFactor) }
   })
 
 export const getDefaults = baseProcedure

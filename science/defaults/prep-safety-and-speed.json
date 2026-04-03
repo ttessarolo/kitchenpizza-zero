@@ -1,0 +1,11 @@
+{
+  "type": "defaults",
+  "id": "prep_safety_and_speed",
+  "_meta": { "section": "prep", "description": "Safe room time by category, cut speed by style" },
+  "entries": [],
+  "safeRoomTime": { "protein": 120, "dairy": 60, "vegetable": 240, "grain": 480, "fruit": 240 },
+  "cutSpeed": { "julienne": 80, "brunoise": 50, "chiffonade": 120, "dice": 100, "slice": 150, "mince": 60, "rough": 200 },
+  "cookedMultiplier": 1.5,
+  "defaultSafeTime": 120,
+  "defaultCutSpeed": 100
+}

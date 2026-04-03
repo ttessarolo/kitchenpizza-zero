@@ -37,9 +37,10 @@ export const search = baseProcedure
 export const suggestByW = baseProcedure
   .input(suggestForWInputSchema)
   .output(suggestForWOutputSchema)
-  .handler(async ({ input }) => ({
-    results: suggestForW(input.targetW, FLOUR_CATALOG as any, input.tolerance),
-  }))
+  .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
+    return { results: suggestForW(provider, input.targetW, FLOUR_CATALOG as any, input.tolerance) }
+  })
 
 export const estimateWFromProtein = baseProcedure
   .input(estimateWInputSchema)
@@ -53,12 +54,14 @@ export const blendProperties = baseProcedure
   .input(blendPropertiesInputSchema)
   .output(blendPropertiesOutputSchema)
   .handler(async ({ input }) => {
-    return blendFlourProperties(input.flours as any, FLOUR_CATALOG as any)
+    const provider = await getScienceProvider()
+    return blendFlourProperties(provider, input.flours as any, FLOUR_CATALOG as any)
   })
 
 export const estimateBlendWProcedure = baseProcedure
   .input(estimateBlendWInputSchema)
   .output(estimateBlendWOutputSchema)
-  .handler(async ({ input }) => ({
-    W: estimateBlendW(input.flourKeys, FLOUR_CATALOG as any),
-  }))
+  .handler(async ({ input }) => {
+    const provider = await getScienceProvider()
+    return { W: estimateBlendW(input.flourKeys, FLOUR_CATALOG as any, provider) }
+  })

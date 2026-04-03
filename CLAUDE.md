@@ -148,15 +148,16 @@ Se crei un nuovo testo, aggiungi SEMPRE la chiave in `commons/i18n/it/*.json` E 
 
 ### ScienceProvider (CookingScienceBrain)
 
-- **All scientific logic** (formulas, rules, catalogs, defaults, classifications) lives in the `science_blocks` table on Neon PostgreSQL
+- **All scientific logic** (formulas, rules, catalogs, defaults, classifications) lives in the `science_blocks` table on Neon PostgreSQL — **58 blocks** total (12 formulas, 10 catalogs, 4 classifications, 10 defaults, 10 rules, 1 constraint, plus 10 new defaults blocks for manager constants, 1 blend_formula)
+- **Expression format**: All mathematical expressions use **MathJSON** (CortexJS standard). Evaluated by `@cortex-js/compute-engine`. LaTeX auto-generated via `.latex` property for UI rendering (KaTeX `FormulaDisplay` component).
 - **DbScienceProvider** (`commons/utils/science/db-science-provider.ts`) reads from Neon; lazy singleton via `app/server/middleware/science.ts`
 - **FileScienceProvider** reads from `/science/` JSON directory — used by tests and local dev (fallback when `NEON_CSB_DATABASE_URL` is not set)
 - **StaticScienceProvider** bundles JSON via Vite imports — used client-side (browser)
-- **Provider is REQUIRED** in all manager functions — no `provider?` optional, no hardcoded fallbacks
-- **Managers are pure orchestrators** — they build context, call the provider, return results. Zero domain-specific scientific values in TypeScript.
-- **9 block types**: formula, factor_chain, piecewise, classification, rule, catalog, defaults, blend_formula, multi_node_constraint
+- **Provider is REQUIRED** in all manager functions — no `provider?` optional, no hardcoded fallbacks. Exception: `calcFinalDoughTemp` accepts `provider: ScienceProvider | undefined` because it's called client-side without provider.
+- **Managers are pure orchestrators** — they build context, call the provider, return results. Zero domain-specific scientific values in TypeScript. All constants, thresholds, enum lists, and fallback defaults are stored in Neon `defaults/*` blocks.
+- **10 block types**: formula, factor_chain, piecewise, classification, rule, catalog, defaults, blend_formula, multi_node_constraint
 - **Environment**: `NEON_CSB_DATABASE_URL` for the cooking-science-brain Neon project
-- **Admin panel**: `/admin/science` for CRUD operations on science blocks
+- **Admin panel**: `/admin/science` for CRUD operations on science blocks, with KaTeX formula rendering
 
 ### State Management
 

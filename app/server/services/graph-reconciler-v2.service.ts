@@ -60,15 +60,8 @@ const DOUGH_NODE_TYPES = new Set([
 
 // ── Helpers ────────────────────────────────────────────────
 
-function getDoughFlourProps(data: RecipeNode['data'], flourCatalog: any[]): BlendedFlourProps {
-  if (data.flours.length === 0) {
-    return {
-      protein: 12, W: 280, PL: 0.55, absorption: 58,
-      ash: 0.55, fiber: 2.2, starchDamage: 7,
-      fermentSpeed: 1, fallingNumber: 340,
-    }
-  }
-  return blendFlourProperties(data.flours, [...flourCatalog])
+function getDoughFlourProps(data: RecipeNode['data'], flourCatalog: any[], provider: ScienceProvider): BlendedFlourProps {
+  return blendFlourProperties(provider, data.flours, [...flourCatalog])
 }
 
 function getYeastInfo(data: RecipeNode['data'], yeastTypesCatalog: any[]): { yPct: number; ySF: number } {
@@ -174,7 +167,7 @@ export function reconcileGraphV2(
 
     // ── Dough: extract flour properties ──
     if (nodeRef.type === 'dough') {
-      const bp = getDoughFlourProps(nodeRef.data, flourCatalog)
+      const bp = getDoughFlourProps(nodeRef.data, flourCatalog, provider)
       const { yPct, ySF } = getYeastInfo(nodeRef.data, yeastTypesCatalog)
       const totalFlour = nodeRef.data.flours.reduce((a, f) => a + f.g, 0)
 
@@ -434,12 +427,12 @@ export function reconcileGraphV2(
 
   const doughFlours = mainDoughForWarnings?.data.flours ?? []
   const _hasGlutenFreeFlour = doughFlours.some((f) => {
-    const entry = getFlour(f.type, flourCatalog as any)
+    const entry = getFlour(f.type, flourCatalog as any, provider)
     return isGlutenFree(entry)
   })
   const totalFlourForWG = doughFlours.reduce((a, f) => a + f.g, 0)
   const wholeGrainG = doughFlours.reduce((a, f) => {
-    const entry = getFlour(f.type, flourCatalog as any)
+    const entry = getFlour(f.type, flourCatalog as any, provider)
     return a + (isWholeGrain(entry) ? f.g : 0)
   }, 0)
   const _wholeGrainPct = totalFlourForWG > 0 ? Math.round(wholeGrainG / totalFlourForWG * 100) : 0

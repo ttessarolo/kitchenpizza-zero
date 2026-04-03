@@ -90,7 +90,7 @@ export function checkCustardPasteurization(
 ): { safe: boolean } {
   if (!hasEggs) return { safe: true }
 
-  const block = provider.getBlock('pastry_subtype_defaults') as any
+  const block = provider.getBlock('pastry_safety') as any
   const safeTemp = block?.custard?.safeTemp ?? 82
   const minDur = block?.custard?.minDurationS ?? 10
 
@@ -116,7 +116,7 @@ export function calcMeringueRatio(
 ): { ratio: number; stable: boolean } {
   if (eggWhiteG <= 0) return { ratio: 0, stable: false }
 
-  const block = provider.getBlock('pastry_subtype_defaults') as any
+  const block = provider.getBlock('pastry_safety') as any
   const stableRatio = block?.meringue?.stableRatio ?? 1.5
 
   const ratio = Math.round((sugarG / eggWhiteG) * 100) / 100

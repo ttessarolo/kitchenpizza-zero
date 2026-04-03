@@ -67,8 +67,8 @@ export function validatePreFerment(
     hydrationPct: cfg.hydrationPct,
     pfFlour,
     pfWater,
-    _totalFlourAllowance: totalFlour * 1.01,
-    _totalLiquidAllowance: totalLiquid * 1.01,
+    _totalFlourAllowance: totalFlour * ((provider.getBlock('pre_ferment_constants') as any)?.allowanceMargin ?? 1.01),
+    _totalLiquidAllowance: totalLiquid * ((provider.getBlock('pre_ferment_constants') as any)?.allowanceMargin ?? 1.01),
   }
 
   return evaluateRules(provider.getRules('pre_ferment'), ctx)
@@ -94,6 +94,7 @@ export function recalcPreFermentIngredients(
   const liquidType = step.liquids[0]?.type || 'Acqua'
   const liquidTemp = step.liquids[0]?.temp ?? null
   const yeastType = cfg.yeastType || step.yeasts[0]?.type || 'fresh'
+  // Note: default types ('gt_0_for', 'Acqua', 'fresh') match Neon defaults/pre-ferment-constants block
 
   const isTwoPhase = cfg.yeastPct != null && cfg.yeastPct > 0
 

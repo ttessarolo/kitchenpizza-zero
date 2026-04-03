@@ -1,0 +1,43 @@
+{
+  "type": "defaults",
+  "id": "pre_bake_configs",
+  "_meta": { "section": "bake", "description": "Pre-bake enums, suggestions, default configs, and validation ranges" },
+  "entries": [],
+  "validEnums": {
+    "liquidTypes": ["water_malt", "water_honey", "water_sugar", "lye_solution", "baking_soda"],
+    "dockTools": ["fork", "docker_roller", "skewer"],
+    "dockPatterns": ["uniform", "center_only", "edge_sparing"],
+    "flourTypes": ["rice", "semolina", "tipo00", "rye", "cornmeal"],
+    "flourApplications": ["surface", "base_only", "all_over"],
+    "oilTypes": ["olive", "canola", "peanut", "sunflower", "avocado"],
+    "oilMethods": ["spray", "brush", "drizzle"],
+    "oilSurfaces": ["top", "bottom", "both"],
+    "steamMethods": ["water_pan", "ice_cubes", "spray_bottle", "steam_injection"],
+    "steamVolumes": ["small", "medium", "large"],
+    "allSubtypes": ["boil", "dock", "flour_dust", "oil_coat", "steam_inject", "brush", "topping", "scoring", "generic"]
+  },
+  "suggestions": {
+    "griglia": ["dock", "oil_coat"],
+    "padella": ["oil_coat"],
+    "aria": ["oil_coat"],
+    "frittura": [],
+    "vapore": [],
+    "forno": ["scoring", "steam_inject", "flour_dust"],
+    "pentola": ["scoring", "flour_dust"]
+  },
+  "defaultConfigs": {
+    "boil": { "method": "boil", "cfg": { "liquidType": "water_malt", "liquidTemp": 100, "additivePct": 2, "flipOnce": true, "drainTime": 1 } },
+    "dock": { "method": "dock", "cfg": { "tool": "fork", "pattern": "uniform" } },
+    "flour_dust": { "method": "flour_dust", "cfg": { "flourType": "rice", "application": "surface" } },
+    "oil_coat": { "method": "oil_coat", "cfg": { "oilType": "olive", "method": "spray", "surface": "both" } },
+    "steam_inject": { "method": "steam_inject", "cfg": { "method": "water_pan", "waterVolume": "small", "removeAfter": 15 } },
+    "brush": { "method": "brush", "cfg": null },
+    "topping": { "method": "topping", "cfg": null },
+    "scoring": { "method": "scoring", "cfg": null },
+    "generic": { "method": "generic", "cfg": null }
+  },
+  "validationRanges": {
+    "boil": { "liquidTemp": [85, 100], "additivePct": [1, 5], "drainTime": [0.5, 2] },
+    "steam_inject": { "removeAfter": [10, 25] }
+  }
+}
