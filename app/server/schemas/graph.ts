@@ -115,6 +115,9 @@ export const reconcileInputSchema = z.object({
   locale: z.string().default('it'),
   llmVerify: z.boolean().default(true),
   autoResolve: z.boolean().default(false),
+  layerType: z.string().default('impasto'),
+  layerSubtype: z.string().default(''),
+  layerVariant: z.string().default(''),
 })
 
 export const reconcileOutputSchema = z.object({

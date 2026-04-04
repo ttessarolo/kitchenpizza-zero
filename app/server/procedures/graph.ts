@@ -8,6 +8,8 @@ import { verifyReconciliation } from '../services/llm/verify-reconciliation'
 import { applyWarningActionPure } from '@commons/utils/graph-mutation-engine'
 import { applyLlmPerimeter } from '../services/llm/apply-perimeter'
 import { getActivePerimeter } from '../../../local_data/llm-perimeter'
+import type { RecipeLayer } from '@commons/types/recipe-layers'
+import { getDefaultMasterConfig } from '@commons/constants/layer-defaults'
 
 const AUTO_PILOT_CONFIDENCE_THRESHOLD = 0.7
 
@@ -35,12 +37,37 @@ export const reconcile = baseProcedure
     const shouldVerify = flags.LLM_ENABLED && llmVerify && result.warnings.length > 0
     if (shouldVerify) {
       try {
+        // Build a pseudo-layer from the reconcile input for domain-aware LLM verification
+        const layerType = (input.layerType ?? 'impasto') as any
+        const pseudoLayer: RecipeLayer = {
+          id: 'reconcile-layer',
+          type: layerType,
+          subtype: input.layerSubtype ?? '',
+          variant: input.layerVariant ?? '',
+          name: input.meta.name ?? '',
+          color: '#888',
+          icon: '',
+          position: 0,
+          visible: true,
+          locked: false,
+          masterConfig: layerType === 'impasto'
+            ? { type: 'impasto', config: result.portioning }
+            : getDefaultMasterConfig(layerType, input.layerSubtype),
+          nodes: result.graph.nodes as any,
+          edges: result.graph.edges as any,
+          lanes: result.graph.lanes as any,
+        }
+
+        // Look up domain persona from science provider
+        const domains = provider.getDomains()
+        const domainInfo = domains.find(d => d.key === layerType) ?? null
+
         llmVerification = await verifyReconciliation(
-          result.graph,
-          result.portioning,
+          pseudoLayer,
           { ...input.meta, locale } as any,
           result.warnings,
           locale,
+          domainInfo,
         )
       } catch {
         // LLM verification failed — continue with science-only warnings

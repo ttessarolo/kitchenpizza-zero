@@ -17,6 +17,7 @@ import type {
   RuleBlock,
   BlendFormulaBlock,
   MultiNodeConstraintBlock,
+  DomainInfo,
 } from './types'
 
 // ── Provider interface ─────────────────────────────────────────
@@ -49,6 +50,9 @@ export interface ScienceProvider {
   // i18n
   getI18nKeys(locale: string): Record<string, string>
   saveI18nKey(locale: string, key: string, value: string): void
+
+  // Domains
+  getDomains(): DomainInfo[]
 }
 
 // ── File-based provider ────────────────────────────────────────
@@ -61,6 +65,7 @@ export class FileScienceProvider implements ScienceProvider {
   private rulesByDomain: Map<string, RuleBlock[]> = new Map()
   private catalogs: Map<string, Record<string, unknown>[]> = new Map()
   private i18nCache: Map<string, Record<string, string>> = new Map()
+  private domains: DomainInfo[] = []
 
   constructor(
     private scienceDir: string,
@@ -74,6 +79,13 @@ export class FileScienceProvider implements ScienceProvider {
     this.rulesByDomain.clear()
     this.catalogs.clear()
     this.i18nCache.clear()
+
+    // Load domains
+    const domainsPath = path.join(this.scienceDir, 'domains.json')
+    if (fs.existsSync(domainsPath)) {
+      const raw: DomainInfo[] = JSON.parse(fs.readFileSync(domainsPath, 'utf-8'))
+      this.domains = raw.filter(d => d.persona && d.status === 'active')
+    }
 
     const dirs = ['formulas', 'rules', 'catalogs', 'defaults', 'classifications', 'constraints']
     for (const dir of dirs) {
@@ -217,5 +229,11 @@ export class FileScienceProvider implements ScienceProvider {
     data[key] = value
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
     this.i18nCache.set(locale, data)
+  }
+
+  // ── Domains API ───────────────────────────────────────────────
+
+  getDomains(): DomainInfo[] {
+    return this.domains
   }
 }

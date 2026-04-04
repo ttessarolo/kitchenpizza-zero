@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useT } from '~/hooks/useTranslation'
 import { useRecipeFlowStore } from '~/stores/recipe-flow-store'
-import { LAYER_TYPES, LAYER_TYPE_META } from '@commons/constants/layer-defaults'
+import { useDomainMeta } from '~/hooks/useDomainMeta'
 import { LAYER_SUBTYPES, getVariants } from '@commons/constants/layer-subtypes'
 import type { LayerType } from '@commons/types/recipe-layers'
 
@@ -35,6 +35,7 @@ interface LayerTypePickerProps {
 export function LayerTypePicker({ onClose, mode = 'inline', onSkip }: LayerTypePickerProps) {
   const t = useT()
   const addLayer = useRecipeFlowStore((s) => s.addLayer)
+  const { meta: LAYER_TYPE_META, types: LAYER_TYPES } = useDomainMeta()
   const [search, setSearch] = useState('')
   const [selectedType, setSelectedType] = useState<LayerType | null>(null)
   const [selectedSubtype, setSelectedSubtype] = useState<string | null>(null)
@@ -53,7 +54,7 @@ export function LayerTypePicker({ onClose, mode = 'inline', onSkip }: LayerTypeP
       )
       return label.includes(q) || desc.includes(q) || subtypeMatch
     })
-  }, [search, t])
+  }, [search, t, LAYER_TYPES, LAYER_TYPE_META])
 
   const filteredSubtypes = useMemo(() => {
     if (!selectedType) return []

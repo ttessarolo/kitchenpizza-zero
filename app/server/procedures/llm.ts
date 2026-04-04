@@ -9,6 +9,7 @@ import {
 } from '../schemas/llm'
 import { llmService } from '../services/llm/llm-service'
 import { getPromptTemplate, fillTemplate } from '../services/llm/prompt-store'
+import { getScienceProvider } from '../middleware/science'
 
 export const explainWarning = baseProcedure
   .input(explainWarningInputSchema)
@@ -23,7 +24,15 @@ export const explainWarning = baseProcedure
       locale: input.locale,
     })
 
-    const explanation = await llmService.generate(prompt)
+    // Use domain persona if domainKey is provided
+    let systemPrompt: string | undefined
+    if (input.domainKey) {
+      const provider = await getScienceProvider()
+      const domain = provider.getDomains().find(d => d.key === input.domainKey)
+      systemPrompt = domain?.personaSystemPrompt ?? undefined
+    }
+
+    const explanation = await llmService.generate(prompt, { systemPrompt })
     return {
       explanation,
       source: explanation ? ('llm' as const) : ('fallback' as const),

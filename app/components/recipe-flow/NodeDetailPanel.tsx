@@ -17,7 +17,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '~/components/ui/alert-dialog'
 import { fmtDuration } from '@commons/utils/format'
-import { LAYER_TYPE_META } from '@commons/constants/layer-defaults'
+import { useDomainMeta } from '~/hooks/useDomainMeta'
 import { getSubtypeLabelKey } from '@commons/constants/layer-subtypes'
 import { calcFinalDoughTempRPC } from '~/lib/recipe-rpc'
 import { WarningCard } from './WarningCard'
@@ -39,6 +39,7 @@ function SinglePanel({
   onClose: () => void
 }) {
   const t = useT()
+  const { meta: LAYER_TYPE_META } = useDomainMeta()
   const graph = useRecipeFlowStore(selectGraph)
   const meta = useRecipeFlowStore((s) => s.meta)
   const portioning = useRecipeFlowStore(selectPortioning)

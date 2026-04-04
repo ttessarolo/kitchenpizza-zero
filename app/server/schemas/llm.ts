@@ -5,6 +5,7 @@ export const explainWarningInputSchema = z.object({
   messageVars: z.record(z.string(), z.unknown()).optional(),
   context: z.string().optional(),
   locale: z.string().default('it'),
+  domainKey: z.string().optional(),
 })
 
 export const explainWarningOutputSchema = z.object({

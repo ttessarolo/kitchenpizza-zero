@@ -14,6 +14,7 @@ import type {
   RuleBlock,
   BlendFormulaBlock,
   MultiNodeConstraintBlock,
+  DomainInfo,
 } from './types'
 import type { ScienceProvider } from './science-provider'
 
@@ -76,6 +77,9 @@ import flourStrength from '@/science/classifications/flour-strength.json'
 import riseCapacity from '@/science/classifications/rise-capacity.json'
 import minFermentationHours from '@/science/classifications/min-fermentation-hours.json'
 import pastryTemper from '@/science/classifications/pastry-temper.json'
+
+// Domains
+import domainsJson from '@/science/domains.json'
 
 // ── Build indexes ─────────────────────────────────────────────────
 
@@ -203,5 +207,9 @@ export const staticProvider: ScienceProvider = {
 
   saveI18nKey(): void {
     throw new Error('StaticScienceProvider is read-only')
+  },
+
+  getDomains(): DomainInfo[] {
+    return (domainsJson as DomainInfo[]).filter(d => d.persona && d.status === 'active')
   },
 }

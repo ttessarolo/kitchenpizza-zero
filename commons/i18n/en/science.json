@@ -234,5 +234,16 @@
   "warning_pastry_chilling_too_fast": "Cooling too quickly: thermal shock can cause cracks in tempered chocolate.",
 
   "warning_prep_cross_contamination": "Cross-contamination risk: use separate cutting boards and utensils for raw meat and vegetables.",
-  "warning_prep_oxidation": "Ingredient oxidizes rapidly after cutting. Store in acidulated water or work quickly."
+  "warning_prep_oxidation": "Ingredient oxidizes rapidly after cutting. Store in acidulated water or work quickly.",
+
+  "domain.impasto.label": "Dough",
+  "domain.impasto.description": "Bread, pizza, and leavened dough recipes",
+  "domain.sauce.label": "Sauce",
+  "domain.sauce.description": "Sauces, reductions, and emulsions",
+  "domain.prep.label": "Prep",
+  "domain.prep.description": "Ingredient preparation and assembly",
+  "domain.ferment.label": "Fermentation",
+  "domain.ferment.description": "Lacto-fermentation, brining, and cultures",
+  "domain.pastry.label": "Pastry",
+  "domain.pastry.description": "Pastry, chocolate, and confectionery"
 }

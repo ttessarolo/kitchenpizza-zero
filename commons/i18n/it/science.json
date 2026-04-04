@@ -234,5 +234,16 @@
   "warning_pastry_chilling_too_fast": "Raffreddamento troppo rapido: lo shock termico può causare crepe nel cioccolato temperato.",
 
   "warning_prep_cross_contamination": "Rischio contaminazione crociata: usare taglieri e utensili separati per carne cruda e verdure.",
-  "warning_prep_oxidation": "L'ingrediente si ossida rapidamente dopo il taglio. Conservare in acqua acidulata o lavorare velocemente."
+  "warning_prep_oxidation": "L'ingrediente si ossida rapidamente dopo il taglio. Conservare in acqua acidulata o lavorare velocemente.",
+
+  "domain.impasto.label": "Impasto",
+  "domain.impasto.description": "Ricette di pane, pizza e impasti lievitati",
+  "domain.sauce.label": "Salsa",
+  "domain.sauce.description": "Sughi, riduzioni ed emulsioni",
+  "domain.prep.label": "Preparazione",
+  "domain.prep.description": "Preparazione ingredienti e assemblaggio",
+  "domain.ferment.label": "Fermentazione",
+  "domain.ferment.description": "Lattofermentazione, salamoia e colture",
+  "domain.pastry.label": "Pasticceria",
+  "domain.pastry.description": "Pasticceria, cioccolato e confetteria"
 }

@@ -11,7 +11,7 @@ import { DoughTotalsPanel } from './DoughTotalsPanel'
 import { LayerColorPicker } from './LayerColorPicker'
 import { LayerMasterConfig } from './layer-configs/LayerMasterConfig'
 import { RECIPE_SUBTYPES } from '@/local_data'
-import { LAYER_TYPE_META } from '@commons/constants/layer-defaults'
+import { useDomainMeta } from '~/hooks/useDomainMeta'
 import { Switch } from '~/components/ui/switch'
 
 function AccordionSection({
@@ -71,6 +71,7 @@ export function RecipeToolbar({ collapsed, onToggleCollapse }: { collapsed?: boo
     return layer?.masterConfig.type ?? 'impasto'
   })
   const t = useT()
+  const { meta: LAYER_TYPE_META } = useDomainMeta()
 
   const currentSubtypes = (RECIPE_SUBTYPES[meta.type] || []).map((s) => ({
     key: s.key,

@@ -256,6 +256,20 @@ export interface MultiNodeConstraintBlock {
   adaptationStrategies?: Record<string, unknown>
 }
 
+// ── Domain info ───────────────────────────────────────────────
+
+export interface DomainInfo {
+  key: string
+  persona: boolean
+  status: 'active' | 'inactive'
+  personaSystemPrompt: string | null
+  labelKey: string
+  descriptionKey: string
+  icon: string | null
+  defaultColor: string | null
+  sortOrder: number
+}
+
 // ── Union type ─────────────────────────────────────────────────
 
 export type ScienceBlock =

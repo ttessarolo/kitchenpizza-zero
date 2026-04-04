@@ -3,6 +3,7 @@
  */
 
 import type { LayerType, MasterConfig } from '../types/recipe-layers'
+import type { DomainInfo } from '../utils/science/types'
 
 // ── Layer type metadata ──────────────────────────────────────────
 
@@ -47,6 +48,30 @@ export const LAYER_TYPE_META: Record<LayerType, LayerTypeMeta> = {
     descriptionKey: 'layer_type_pastry_desc',
     disabled: true,
   },
+}
+
+/**
+ * Build LayerTypeMeta from DB domains, overlaying on static defaults.
+ * DB values take precedence; static LAYER_TYPE_META is the fallback.
+ */
+export function buildLayerTypeMeta(
+  domains: DomainInfo[],
+): Record<LayerType, LayerTypeMeta> {
+  const meta = { ...LAYER_TYPE_META }
+  for (const d of domains) {
+    if (d.key in meta) {
+      const k = d.key as LayerType
+      meta[k] = {
+        ...meta[k],
+        labelKey: d.labelKey,
+        descriptionKey: d.descriptionKey,
+        icon: d.icon ?? meta[k].icon,
+        defaultColor: d.defaultColor ?? meta[k].defaultColor,
+        disabled: false,
+      }
+    }
+  }
+  return meta
 }
 
 // ── Canonical layer type list ────────────────────────────────────

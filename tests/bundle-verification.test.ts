@@ -53,6 +53,7 @@ describe('Bundle verification — no forbidden client imports', () => {
     const ALLOWED = [
       'hooks/useRecipeCalculator.ts',
       'hooks/useScienceCatalogs.ts',
+      'hooks/useDomainMeta.ts',
       'stores/recipe-flow-store.ts',
       'lib/generate-dough.ts',
       'lib/generate-layer-graph.ts',

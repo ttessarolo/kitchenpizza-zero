@@ -1,5 +1,7 @@
 import OpenAI from 'openai'
-import type { LlmProvider } from './noop-provider'
+import type { LlmProvider, LlmGenerateOptions } from './noop-provider'
+
+const DEFAULT_SYSTEM_PROMPT = 'You are a culinary science expert.'
 
 /**
  * OpenAiProvider — connects to OpenAI API (gpt-5.4-mini).
@@ -34,13 +36,14 @@ export class OpenAiProvider implements LlmProvider {
 
   async generate(
     prompt: string,
-    options?: { maxTokens?: number; temperature?: number },
+    options?: LlmGenerateOptions,
   ): Promise<string | null> {
     try {
+      const systemContent = options?.systemPrompt ?? DEFAULT_SYSTEM_PROMPT
       const response = await this.client.chat.completions.create({
         model: this.model,
         messages: [
-          { role: 'system', content: 'You are a culinary science expert specializing in baking chemistry, fermentation, and dough rheology.' },
+          { role: 'system', content: systemContent },
           { role: 'user', content: prompt },
         ],
         max_completion_tokens: options?.maxTokens ?? this.maxTokens,
@@ -57,16 +60,19 @@ export class OpenAiProvider implements LlmProvider {
   async generateJSON<T>(
     prompt: string,
     schema: { parse: (v: unknown) => T },
+    options?: LlmGenerateOptions,
   ): Promise<T | null> {
     try {
+      const basePrompt = options?.systemPrompt ?? DEFAULT_SYSTEM_PROMPT
+      const systemContent = `${basePrompt} Respond ONLY with valid JSON.`
       const response = await this.client.chat.completions.create({
         model: this.model,
         messages: [
-          { role: 'system', content: 'You are a culinary science expert. Respond ONLY with valid JSON.' },
+          { role: 'system', content: systemContent },
           { role: 'user', content: prompt },
         ],
-        max_completion_tokens: this.maxTokens,
-        temperature: 0.1,
+        max_completion_tokens: options?.maxTokens ?? this.maxTokens,
+        temperature: options?.temperature ?? 0.1,
         response_format: { type: 'json_object' },
       })
 

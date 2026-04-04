@@ -11,8 +11,7 @@ export interface LlmPromptEntry {
 
 // Default templates — used as reset targets in admin panel
 const DEFAULT_TEMPLATES: Record<string, string> = {
-  explain_warning: `You are a culinary science expert specializing in baking, fermentation, and dough rheology.
-Explain the following recipe warning in practical, educational terms.
+  explain_warning: `Explain the following recipe warning in practical, educational terms.
 
 Warning key: {{messageKey}}
 Context: {{context}}
@@ -26,8 +25,7 @@ Provide a clear explanation (3-5 sentences) covering:
 
 Respond in the language specified by the locale.`,
 
-  nl_to_constraints: `You are a recipe adaptation assistant with deep knowledge of baking science.
-Extract structured constraints from the user's natural language request.
+  nl_to_constraints: `Extract structured constraints from the user's natural language request.
 
 User request: "{{userInput}}"
 Current recipe: {{recipeSummary}}
@@ -68,7 +66,7 @@ Respond as JSON:
   "suggestions": ["actionable suggestion 1", "actionable suggestion 2"]
 }`,
 
-  verify_reconciliation: `You are a culinary science verification system with deep expertise in baking chemistry, fermentation kinetics, and dough rheology. ALL text in llmReason and explanation fields MUST be written in {{locale}}. Never use English if locale is not ENGLISH.
+  verify_reconciliation: `ALL text in llmReason and explanation fields MUST be written in {{locale}}. Never use English if locale is not ENGLISH.
 
 CONTEXT: Each warning below includes the actual warning text, the computed values (Data), and available corrective actions. Use the Text and Data fields to make your decision — they contain the exact values the science engine used.
 
@@ -86,14 +84,14 @@ RULES:
 Recipe:
 {{recipeSummary}}
 
+Domain: {{domainKey}}
 Type: {{recipeType}}/{{recipeSubtype}}
-Global values: hyd={{hydration}}%, yeast={{yeastPct}}%, salt={{saltPct}}%, W={{flourW}}, doughHours={{doughHours}}
+Key metrics: {{globalValues}}
 
 Process phases:
-{{nodeDetails}}
+{{processPhases}}
 
-Flour blend:
-{{flourBlendInfo}}
+{{supplementary}}
 
 Warnings to verify:
 {{warningsSummary}}
@@ -136,8 +134,8 @@ export const LLM_PROMPTS: LlmPromptEntry[] = [
     descriptionKey: 'admin.ai.prompt.verify_reconciliation_desc',
     category: 'verification',
     template: DEFAULT_TEMPLATES.verify_reconciliation,
-    variables: ['recipeSummary', 'recipeType', 'recipeSubtype', 'hydration', 'yeastPct', 'saltPct', 'flourW', 'doughHours', 'nodeDetails', 'flourBlendInfo', 'warningsSummary', 'locale'],
-    lastModified: '2026-04-03',
+    variables: ['recipeSummary', 'recipeType', 'recipeSubtype', 'domainKey', 'globalValues', 'processPhases', 'supplementary', 'warningsSummary', 'locale'],
+    lastModified: '2026-04-04',
   },
 ]
 

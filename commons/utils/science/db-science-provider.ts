@@ -17,6 +17,7 @@ import type {
   RuleBlock,
   BlendFormulaBlock,
   MultiNodeConstraintBlock,
+  DomainInfo,
 } from './types'
 
 export class DbScienceProvider implements ScienceProvider {
@@ -24,6 +25,7 @@ export class DbScienceProvider implements ScienceProvider {
   private rulesByDomain: Map<string, RuleBlock[]> = new Map()
   private catalogs: Map<string, Record<string, unknown>[]> = new Map()
   private i18nCache: Map<string, Record<string, string>> = new Map()
+  private domains: DomainInfo[] = []
   private sql: ReturnType<typeof neon>
 
   constructor(databaseUrl: string) {
@@ -33,10 +35,30 @@ export class DbScienceProvider implements ScienceProvider {
   // ── Initialization ────────────────────────────────────────────
 
   async init(): Promise<void> {
+    // Load science blocks
     const rows = await this.sql`SELECT id, type, domain, title, data FROM science_blocks WHERE status = 'active'` as Record<string, unknown>[]
     this.blocks.clear()
     this.rulesByDomain.clear()
     this.catalogs.clear()
+
+    // Load domains
+    const domainRows = await this.sql`
+      SELECT key, persona, status, persona_system_prompt, label_key, description_key, icon, default_color, sort_order
+      FROM domains
+      WHERE persona = true AND status = 'active'
+      ORDER BY sort_order
+    ` as Record<string, unknown>[]
+    this.domains = domainRows.map(r => ({
+      key: r.key as string,
+      persona: r.persona as boolean,
+      status: r.status as 'active' | 'inactive',
+      personaSystemPrompt: (r.persona_system_prompt as string) ?? null,
+      labelKey: r.label_key as string,
+      descriptionKey: r.description_key as string,
+      icon: (r.icon as string) ?? null,
+      defaultColor: (r.default_color as string) ?? null,
+      sortOrder: (r.sort_order as number) ?? 0,
+    }))
 
     for (const row of rows) {
       const data = row.data
@@ -208,5 +230,11 @@ export class DbScienceProvider implements ScienceProvider {
     const cache = this.i18nCache.get(locale) ?? {}
     cache[key] = value
     this.i18nCache.set(locale, cache)
+  }
+
+  // ── Domains API ──────────────────────────────────────────────
+
+  getDomains(): DomainInfo[] {
+    return this.domains
   }
 }

@@ -1,5 +1,5 @@
 import { getFlags } from '../../lib/feature-flags'
-import type { LlmProvider } from './noop-provider'
+import type { LlmProvider, LlmGenerateOptions } from './noop-provider'
 import { NoopProvider } from './noop-provider'
 import { OpenAiProvider } from './openai-provider'
 
@@ -42,10 +42,13 @@ export const llmService = {
   /** Generate free-form text */
   generate: (
     prompt: string,
-    options?: { maxTokens?: number; temperature?: number },
+    options?: LlmGenerateOptions,
   ) => getProvider().generate(prompt, options),
 
   /** Generate structured JSON matching a Zod schema */
-  generateJSON: <T>(prompt: string, schema: { parse: (v: unknown) => T }) =>
-    getProvider().generateJSON(prompt, schema),
+  generateJSON: <T>(
+    prompt: string,
+    schema: { parse: (v: unknown) => T },
+    options?: LlmGenerateOptions,
+  ) => getProvider().generateJSON(prompt, schema, options),
 }
