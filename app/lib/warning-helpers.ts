@@ -49,9 +49,11 @@ export function getActiveLayerWarnings(
   layers: RecipeLayer[],
 ): ActionableWarning[] {
   const nodeLayerMap = buildNodeLayerMap(layers)
-  return warnings.filter(w =>
-    w.sourceNodeId && nodeLayerMap.get(w.sourceNodeId) === activeLayerId
-  )
+  return warnings.filter(w => {
+    if (w.sourceNodeId) return nodeLayerMap.get(w.sourceNodeId) === activeLayerId
+    // Canonical warnings (no sourceNodeId) → include for active layer
+    return true
+  })
 }
 
 /**

@@ -4,10 +4,7 @@ import { calcYeastPctRPC, calcDurationFromYeastRPC } from '~/lib/recipe-rpc'
 import { rnd } from '@commons/utils/format'
 import { useT } from '~/hooks/useTranslation'
 import { useYeastTypes } from '~/hooks/useScienceCatalogs'
-import { WarningCard } from './WarningCard'
-import { ActionableWarningBox } from './ActionableWarningBox'
 import { FlourMixSelector } from './FlourMixSelector'
-import { deduplicateWarnings } from '@commons/utils/warning-dedup'
 import { DEFAULT_LOCKS } from '@commons/types/recipe'
 import { LockButton } from './LockButton'
 
@@ -151,12 +148,6 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
     updateNodeData(nodeId, { fats: [{ id: 0, type: fatType, g }] })
   }
 
-  // Warnings come from the reconciler (store), filtered for composition category
-  const storeWarnings = useRecipeFlowStore((s) => s.warnings)
-  const warnings = storeWarnings.filter((w) =>
-    ['yeast', 'salt', 'fat', 'hydration', 'flour', 'general', 'fermentation'].includes(w.category)
-  )
-
   // Scale ALL chain nodes proportionally when total flour changes.
   // Uses batchUpdateNodes for atomic update — single reconciliation pass.
   function setFlourG(newTotal: number) {
@@ -284,7 +275,6 @@ function DoughTabContent({ nodeId }: { nodeId: string; onRemove?: () => void }) 
       <SliderRow icon="🫒" label={t('label_fats')} value={fatPct} min={0} max={25} step={0.5} unit="%"
         onChange={setFatPct} />
 
-      <WarningSection warnings={warnings} />
     </div>
   )
 }
@@ -311,12 +301,6 @@ function GlobalCompositionSettings() {
   function update(patch: Partial<typeof portioning>) {
     setPortioning((p) => ({ ...p, ...patch }))
   }
-
-  // Warnings come from the reconciler (store), filtered for composition category
-  const storeWarnings = useRecipeFlowStore((s) => s.warnings)
-  const warnings = storeWarnings.filter((w) =>
-    ['yeast', 'salt', 'fat', 'hydration', 'flour', 'general', 'fermentation'].includes(w.category)
-  )
 
   return (
     <div>
@@ -390,63 +374,6 @@ function GlobalCompositionSettings() {
       <SliderRow icon="🫒" label={t('label_fats')} value={Math.round(fatPct * 10) / 10} min={0} max={25} step={0.5} unit="%"
         onChange={(v) => update({ fatPct: v })} />
 
-      <WarningSection warnings={warnings} />
-    </div>
-  )
-}
-
-// ── Shared warning section with deduplication + Apply All ────────
-
-function WarningSection({ warnings }: { warnings: import('@commons/types/recipe-graph').ActionableWarning[] }) {
-  const t = useT()
-  const applyAllWarningActions = useRecipeFlowStore((s) => s.applyAllWarningActions)
-  const autoCorrectReport = useRecipeFlowStore((s) => s.autoCorrectReport)
-
-  const deduped = deduplicateWarnings(warnings)
-  const actionable = deduped.filter((w) => w.actions && w.actions.length > 0)
-  const informational = deduped.filter((w) => !w.actions || w.actions.length === 0)
-
-  const hasWarnings = actionable.length > 0 || informational.length > 0
-  const hasReport = autoCorrectReport && autoCorrectReport.steps.length > 0
-
-  if (!hasWarnings && !hasReport) return null
-
-  return (
-    <div className="mt-2 space-y-2">
-      {/* Auto-correct report banner */}
-      {hasReport && !hasWarnings && (
-        <div className={`rounded-xl p-3 text-xs ${autoCorrectReport.status === 'ok' ? 'bg-success/10 border border-success/30 text-success' : 'bg-warning/10 border border-warning/30 text-warning'}`}>
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">
-              {autoCorrectReport.status === 'ok'
-                ? `✓ ${t('auto_correct_ok', { count: autoCorrectReport.warningsResolved, rounds: autoCorrectReport.roundsUsed })}`
-                : `⚠ ${t('auto_correct_ko', { resolved: autoCorrectReport.warningsResolved, remaining: autoCorrectReport.warningsRemaining.filter(w => w.actions?.length).length })}`
-              }
-            </span>
-            <button
-              type="button"
-              onClick={() => useRecipeFlowStore.setState({ autoCorrectReport: null })}
-              className="text-[10px] opacity-50 hover:opacity-80"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
-      {actionable.length > 0 && (
-        <ActionableWarningBox
-          warnings={actionable}
-          onApplyAll={() => applyAllWarningActions()}
-        />
-      )}
-      {informational.length > 0 && (
-        <div className="space-y-1.5">
-          {informational.map((w) => (
-            <WarningCard key={w.id} warning={w} count={w.count} />
-          ))}
-        </div>
-      )}
     </div>
   )
 }

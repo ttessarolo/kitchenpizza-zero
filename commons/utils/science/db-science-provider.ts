@@ -41,24 +41,29 @@ export class DbScienceProvider implements ScienceProvider {
     this.rulesByDomain.clear()
     this.catalogs.clear()
 
-    // Load domains
-    const domainRows = await this.sql`
-      SELECT key, persona, status, persona_system_prompt, label_key, description_key, icon, default_color, sort_order
-      FROM domains
-      WHERE persona = true AND status = 'active'
-      ORDER BY sort_order
-    ` as Record<string, unknown>[]
-    this.domains = domainRows.map(r => ({
-      key: r.key as string,
-      persona: r.persona as boolean,
-      status: r.status as 'active' | 'inactive',
-      personaSystemPrompt: (r.persona_system_prompt as string) ?? null,
-      labelKey: r.label_key as string,
-      descriptionKey: r.description_key as string,
-      icon: (r.icon as string) ?? null,
-      defaultColor: (r.default_color as string) ?? null,
-      sortOrder: (r.sort_order as number) ?? 0,
-    }))
+    // Load domains (graceful: table may not exist yet)
+    try {
+      const domainRows = await this.sql`
+        SELECT key, persona, status, persona_system_prompt, label_key, description_key, icon, default_color, sort_order
+        FROM domains
+        WHERE persona = true AND status = 'active'
+        ORDER BY sort_order
+      ` as Record<string, unknown>[]
+      this.domains = domainRows.map(r => ({
+        key: r.key as string,
+        persona: r.persona as boolean,
+        status: r.status as 'active' | 'inactive',
+        personaSystemPrompt: (r.persona_system_prompt as string) ?? null,
+        labelKey: r.label_key as string,
+        descriptionKey: r.description_key as string,
+        icon: (r.icon as string) ?? null,
+        defaultColor: (r.default_color as string) ?? null,
+        sortOrder: (r.sort_order as number) ?? 0,
+      }))
+    } catch {
+      // Table may not exist yet — fall back to empty domains
+      this.domains = []
+    }
 
     for (const row of rows) {
       const data = row.data
